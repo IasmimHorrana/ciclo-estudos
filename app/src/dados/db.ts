@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
+import type { Baralho, CartaoFc, GrupoOpcoes, NotaFc, RegistroRevisao, TipoNota } from '@/dados/flashcards-tipos'
 import type { Assunto, ModeloSalvo, NotaResumo, RegistroQuestoes, SemanaFechada, SessaoPomodoro, Valor } from '@/dados/esquemas'
 
 /**
@@ -16,6 +17,12 @@ export class BancoCiclo extends Dexie {
   questoes!: EntityTable<RegistroQuestoes, 'id'>
   sessoes!: EntityTable<SessaoPomodoro, 'id'>
   /** Só deste aparelho (pasta de backup e afins). Nunca vai para a nuvem. */
+  baralhos!: EntityTable<Baralho, 'id'>
+  gruposOpcoes!: EntityTable<GrupoOpcoes, 'id'>
+  tiposNota!: EntityTable<TipoNota, 'id'>
+  notasFc!: EntityTable<NotaFc, 'id'>
+  cartoes!: EntityTable<CartaoFc, 'id'>
+  revlog!: EntityTable<RegistroRevisao, 'id'>
   local!: EntityTable<{ chave: string; valor: unknown }, 'chave'>
 
   constructor(nome = 'ciclo-estudos') {
@@ -31,6 +38,15 @@ export class BancoCiclo extends Dexie {
     })
     // v2: tabela nova só com dados deste aparelho. As demais continuam como estavam (não precisa de upgrade).
     this.version(2).stores({ local: 'chave' })
+    // v3: flashcards (tabelas novas; nada do que já existia é tocado)
+    this.version(3).stores({
+      baralhos: 'id, nome, sujo, excluidoEm',
+      gruposOpcoes: 'id, sujo',
+      tiposNota: 'id, sujo',
+      notasFc: 'id, tipoId, baralhoId, sujo, excluidoEm',
+      cartoes: 'id, notaId, baralhoId, tipo, venceDia, venceMs, sujo, excluidoEm',
+      revlog: 'id, cartaoId, baralhoId, dia, sujo',
+    })
   }
 }
 
