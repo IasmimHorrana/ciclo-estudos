@@ -32,3 +32,8 @@ export function fmtMMSS(seg: number): string {
   const s = Math.max(0, Math.round(seg))
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 }
+
+/** Minutos já estudados num foco interrompido (arredondados). */
+export function minutosDecorridos(cfg: ConfigPomodoro, restaSeg: number): number {
+  return Math.round((duracaoSeg('foco', cfg) - restaSeg) / 60)
+}

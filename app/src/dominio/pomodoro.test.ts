@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CONFIG_PADRAO, duracaoSeg, fmtMMSS, proximaFase } from './pomodoro'
+import { CONFIG_PADRAO, duracaoSeg, fmtMMSS, minutosDecorridos, proximaFase } from './pomodoro'
 
 describe('pomodoro', () => {
   it('durações em segundos', () => {
@@ -28,5 +28,13 @@ describe('pomodoro', () => {
     expect(fmtMMSS(1500)).toBe('25:00')
     expect(fmtMMSS(59.4)).toBe('00:59')
     expect(fmtMMSS(-3)).toBe('00:00')
+  })
+})
+
+describe('minutosDecorridos', () => {
+  it('arredonda o que já foi estudado do foco', () => {
+    expect(minutosDecorridos(CONFIG_PADRAO, 25 * 60)).toBe(0)
+    expect(minutosDecorridos(CONFIG_PADRAO, 10 * 60 + 20)).toBe(15)
+    expect(minutosDecorridos(CONFIG_PADRAO, 0)).toBe(25)
   })
 })

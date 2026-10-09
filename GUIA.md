@@ -39,7 +39,7 @@ Estrutura (etapas 1, 2 e parte da 3):
 
 **Flashcards (etapa 3, parcial):** aba Flashcards com baralhos e contagens (azul novos, vermelho aprender, verde revisar), estudo com 4 botões e intervalos, atalhos `Espaço/Enter`, `1-4`, `Ctrl+Z`, `*` marcar, `-` e `=` esconder cartão/nota até amanhã, `@` e `!` suspender cartão/nota, `Ctrl+1..4` bandeira; opções do baralho (limites, passos, intervalos, sanguessuga); adicionar cartões (Básico, invertido, invertido opcional, digitar resposta, omissão/cloze) em caixa de texto simples. Ainda faltam: editor rico com imagens, Navegar, Estatísticas, importar/exportar do Anki.
 
-Ainda **não** estão na base nova: Montar, Semana, Desempenho, Resumos, Flashcards, backup e sincronização.
+Ainda **não** estão na base nova: Desempenho, Resumos (e, do Flashcards, o editor rico, Navegar, Estatísticas e importar do Anki) e a sincronização.
 
 ## 1. Como o app funciona (visão rápida)
 
@@ -279,3 +279,4 @@ Dica: para testar sem perder seus dados reais, abra o arquivo em uma janela anô
 | 2026-10-09 | **Base nova, etapa 2 (parcial)**: banco local Dexie, importador do "Exportar backup completo" do app em HTML (validado com Zod, tolerante a campos ausentes), exportar backup em JSON (mesmo formato do HTML + `formato`/`versao`) e tela "Dados e backup". 20 testes, incluindo ida e volta e teste com o backup real. Branch `dev`. |
 | 2026-10-09 | **Base nova, etapa 2 concluída**: exportar tudo em .zip (um .md por resumo + backup completo), backup automático em pasta com restaurar (junta .md editados fora do app), tabela `local` no Dexie (versão 2 do banco, sem perder dados) e indicador no rodapé da barra lateral. 29 testes. |
 | 2026-10-09 | **Flashcards, etapa 3 (sub-etapas 1 e 2)**: agendador SM-2, fila com limites diários, modelo de dados (Dexie v3), baralhos por matéria/assunto, estudo, baralhos, opções do baralho e adicionar cartões simples. 108 testes. Na branch `dev`. |
+| 2026-10-09 | **Base nova, etapa 4 (parcial)**: Montar ciclo (modelos, meta em horas, dias de estudo, matérias, gerenciar lista), Semana (checklist por dia, rosca, por matéria, fechar semana com resumo, reagendar, limpar), barra lateral com Hoje e semana e calendário marcado, Pomodoro com Encerrar, tempos salvos e registro do tempo no passo. Corrigido o esquema do backup (passos por dia era lido como lista). 148 testes. |
