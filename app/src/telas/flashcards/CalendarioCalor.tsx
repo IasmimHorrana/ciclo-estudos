@@ -9,13 +9,8 @@ import { cn } from '@/lib/utils'
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 const DIAS = ['seg', '', 'qua', '', 'sex', '', '']
 
-const NIVEL = [
-  'bg-muted',
-  'bg-[color-mix(in_srgb,var(--ok)_30%,var(--muted))]',
-  'bg-[color-mix(in_srgb,var(--ok)_55%,var(--muted))]',
-  'bg-[color-mix(in_srgb,var(--ok)_80%,var(--muted))]',
-  'bg-ok',
-]
+// verdes pastéis, do mais claro ao mais forte
+const NIVEL = ['bg-muted', 'bg-[#d4ebc9]', 'bg-[#b3dca4]', 'bg-[#8fca82]', 'bg-[#6bb36b]']
 
 const fmtTempo = (ms: number) => {
   const s = Math.round(ms / 1000)
@@ -34,7 +29,7 @@ export function CalendarioCalor() {
   const tHoje = dados.tempoMs.get(hoje) ?? 0
   const stat = (rotulo: string, valor: string) => (
     <span>
-      {rotulo}: <b className="text-ok">{valor}</b>
+      {rotulo}: <b className="text-[#5fa65f]">{valor}</b>
     </span>
   )
   return (
@@ -44,15 +39,15 @@ export function CalendarioCalor() {
         {nHoje > 0 && <> em <b>{fmtTempo(tHoje)}</b> ({fmtTempo(tHoje / nHoje)}/cartão)</>}
       </p>
       <div className="flex justify-center gap-1 overflow-x-auto pb-1">
-        <div className="mt-4 grid grid-rows-7 gap-0.5 text-[0.6rem] leading-none text-muted-foreground">
+        <div className="mt-[1.125rem] grid grid-rows-7 gap-0.5 text-[0.6rem] leading-none text-muted-foreground">
           {DIAS.map((d, i) => (
-            <span key={i} className="flex h-3 items-center">{d}</span>
+            <span key={i} className="flex h-3.5 items-center">{d}</span>
           ))}
         </div>
         <div>
           <div className="mb-0.5 flex h-3.5 gap-0.5 text-[0.65rem] leading-none text-muted-foreground">
             {m.meses.map((mes, i) => (
-              <span key={i} className="relative w-3 shrink-0">
+              <span key={i} className="relative w-3.5 shrink-0">
                 {mes !== null && <span className="absolute left-0 whitespace-nowrap">{MESES[mes]}</span>}
               </span>
             ))}
@@ -65,10 +60,10 @@ export function CalendarioCalor() {
                     <span
                       key={j}
                       title={`${fmtData(c.data)}/${c.data.slice(0, 4)} · ${c.cartoes} cartão(ões)`}
-                      className={cn('size-3 rounded-[3px]', NIVEL[c.nivel], c.dia === hoje && 'ring-1 ring-foreground')}
+                      className={cn('size-3.5 rounded-[3px]', NIVEL[c.nivel], c.dia === hoje && 'ring-1 ring-foreground')}
                     />
                   ) : (
-                    <span key={j} className="size-3" />
+                    <span key={j} className="size-3.5" />
                   ),
                 )}
               </div>

@@ -60,8 +60,6 @@ export function Baralhos() {
         </div>
       </div>
 
-      <CalendarioCalor />
-
       {novo !== null && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3">
           <Entrada
@@ -120,6 +118,8 @@ export function Baralhos() {
           </table>
         )}
       </div>
+      <CalendarioCalor />
+
       <p className="m-0 text-xs text-muted-foreground">
         Clique no nome do baralho para estudar. Azul = novos, vermelho = em aprendizado, verde = revisões de hoje. Os números de um baralho incluem os subbaralhos.
       </p>
