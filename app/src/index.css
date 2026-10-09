@@ -2,73 +2,75 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Paleta verde-menta (a mesma do app em HTML), com os nomes que o shadcn/ui espera */
+/*
+ * Paleta "Dark Mode Color Palette" (Ayushi Verma): limão #DDDE68, glicínia #A5B2EB, laranja #DA935D,
+ * roxo #676386, azul-camurça #494C65, pedra-negra #2B2D3B. Nomes de variáveis do shadcn/ui.
+ */
 :root {
   --radius: 0.75rem;
-  --background: #f4f5f5;
-  --foreground: #2b302f;
+  --background: #f3f4f9;
+  --foreground: #2b2d3b;
   --card: #ffffff;
-  --card-foreground: #2b302f;
+  --card-foreground: #2b2d3b;
   --popover: #ffffff;
-  --popover-foreground: #2b302f;
-  --primary: #1f9d7f;
+  --popover-foreground: #2b2d3b;
+  --primary: #676386;
   --primary-foreground: #ffffff;
-  --secondary: #e3f5ef;
-  --secondary-foreground: #1f6f59;
-  --muted: #eef1f0;
-  --muted-foreground: #6c7773;
-  --accent: #e3f5ef;
-  --accent-foreground: #1f6f59;
-  --destructive: #dc2626;
-  --border: #e2e7e5;
-  --input: #e2e7e5;
-  --ring: #1f9d7f;
+  --secondary: #e6e9f8;
+  --secondary-foreground: #494c65;
+  --muted: #eceef6;
+  --muted-foreground: #6b6f8a;
+  --accent: #e4e8f8;
+  --accent-foreground: #494c65;
+  --destructive: #c0394f;
+  --border: #dcdfec;
+  --input: #dcdfec;
+  --ring: #a5b2eb;
   /* extras do app */
-  --lateral: #eef1f0;
-  --ok: #16a34a;
-  --ok-bg: #dcfce7;
-  --aviso: #b45309;
-  --aviso-bg: #fef3c7;
-  --erro: #dc2626;
-  --erro-bg: #fee2e2;
+  --lateral: #eaecf5;
+  --ok: #5f7a12;
+  --ok-bg: #f1f2c4;
+  --aviso: #b5651d;
+  --aviso-bg: #fbe6d3;
+  --erro: #c0394f;
+  --erro-bg: #fbe1e6;
   /* calendário de calor dos flashcards (do mais fraco ao mais forte) */
-  --calor-1: #d4ebc9;
-  --calor-2: #b3dca4;
-  --calor-3: #8fca82;
-  --calor-4: #6bb36b;
+  --calor-1: #eef0b9;
+  --calor-2: #e3e585;
+  --calor-3: #d0d251;
+  --calor-4: #b4b62f;
 }
 
 .dark {
-  /* carvão neutro (referência de painel escuro): fundo quase preto, cartões um degrau acima */
-  --background: #141414;
-  --foreground: #f2f2f2;
-  --card: #212121;
-  --card-foreground: #f2f2f2;
-  --popover: #262626;
-  --popover-foreground: #f2f2f2;
-  --primary: #5fd3b3;
-  --primary-foreground: #06281f;
-  --secondary: #263431;
-  --secondary-foreground: #bff0e1;
-  --muted: #2c2c2c;
-  --muted-foreground: #a3a3a3;
-  --accent: #2a3a36;
-  --accent-foreground: #bff0e1;
-  --destructive: #fb7185;
-  --border: #353535;
-  --input: #3a3a3a;
-  --ring: #5fd3b3;
-  --lateral: #1a1a1a;
-  --ok: #4ade80;
-  --ok-bg: #173324;
-  --aviso: #fbbf24;
-  --aviso-bg: #3a2f14;
-  --erro: #fb7185;
-  --erro-bg: #3d1f27;
-  --calor-1: #1f4a3a;
-  --calor-2: #2f7d5b;
-  --calor-3: #46ad7c;
-  --calor-4: #78dba5;
+  --background: #20222d;
+  --foreground: #eef0fa;
+  --card: #2b2d3b;
+  --card-foreground: #eef0fa;
+  --popover: #323547;
+  --popover-foreground: #eef0fa;
+  --primary: #a5b2eb;
+  --primary-foreground: #1f2233;
+  --secondary: #3a3d55;
+  --secondary-foreground: #d5dbf7;
+  --muted: #353849;
+  --muted-foreground: #a3a7c2;
+  --accent: #3b3f5e;
+  --accent-foreground: #d5dbf7;
+  --destructive: #f08a9c;
+  --border: #44475c;
+  --input: #4a4d63;
+  --ring: #a5b2eb;
+  --lateral: #252733;
+  --ok: #ddde68;
+  --ok-bg: #3a3b1c;
+  --aviso: #da935d;
+  --aviso-bg: #3d2e22;
+  --erro: #f08a9c;
+  --erro-bg: #43252f;
+  --calor-1: #4b4f2e;
+  --calor-2: #7a7e3a;
+  --calor-3: #aeb050;
+  --calor-4: #ddde68;
 }
 
 @theme inline {

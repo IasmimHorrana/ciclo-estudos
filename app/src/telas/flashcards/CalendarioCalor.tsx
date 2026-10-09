@@ -29,7 +29,7 @@ export function CalendarioCalor() {
   const tHoje = dados.tempoMs.get(hoje) ?? 0
   const stat = (rotulo: string, valor: string) => (
     <span>
-      {rotulo}: <b className="text-[#5fa65f]">{valor}</b>
+      {rotulo}: <b className="text-ok">{valor}</b>
     </span>
   )
   return (
