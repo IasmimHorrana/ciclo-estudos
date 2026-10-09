@@ -1,16 +1,16 @@
 import { useState } from 'react'
-import { Pizza } from '@/componentes/graficos/Rosca'
+import { Pizza, RoscaCiclo } from '@/componentes/graficos/Rosca'
 import { CampoNumero } from '@/componentes/CampoNumero'
 import { avisar, confirmar } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
 import { definirMeta, fecharSemana, limparSemana, reagendar, type Ciclo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
-import { fmtH, horasFeitasDe, metaEf, resumoSemana, round2, type ResumoSemana } from '@/dominio/ciclo'
+import { corDe, fmtH, horasFeitasDe, metaEf, resumoSemana, round2, soma, type ResumoSemana } from '@/dominio/ciclo'
 import { fmtData, idxDia, NOMES_DIA_LONGO } from '@/dominio/datas'
 import { abrirDialogo } from '@/estado/dialogo'
 import { useUi } from '@/estado/ui'
-import { Constancia, PainelDisciplinas } from '@/telas/PainelSemana'
+import { Constancia } from '@/telas/PainelSemana'
 import { QuadroSemana } from '@/telas/QuadroSemana'
 import { cn } from '@/lib/utils'
 
@@ -71,6 +71,7 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
   const pctH = meta ? Math.min(100, Math.round((horas / meta) * 100)) : 0
   const passosHoje = s.passos.filter((p) => p.dia === hojeISO)
   const hojeFeitos = passosHoje.filter((p) => p.feito).length
+  const materias = [...new Set(s.passos.map((p) => p.materia))]
   const fora = hojeISO > s.dom ? ' · ⚠️ semana encerrada' : hojeISO < s.seg ? ' · semana futura' : ''
 
   async function copiar() {
@@ -131,8 +132,9 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
         <Estat rotulo="Faltam" valor={fmtH(falta)} />
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_340px] gap-3 max-[1100px]:grid-cols-1 max-[1100px]:overflow-visible">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_300px] gap-3 max-[1100px]:grid-cols-1 max-[1100px]:overflow-visible">
         <div className="flex min-h-0 flex-col gap-2">
+          <Constancia s={s} diasDeEstudo={config.dias} hojeISO={hojeISO} />
           <div className={cn(card, 'flex min-h-0 flex-1 flex-col')}>
             <div className="mb-2 flex items-center justify-between gap-2">
               <h2 className="m-0 text-sm font-bold">
@@ -153,8 +155,28 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
         </div>
 
         <div className="flex min-h-0 flex-col gap-3 overflow-auto max-[1100px]:overflow-visible">
-          <PainelDisciplinas s={s} cores={cores} />
-          <Constancia s={s} diasDeEstudo={config.dias} hojeISO={hojeISO} />
+          <section className={card}>
+            <h2 className="m-0 mb-2 text-sm font-bold">Ciclo</h2>
+            <RoscaCiclo passos={s.passos} cores={cores} />
+          </section>
+          <section className={card}>
+            <h2 className="m-0 mb-2 text-sm font-bold">Por matéria</h2>
+            {materias.map((m) => {
+              const itens = s.passos.filter((p) => p.materia === m)
+              const pl = soma(itens, (p) => p.horasPlanejadas)
+              const fe = soma(itens, (p) => p.horasFeitas)
+              return (
+                <div key={m} className="mb-2.5 last:mb-0">
+                  <div className="flex items-center gap-2 text-sm">
+                    <i className="size-2.5 shrink-0 rounded-full" style={{ background: corDe(cores, m) }} />
+                    <span className="min-w-0 flex-1 truncate" title={m}>{m}</span>
+                    <span className={mudo}>{fmtH(fe)}/{fmtH(pl)}</span>
+                  </div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded bg-muted"><i className="block h-full" style={{ width: `${pl ? Math.min(100, (fe / pl) * 100) : 0}%`, background: corDe(cores, m) }} /></div>
+                </div>
+              )
+            })}
+          </section>
         </div>
       </div>
     </div>

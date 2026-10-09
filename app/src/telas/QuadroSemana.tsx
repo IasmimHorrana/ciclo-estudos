@@ -93,11 +93,11 @@ function CartaoPasso({ p, cores }: { p: Passo; cores: Record<string, number> }) 
       onClick={() => abrirEdicao(p)}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), abrirEdicao(p))}
       title="Clique para editar o passo"
-      className={cn('group relative cursor-pointer rounded-lg border-l-4 px-2.5 py-2 shadow-sm outline-none transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring', p.feito && 'opacity-55')}
+      className={cn('group relative cursor-pointer rounded-lg border-l-4 px-3 py-3 shadow-sm outline-none transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring', p.feito && 'opacity-55')}
       style={{ background: fundoDe(cor), borderLeftColor: cor }}
     >
       <div className="flex items-start gap-1.5">
-        <b className={cn('min-w-0 flex-1 text-[0.8rem] leading-tight', p.feito && 'line-through')}>{p.materia}</b>
+        <b className={cn('min-w-0 flex-1 text-sm leading-tight', p.feito && 'line-through')}>{p.materia}</b>
         <button
           onClick={(e) => {
             e.stopPropagation()
@@ -112,7 +112,7 @@ function CartaoPasso({ p, cores }: { p: Passo; cores: Record<string, number> }) 
           {p.feito && <Check className="size-3" strokeWidth={3} />}
         </button>
       </div>
-      <div className="mt-1.5 flex flex-wrap items-center gap-1">
+      <div className="mt-2.5 flex flex-wrap items-center gap-1">
         <span className="rounded-full bg-card/80 px-1.5 py-px text-[0.65rem] font-bold">{fmtH(p.horasPlanejadas)}</span>
         {p.horasFeitas > 0 && <span className="rounded-full bg-card/80 px-1.5 py-px text-[0.65rem] font-semibold text-muted-foreground">feito {fmtH(p.horasFeitas)}</span>}
       </div>
@@ -121,7 +121,7 @@ function CartaoPasso({ p, cores }: { p: Passo; cores: Record<string, number> }) 
   )
 }
 
-/** O ciclo da semana como um quadro: uma coluna por dia, um cartão colorido por passo. */
+/** O ciclo da semana como um calendário: uma coluna por dia (do cabeçalho ao rodapé do quadro), um cartão colorido por passo. */
 export function QuadroSemana({ s, cores, diasDeEstudo, hojeISO }: { s: SemanaAtual; cores: Record<string, number>; diasDeEstudo: boolean[]; hojeISO: string }) {
   const colunas: { chave: string; dia: string | null; i: number; itens: Passo[] }[] = Array.from({ length: 7 }, (_, i) => {
     const d = addDias(s.seg, i)
@@ -131,30 +131,35 @@ export function QuadroSemana({ s, cores, diasDeEstudo, hojeISO }: { s: SemanaAtu
   if (semDia.length) colunas.push({ chave: 'sem', dia: null, i: -1, itens: semDia })
 
   return (
-    <div className="grid min-h-0 flex-1 auto-cols-[minmax(6rem,1fr)] grid-flow-col gap-2 overflow-auto">
-      {colunas.map(({ chave, dia, i, itens }) => {
-        const hoje = dia === hojeISO
-        const fe = itens.filter((p) => p.feito).length
-        const pend = itens.length - fe
-        const folga = dia !== null && !diasDeEstudo[i] && !itens.length
-        return (
-          <section key={chave} className={cn('flex min-w-0 flex-col gap-2', folga && 'opacity-55')}>
-            <header
-              id={dia ? `dia-${dia}` : undefined}
-              className={cn('sticky top-0 z-10 rounded-lg border px-2 py-1.5 text-center', hoje ? 'border-primary bg-primary text-primary-foreground' : 'bg-card')}
-            >
-              <b className="block text-sm">{dia ? `${NOMES_DIA[i]}, ${fmtData(dia).slice(0, 2)}` : 'Sem dia'}</b>
-              <span className={cn('block text-[0.65rem]', hoje ? 'text-primary-foreground/85' : 'text-muted-foreground')}>
-                {itens.length ? `${fe}/${itens.length} · ${fmtH(soma(itens, (p) => p.horasPlanejadas))}` : folga ? 'folga' : '—'}
-                {dia && dia < hojeISO && pend > 0 && <span className="font-bold text-erro"> · {pend} atrasado(s)</span>}
-              </span>
-            </header>
-            {itens.map((p) => (
-              <CartaoPasso key={p.id} p={p} cores={cores} />
-            ))}
-          </section>
-        )
-      })}
+    <div className="min-h-0 flex-1 overflow-auto rounded-lg border">
+      <div className="grid min-h-full auto-cols-[minmax(6.5rem,1fr)] grid-flow-col">
+        {colunas.map(({ chave, dia, i, itens }, k) => {
+          const hoje = dia === hojeISO
+          const fe = itens.filter((p) => p.feito).length
+          const pend = itens.length - fe
+          const folga = dia !== null && !diasDeEstudo[i] && !itens.length
+          return (
+            <section key={chave} className={cn('flex min-w-0 flex-col', k > 0 && 'border-l', hoje && 'bg-primary/5')}>
+              <header
+                id={dia ? `dia-${dia}` : undefined}
+                className={cn('sticky top-0 z-10 border-b px-2 py-2 text-center', hoje ? 'bg-primary text-primary-foreground' : 'bg-card')}
+              >
+                <b className="block text-sm">{dia ? `${NOMES_DIA[i]}, ${fmtData(dia).slice(0, 2)}` : 'Sem dia'}</b>
+                <span className={cn('block text-[0.68rem]', hoje ? 'text-primary-foreground/85' : 'text-muted-foreground')}>
+                  {itens.length ? `${fe}/${itens.length} · ${fmtH(soma(itens, (p) => p.horasPlanejadas))}` : '—'}
+                  {dia && dia < hojeISO && pend > 0 && <span className="font-bold text-erro"> · {pend} atrasado(s)</span>}
+                </span>
+              </header>
+              <div className="flex flex-1 flex-col gap-2 p-2">
+                {itens.map((p) => (
+                  <CartaoPasso key={p.id} p={p} cores={cores} />
+                ))}
+                {!itens.length && <span className="m-auto text-xs text-muted-foreground/70">{folga ? 'folga' : 'sem passos'}</span>}
+              </div>
+            </section>
+          )
+        })}
+      </div>
     </div>
   )
 }
