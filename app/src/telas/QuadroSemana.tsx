@@ -131,7 +131,7 @@ export function QuadroSemana({ s, cores, diasDeEstudo, hojeISO }: { s: SemanaAtu
   if (semDia.length) colunas.push({ chave: 'sem', dia: null, i: -1, itens: semDia })
 
   return (
-    <div className="grid min-h-0 flex-1 auto-cols-[minmax(6.5rem,1fr)] grid-flow-col gap-2 overflow-auto">
+    <div className="grid min-h-0 flex-1 auto-cols-[minmax(6rem,1fr)] grid-flow-col gap-2 overflow-auto">
       {colunas.map(({ chave, dia, i, itens }) => {
         const hoje = dia === hojeISO
         const fe = itens.filter((p) => p.feito).length
