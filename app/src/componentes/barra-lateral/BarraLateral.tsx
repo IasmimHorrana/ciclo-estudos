@@ -36,7 +36,7 @@ export function BarraLateral() {
     <aside className="flex h-full flex-col gap-1.5 overflow-x-hidden overflow-y-auto border-r bg-lateral p-2.5 max-[900px]:h-auto max-[900px]:border-r-0 max-[900px]:border-b">
       <div className="flex items-center justify-between gap-2 px-1 py-0.5">
         <span className="flex items-center gap-2 text-base font-extrabold">
-          <img src="/favicon.svg" alt="" className="size-6 rounded-md" />
+          <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" className="size-6 rounded-md" />
           Ciclo de Estudos
         </span>
         <Button variant="outline" size="icon" onClick={alternarTema} title="Alternar tema" aria-label="Alternar tema">
