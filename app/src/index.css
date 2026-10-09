@@ -1,0 +1,121 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+/* Paleta verde-menta (a mesma do app em HTML), com os nomes que o shadcn/ui espera */
+:root {
+  --radius: 0.75rem;
+  --background: #f4f5f5;
+  --foreground: #2b302f;
+  --card: #ffffff;
+  --card-foreground: #2b302f;
+  --popover: #ffffff;
+  --popover-foreground: #2b302f;
+  --primary: #1f9d7f;
+  --primary-foreground: #ffffff;
+  --secondary: #e3f5ef;
+  --secondary-foreground: #1f6f59;
+  --muted: #eef1f0;
+  --muted-foreground: #6c7773;
+  --accent: #e3f5ef;
+  --accent-foreground: #1f6f59;
+  --destructive: #dc2626;
+  --border: #e2e7e5;
+  --input: #e2e7e5;
+  --ring: #1f9d7f;
+  /* extras do app */
+  --lateral: #eef1f0;
+  --ok: #16a34a;
+  --ok-bg: #dcfce7;
+  --aviso: #b45309;
+  --aviso-bg: #fef3c7;
+  --erro: #dc2626;
+  --erro-bg: #fee2e2;
+}
+
+.dark {
+  --background: #131817;
+  --foreground: #e7efec;
+  --card: #1b2220;
+  --card-foreground: #e7efec;
+  --popover: #1b2220;
+  --popover-foreground: #e7efec;
+  --primary: #5fd3b3;
+  --primary-foreground: #06281f;
+  --secondary: #1d3a33;
+  --secondary-foreground: #bff0e1;
+  --muted: #171d1b;
+  --muted-foreground: #93a39e;
+  --accent: #1d3a33;
+  --accent-foreground: #bff0e1;
+  --destructive: #f87171;
+  --border: #2a3330;
+  --input: #2a3330;
+  --ring: #5fd3b3;
+  --lateral: #171d1b;
+  --ok: #4ade80;
+  --ok-bg: #12331f;
+  --aviso: #fbbf24;
+  --aviso-bg: #3a2e10;
+  --erro: #f87171;
+  --erro-bg: #3b1a1a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-lateral: var(--lateral);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-aviso: var(--aviso);
+  --color-aviso-bg: var(--aviso-bg);
+  --color-erro: var(--erro);
+  --color-erro-bg: var(--erro-bg);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.45;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Sem isso, regras com display:grid/flex reexibem elementos com o atributo hidden */
+[hidden] {
+  display: none !important;
+}

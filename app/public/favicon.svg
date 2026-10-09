@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1f9d7f"/>
+  <!-- ciclo: duas setas circulares -->
+  <g fill="none" stroke="#ffffff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M143 235a118 118 0 0 1 208-62"/>
+    <path d="M369 277a118 118 0 0 1-208 62"/>
+  </g>
+  <path d="M376 112v82h-82z" fill="#ffffff"/>
+  <path d="M136 400v-82h82z" fill="#ffffff"/>
+</svg>
