@@ -3,17 +3,15 @@ import { Pizza, RoscaCiclo } from '@/componentes/graficos/Rosca'
 import { CampoNumero } from '@/componentes/CampoNumero'
 import { avisar, confirmar } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
-import { Entrada, Selecao } from '@/componentes/ui/entrada'
-import { definirMeta, editarPasso, fecharSemana, limparSemana, marcarPasso, reagendar, type Ciclo } from '@/dados/ciclo'
+import { definirMeta, fecharSemana, limparSemana, reagendar, type Ciclo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
-import { corDe, fmtH, horasFeitasDe, metaEf, resumoSemana, round2, soma, type Passo, type ResumoSemana } from '@/dominio/ciclo'
+import { corDe, fmtH, horasFeitasDe, metaEf, resumoSemana, round2, soma, type ResumoSemana } from '@/dominio/ciclo'
 import { addDias, fmtData, idxDia, NOMES_DIA, NOMES_DIA_LONGO } from '@/dominio/datas'
 import { abrirDialogo } from '@/estado/dialogo'
 import { useUi } from '@/estado/ui'
-import { resumoDaMateria } from '@/dados/notas'
-import { abrirNota } from '@/lib/abrirNota'
 import { irParaDia } from '@/lib/rolagem'
+import { QuadroSemana } from '@/telas/QuadroSemana'
 import { cn } from '@/lib/utils'
 
 const card = 'rounded-xl border bg-card p-3.5 shadow-sm'
@@ -74,15 +72,6 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
   const passosHoje = s.passos.filter((p) => p.dia === hojeISO)
   const hojeFeitos = passosHoje.filter((p) => p.feito).length
   const fora = hojeISO > s.dom ? ' · ⚠️ semana encerrada' : hojeISO < s.seg ? ' · semana futura' : ''
-
-  const semDia = s.passos.filter((p) => !p.dia || p.dia < s.seg || p.dia > s.dom)
-  const grupos: { chave: string; titulo: string; dia: string | null; itens: Passo[] }[] = []
-  for (let i = 0; i < 7; i++) {
-    const d = addDias(s.seg, i)
-    const itens = s.passos.filter((p) => p.dia === d)
-    if (itens.length) grupos.push({ chave: d, titulo: `${NOMES_DIA_LONGO[i]} ${fmtData(d)}`, dia: d, itens })
-  }
-  if (semDia.length) grupos.push({ chave: 'sem', titulo: grupos.length ? 'Sem dia' : 'Passos', dia: null, itens: semDia })
 
   const materias = [...new Set(s.passos.map((p) => p.materia))]
 
@@ -178,27 +167,7 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
                 {copiado && <span className={mudo}>Copiado!</span>}
               </span>
             </div>
-            <div className="min-h-0 flex-1 overflow-auto">
-              {grupos.map((g) => {
-                const fe = g.itens.filter((p) => p.feito).length
-                const pend = g.itens.length - fe
-                return (
-                  <div key={g.chave}>
-                    <div id={g.dia ? `dia-${g.dia}` : undefined} className="sticky top-0 z-10 flex items-center gap-2 border-b bg-card py-1.5 text-sm">
-                      <b>{g.titulo}</b>
-                      {g.dia === hojeISO && <span className="rounded-full bg-primary/15 px-2 text-[0.65rem] font-bold text-primary">HOJE</span>}
-                      {g.dia && g.dia < hojeISO && pend > 0 && <span className="rounded-full bg-erro-bg px-2 text-[0.65rem] font-bold text-erro">{pend} atrasado(s)</span>}
-                      <span className={mudo}>
-                        {fe}/{g.itens.length} passos · {fmtH(soma(g.itens, (p) => p.horasFeitas))}/{fmtH(soma(g.itens, (p) => p.horasPlanejadas))}
-                      </span>
-                    </div>
-                    {g.itens.map((p) => (
-                      <LinhaPasso key={p.id} p={p} s={s} cores={cores} />
-                    ))}
-                  </div>
-                )
-              })}
-            </div>
+            <QuadroSemana s={s} cores={cores} diasDeEstudo={config.dias} hojeISO={hojeISO} />
           </div>
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => void fechar()}>✅ Fechar semana</Button>
@@ -243,49 +212,6 @@ function Estat({ rotulo, valor, sub, barra }: { rotulo: string; valor: string; s
       <b className="text-xl leading-tight">{valor}</b>
       {sub && <span className={mudo}>{sub}</span>}
       {barra !== undefined && <div className="mt-0.5 h-1.5 overflow-hidden rounded bg-muted"><i className="block h-full bg-primary" style={{ width: `${barra}%` }} /></div>}
-    </div>
-  )
-}
-
-function LinhaPasso({ p, s, cores }: { p: Passo; s: NonNullable<Ciclo['semana']>; cores: Record<string, number> }) {
-  const pct = p.horasPlanejadas ? Math.min(100, Math.round((p.horasFeitas / p.horasPlanejadas) * 100)) : 0
-  return (
-    <div className={cn('grid grid-cols-[auto_minmax(0,1fr)_72px_72px_minmax(0,1.3fr)_130px_auto] items-end gap-2 border-b py-2 max-[1300px]:grid-cols-[auto_minmax(0,1fr)_72px_72px_130px_auto] max-[1300px]:[&>.nota]:col-span-full', p.feito && 'opacity-60')}>
-      <input type="checkbox" className="mb-1.5 size-4 cursor-pointer accent-[var(--primary)]" checked={p.feito} onChange={(e) => void marcarPasso(db, p.id, e.target.checked)} aria-label={`Concluir passo ${p.id}`} />
-      <div className="min-w-0 pb-1">
-        <div className="flex items-center gap-1.5 text-sm font-semibold">
-          <span className="text-xs text-muted-foreground">{p.id}.</span>
-          <i className="size-2.5 shrink-0 rounded-full" style={{ background: corDe(cores, p.materia) }} />
-          <span className="truncate" title={p.materia}>{p.materia}</span>
-        </div>
-        <div className="mt-1 h-1 overflow-hidden rounded bg-muted"><i className="block h-full" style={{ width: `${pct}%`, background: corDe(cores, p.materia) }} /></div>
-      </div>
-      <label className="flex flex-col text-[0.65rem] text-muted-foreground">
-        planejado (h)
-        <CampoNumero key={`pl${p.horasPlanejadas}`} className="px-1.5 py-1 text-center" valor={p.horasPlanejadas} aoConfirmar={(n) => void editarPasso(db, p.id, { horasPlanejadas: n && n > 0 ? n : 1 })} />
-      </label>
-      <label className="flex flex-col text-[0.65rem] text-muted-foreground">
-        feito (h)
-        <CampoNumero key={`fe${p.horasFeitas}`} className="px-1.5 py-1 text-center" valor={p.horasFeitas} aoConfirmar={(n) => void editarPasso(db, p.id, { horasFeitas: n && n > 0 ? n : 0 })} />
-      </label>
-      <Entrada
-        key={`nt${p.nota}`}
-        className="nota py-1"
-        placeholder="Anotação: tópico, questões, acertos…"
-        defaultValue={p.nota}
-        onBlur={(e) => e.target.value !== p.nota && void editarPasso(db, p.id, { nota: e.target.value })}
-        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-      />
-      <Selecao className="py-1" value={p.dia ?? ''} aria-label={`Dia do passo ${p.id}`} onChange={(e) => void editarPasso(db, p.id, { dia: e.target.value || null })}>
-        <option value="">Sem dia</option>
-        {Array.from({ length: 7 }, (_, i) => {
-          const d = addDias(s.seg, i)
-          return <option key={d} value={d}>{NOMES_DIA[i]} {fmtData(d)}</option>
-        })}
-      </Selecao>
-      <Button size="sm" variant="outline" title="Abrir ou criar o resumo desta matéria" onClick={async () => abrirNota((await resumoDaMateria(db, p.materia)).id)}>
-        📝 Resumo
-      </Button>
     </div>
   )
 }
