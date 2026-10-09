@@ -1,0 +1,2354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ciclo de Estudos</title>
+<style>
+/* Paleta inspirada no Estudei: fundo cinza-claro, cartões brancos, verde-menta de destaque, pastéis por matéria */
+:root{
+  --bg:#f4f5f5; --side:#eef1f0; --card:#ffffff; --text:#2b302f; --muted:#6c7773; --line:#e2e7e5;
+  --accent:#1f9d7f; --accent-text:#ffffff; --soft:#e3f5ef; --ok:#16a34a; --warn:#b45309; --bad:#dc2626;
+  --warn-bg:#fef3c7; --ok-bg:#dcfce7; --bad-bg:#fee2e2; --shadow:0 1px 3px rgba(31,48,42,.07);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131817; --side:#171d1b; --card:#1b2220; --text:#e7efec; --muted:#93a39e; --line:#2a3330;
+    --accent:#5fd3b3; --accent-text:#06281f; --soft:#1d3a33; --ok:#4ade80; --warn:#fbbf24; --bad:#f87171;
+    --warn-bg:#3a2e10; --ok-bg:#12331f; --bad-bg:#3b1a1a; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#131817; --side:#171d1b; --card:#1b2220; --text:#e7efec; --muted:#93a39e; --line:#2a3330;
+  --accent:#5fd3b3; --accent-text:#06281f; --soft:#1d3a33; --ok:#4ade80; --warn:#fbbf24; --bad:#f87171;
+  --warn-bg:#3a2e10; --ok-bg:#12331f; --bad-bg:#3b1a1a; --shadow:none;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}   /* sem isso, regras com display:grid/flex reexibem seções escondidas (abas) */
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45}
+/* Layout em tela cheia: barra lateral fixa + área principal que usa toda a largura */
+.app{display:grid;grid-template-columns:276px minmax(0,1fr);min-height:100vh}
+.side{position:sticky;top:0;height:100vh;overflow:auto;background:var(--side);border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:10px}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:800;font-size:1.05rem;padding:2px 4px}
+.navs{display:flex;flex-direction:column;gap:2px}
+.main{padding:20px 28px;min-width:0}
+h1{font-size:1.5rem;margin:0;font-weight:700}
+h2{font-size:1.05rem;margin:0 0 12px;font-weight:650}
+h3{font-size:.95rem;margin:0 0 8px}
+.tab{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;color:var(--text);padding:8px 10px;border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
+.tab:hover{background:var(--soft)}
+.tab.on{background:var(--soft);color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);margin-bottom:16px}
+.muted{color:var(--muted);font-size:.875rem}
+button{font:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:8px 14px;border-radius:8px;font-weight:600}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:4px 10px;font-size:.85rem}
+input,select{font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 9px;min-width:0}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.85rem;font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;background:var(--card);color:var(--text);padding:8px 14px;font-weight:600}
+.seg button.on{background:var(--accent);color:var(--accent-text)}
+.mrow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;margin-bottom:8px}
+.mrow label{font-size:.8rem;color:var(--muted);white-space:nowrap}
+.counter{padding:8px;border-radius:8px;text-align:center;font-size:.875rem;font-weight:600;margin:10px 0}
+.counter.ok{background:var(--ok-bg);color:var(--ok)}
+.counter.warn{background:var(--warn-bg);color:var(--warn)}
+.counter.bad{background:var(--bad-bg);color:var(--bad)}
+.layout{display:grid;grid-template-columns:1fr 330px;gap:16px;align-items:start}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .2s}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat b{display:block;font-size:1.25rem}
+.passo{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.passo:last-child{border-bottom:0}
+.passo.done .nome{text-decoration:line-through;color:var(--muted)}
+.passo input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
+.passo .nome{font-weight:600;display:flex;align-items:center;gap:8px}
+.passo .num{color:var(--muted);font-weight:500;font-size:.8rem;min-width:1.6em}
+.passo .sub{grid-column:2 / -1;display:flex;gap:8px}
+.passo .nota{flex:1;width:100%;font-size:.85rem;padding:5px 8px;border-style:dashed}
+.passo .dia{font-size:.8rem;padding:4px 6px;max-width:130px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:99px;padding:6px 12px;font-weight:600}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+.dia-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 4px 4px;border-bottom:2px solid var(--line)}
+.dia-h:first-of-type{padding-top:4px}
+.badge.hoje{background:var(--soft);color:var(--accent)}
+.badge.atraso{background:var(--bad-bg);color:var(--bad)}
+.aviso{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-weight:600;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.aviso[hidden]{display:none}
+.hojebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-weight:600}
+.passo .sub{flex-wrap:wrap}
+/* ----- Resumos ----- */
+.rs-layout{display:grid;grid-template-columns:270px 1fr;gap:16px;align-items:start}
+.rs-side{position:sticky;top:8px;max-height:calc(100vh - 24px);overflow:auto;margin-bottom:0;background:var(--side)}
+.rs-nav{display:flex;align-items:center;gap:8px;width:100%;border:0;background:transparent;color:var(--text);padding:7px 8px;border-radius:7px;font-weight:600;text-align:left}
+.rs-nav:hover{background:var(--soft)}
+.rs-nav.acc{color:var(--accent)}
+.pill{margin-left:auto;background:var(--card);border:1px solid var(--line);border-radius:99px;padding:0 8px;font-size:.78rem;color:var(--muted);font-weight:600}
+.sq{width:12px;height:12px;border-radius:4px;display:inline-block;flex:none}
+.crumb{font-size:.85rem;margin-bottom:6px}
+.rs-titulo{font-size:2rem;font-weight:800;border:0;background:transparent;width:100%;padding:4px 0;flex:1}
+.rs-titulo:focus{outline:none;border-bottom:2px solid var(--accent)}
+.box:has(#impTexto){max-width:640px}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:.875rem;margin:6px 0}
+#view-flashcards>.card{min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.rs-g{display:flex;align-items:center;gap:6px;margin:12px 0 4px;font-size:.8rem;font-weight:700;color:var(--muted)}
+.rs-g .plus{margin-left:auto;border:0;background:transparent;color:var(--muted);font-weight:700;padding:0 6px}
+.rs-gt{display:flex;align-items:center;gap:6px;flex:1;min-width:0;border:0;background:transparent;color:inherit;font:inherit;font-weight:700;text-align:left;padding:3px 0;border-radius:6px}
+.rs-gt:hover{color:var(--text)}
+.rs-gt .chev{width:12px;flex:none;font-size:.7rem}
+.rs-gt .gn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs-gt .gc{flex:none;font-weight:600;font-size:.72rem;background:var(--card);border:1px solid var(--line);border-radius:99px;padding:0 7px}
+.rs-tools{margin:8px 2px 0;font-size:.78rem;color:var(--muted)}
+.rs-link{border:0;background:transparent;color:var(--accent);font-size:.78rem;font-weight:600;padding:0}
+.rs-n{display:block;width:100%;text-align:left;border:0;background:transparent;color:var(--text);padding:6px 8px;border-radius:7px;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rs-n:hover{background:var(--soft)}
+.rs-n.on{background:var(--soft);color:var(--accent);font-weight:700}
+.rs-edit{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.rs-edit.m-editar,.rs-edit.m-ver{grid-template-columns:1fr}
+.rs-edit.m-editar .md,.rs-edit.m-ver textarea{display:none}
+textarea.rs{width:100%;min-height:62vh;font:14px/1.55 ui-monospace,Consolas,"Courier New",monospace;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--card);color:var(--text)}
+.md{border:1px solid var(--line);border-radius:10px;padding:4px 16px 12px;min-height:200px;overflow-wrap:anywhere}
+.md h1{font-size:1.5rem}.md h2{font-size:1.25rem}.md h3{font-size:1.1rem}
+.md h1,.md h2,.md h3,.md h4{margin:16px 0 6px}
+.md p{margin:8px 0}
+.md ul,.md ol{margin:4px 0;padding-left:22px}
+.md li{margin:2px 0}
+.md li.k{list-style:none;margin-left:-18px}
+.md summary{cursor:pointer}
+.md code{background:var(--soft);padding:1px 5px;border-radius:5px;font-size:.9em}
+.md pre{background:var(--soft);padding:10px 12px;border-radius:8px;overflow:auto}
+.md pre code{background:transparent;padding:0}
+.md blockquote{margin:8px 0;padding:2px 12px;border-left:3px solid var(--accent);color:var(--muted)}
+.md table{border-collapse:collapse;margin:8px 0}
+.md th,.md td{border:1px solid var(--line);padding:5px 10px}
+.md hr{border:0;border-top:1px solid var(--line)}
+.md a{color:var(--accent)}
+.md a.wiki{font-weight:600;text-decoration:none;border-bottom:1px dashed var(--accent)}
+.md a.wiki.novo{color:var(--warn);border-color:var(--warn)}
+.sug{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.sug[hidden]{display:none}
+@media (max-width:900px){
+  .rs-layout{grid-template-columns:1fr}
+  .rs-side{position:static;max-height:none}
+  .rs-edit{grid-template-columns:1fr}
+}
+.passo input.h{width:72px;text-align:right}
+.cap{font-size:.7rem;color:var(--muted);display:block;text-align:right}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.pomo{text-align:center}
+.pomo .tempo{font-size:3rem;font-weight:700;font-variant-numeric:tabular-nums;margin:6px 0}
+.pomo .fase{font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:.8rem}
+.mat{display:flex;align-items:center;gap:8px;font-size:.875rem;margin-bottom:8px}
+.mat .bar{flex:1;height:6px}
+.legend{display:flex;flex-direction:column;gap:4px;font-size:.875rem;flex:1;min-width:180px}
+.legend div{display:flex;align-items:center;gap:8px}
+.pie{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center}
+.hist{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.hist:last-child{border-bottom:0}
+.badge{font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:99px}
+.badge.ok{background:var(--ok-bg);color:var(--ok)}
+.badge.no{background:var(--warn-bg);color:var(--warn)}
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.backdrop[hidden]{display:none}
+.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow:auto}
+.box h3{font-size:1.1rem}
+.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
+.empty{text-align:center;padding:32px 8px}
+/* ----- barra lateral: seções, calendário, hoje, pomodoro ----- */
+details.lat{border-top:1px solid var(--line);padding-top:8px}
+details.lat>summary{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;font-weight:700;color:var(--muted);cursor:pointer;margin-bottom:8px}
+.cal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.cal-h button{border:0;background:transparent;color:var(--muted);padding:2px 10px;border-radius:6px;font-size:1.1rem;font-weight:700}
+.cal-h button:hover{background:var(--soft);color:var(--text)}
+.cal-h .mes{flex:1;font-size:.9rem;color:var(--text)}
+.cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal-g .dn{color:var(--muted);font-weight:700;font-size:.65rem;padding:2px 0}
+.cd{position:relative;aspect-ratio:1;border:0;background:transparent;color:var(--text);border-radius:8px;font-size:.78rem;padding:0}
+.cd:hover{background:var(--soft)}
+.cd.fora{color:var(--muted);opacity:.45}
+.cd.sem{background:var(--soft)}
+.cd.hoje{background:var(--accent);color:var(--accent-text);font-weight:700}
+.cd.fok{box-shadow:inset 0 -3px 0 var(--ok)}
+.cd.fno{box-shadow:inset 0 -3px 0 var(--warn)}
+.cd.nc{cursor:default}
+.cd.nc:hover{background:transparent}
+.cd .pt{position:absolute;bottom:3px;left:50%;margin-left:-2px;width:4px;height:4px;border-radius:50%;background:var(--accent)}
+.cd .pt.ok{background:var(--ok)}
+.cd.hoje .pt{background:var(--accent-text)}
+.cal-leg{margin:6px 0 0;font-size:.72rem}
+.lh{display:flex;align-items:center;gap:8px;font-size:.85rem;padding:3px 0;cursor:pointer}
+.lh .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lh.done .t{text-decoration:line-through;color:var(--muted)}
+.lh input{accent-color:var(--accent)}
+.side{overflow-x:hidden}
+.side .grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.side .grid2 label{min-width:0;font-size:.78rem}
+.side .grid2 input{width:100%;padding:5px 7px}
+.side .pomo .tempo{font-size:2.3rem;margin:2px 0}
+.side .pomo .row{justify-content:center}
+/* ----- montar: matérias e modelos ----- */
+.mrow2{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.mrow2 .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow2 label{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.mrow2 input[type=number]{width:72px}
+.mrow2 .prev{min-width:130px;text-align:right}
+.mdl{display:flex;align-items:center;gap:6px;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.mdl .t{flex:1;min-width:140px}
+.counter .btn{margin-left:8px}
+/* ----- desempenho: assuntos, questões, gráficos ----- */
+.bar.sm{height:5px;margin-top:5px}
+.kpis{grid-column:1 / -1;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .muted{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.kpi b{display:block;font-size:1.7rem;margin-top:2px}
+.d-topo{grid-column:1 / -1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.d-topo h2{margin:0;font-size:1.4rem}
+#view-desempenho.vis-semanas{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
+.ds-m{border-bottom:1px solid var(--line)}
+.ds-m:last-child{border-bottom:0}
+.ds-m>summary{display:flex;align-items:center;gap:10px;padding:10px 4px;cursor:pointer;font-weight:650}
+.ds-m>summary .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ds-m .resumo-m{font-size:.8rem;color:var(--muted);font-weight:500;white-space:nowrap}
+.as{display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,170px) auto auto;gap:10px;align-items:center;padding:6px 4px 6px 24px;font-size:.9rem}
+.as .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.as .acoes{display:flex;gap:4px}
+.as .st{font-size:.78rem;color:var(--muted)}
+.lv{font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.lv.na{background:var(--line);color:var(--muted)}
+.lv.fraco{background:var(--bad-bg);color:var(--bad)}
+.lv.medio{background:var(--warn-bg);color:var(--warn)}
+.lv.bom{background:var(--soft);color:var(--accent)}
+.lv.dom{background:var(--ok-bg);color:var(--ok)}
+.reg{display:flex;align-items:center;gap:8px;font-size:.85rem;padding:6px 0;border-bottom:1px solid var(--line)}
+.reg:last-child{border-bottom:0}
+.reg .t{flex:1;min-width:0}
+.rosca{display:flex;flex-direction:column;align-items:center;gap:10px}
+.rosca svg{max-width:240px;width:100%}
+.rosca-leg{display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center;font-size:.8rem}
+.rosca-leg span{display:inline-flex;align-items:center;gap:6px}
+#view-desempenho{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:0 16px;align-items:start}
+/* ----- semana: tira dos 7 dias ----- */
+.weekstrip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.wd{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow)}
+.wd:hover{background:var(--soft)}
+.wd .n{font-weight:700;font-size:.8rem;color:var(--muted)}
+.wd .dt{font-size:.75rem;color:var(--muted)}
+.wd b{font-size:1.1rem}
+.wd .bar{width:100%;height:6px;margin-top:4px}
+.wd.hoje{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.wd.hoje .n{color:var(--accent)}
+.wd.folga{opacity:.55}
+/* ----- aproveitar a largura nas outras abas ----- */
+#view-montar{display:grid;grid-template-columns:minmax(320px,440px) minmax(0,1fr);gap:0 16px;align-items:start}
+#view-montar>.m-materias{grid-column:2;grid-row:1 / span 3}
+@media (max-width:1100px){ .weekstrip{grid-template-columns:repeat(4,minmax(0,1fr))} }
+@media (max-width:900px){
+  .app{grid-template-columns:1fr}
+  .side{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+  .navs{flex-direction:row;flex-wrap:wrap}
+  .tab{width:auto;flex:1;justify-content:center;padding:8px 6px;font-size:.85rem}
+  .main{padding:16px}
+  #view-montar,#view-desempenho{display:block}
+  .as{grid-template-columns:minmax(0,1fr) auto}
+  .as .bar{grid-column:1 / -1}
+}
+@media (max-width:760px){
+  .weekstrip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mrow2{grid-template-columns:auto minmax(0,1fr) auto}
+  .mrow2 .prev{grid-column:2 / -1;text-align:left}
+  .layout{grid-template-columns:1fr}
+  .grid2{grid-template-columns:1fr}
+  .mrow{grid-template-columns:1fr 1fr}
+  .mrow select:first-child{grid-column:1 / -1}
+  .passo{grid-template-columns:auto 1fr auto}
+  .passo .feito-col{grid-column:2 / -1}
+}
+/* ----- barra lateral mais compacta ----- */
+.side{gap:6px;padding:10px}
+.navs{gap:0}
+.tab{padding:6px 10px}
+details.lat{padding-top:6px}
+details.lat>summary{margin-bottom:6px}
+.cd{aspect-ratio:auto;height:24px}
+.cal-leg{font-size:.65rem;margin-top:4px}
+.side .pomo .tempo{font-size:1.9rem}
+.side .pomo p{font-size:.78rem}
+#pomoSessoes{display:none}
+.side{gap:5px}
+.bk-status{margin-top:auto;width:100%;text-align:left;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:6px 10px;font-size:.8rem;font-weight:600}
+.bk-status:hover{background:var(--soft)}
+.bk-status.ok{color:var(--ok)}
+.bk-status.warn{color:var(--warn);background:var(--warn-bg);border-color:transparent}
+.bk-status.bad{color:var(--bad);background:var(--bad-bg);border-color:transparent}
+.pomo-top{display:flex;align-items:baseline;justify-content:center;gap:10px}
+.side .pomo .row{margin-top:2px}
+
+/* ----- TELA ÚNICA (computador): nada de rolar a página; só listas longas rolam dentro do próprio quadro ----- */
+@media (min-width:1100px) and (min-height:620px){
+  html,body{height:100%;overflow:hidden}
+  .app{height:100vh;min-height:0}
+  .side{height:100vh}
+  .main{height:100vh;overflow:hidden;display:flex;flex-direction:column;padding:14px 20px}
+  .main>main{flex:1;min-height:0}
+  .main>main>section{height:100%;min-height:0}
+  .card{margin-bottom:0}
+  .aviso{flex:none;margin-bottom:10px;padding:8px 12px}
+
+  /* Montar: 3 colunas */
+  #view-montar{grid-template-columns:minmax(220px,.85fr) minmax(250px,1fr) minmax(380px,1.7fr);grid-template-rows:auto minmax(0,1fr);gap:14px;align-items:stretch}
+  #view-montar>.card{min-height:0;overflow:auto}
+  #view-montar>.card:nth-child(1){grid-column:1;grid-row:1 / span 2}
+  #view-montar>.card:nth-child(2){grid-column:2;grid-row:1}
+  #view-montar>.card:nth-child(3){grid-column:2;grid-row:2}
+  #view-montar>.m-materias{grid-column:3;grid-row:1 / span 2;display:flex;flex-direction:column;overflow:hidden}
+  .m-materias .lista-m{flex:1;min-height:0;overflow:auto}
+  #view-montar .grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  #view-montar .grid2 input{width:100%}
+  #view-montar .f{min-width:0}
+
+  /* Semana */
+  #view-semana{display:flex;flex-direction:column;gap:10px}
+  #view-semana>.hojebar{margin:0}
+  #view-semana>.card:not(.empty){padding:10px 14px}
+  #view-semana .stats{gap:10px}
+  #view-semana .stat b{font-size:1.15rem}
+  .weekstrip{margin:0;gap:8px}
+  .wd{padding:6px 10px}
+  #view-semana>.layout{flex:1;min-height:0;grid-template-columns:minmax(0,1fr) 320px;align-items:stretch}
+  .col-l{display:flex;flex-direction:column;gap:10px;min-height:0}
+  .lista-card{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .lista-card .scroll{flex:1;min-height:0;overflow:auto}
+  .col-r{min-height:0;overflow:auto}
+  .col-r .card{margin-bottom:10px}
+  .passo{grid-template-columns:auto minmax(150px,1.1fr) 76px 76px minmax(120px,1fr) 116px auto;gap:8px;padding:6px 4px}
+  .passo .sub{display:contents}
+  .passo .dia{max-width:none}
+
+  /* Desempenho: 3 colunas, cada uma rola sozinha se precisar */
+  #view-desempenho{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);gap:0 14px}
+  #view-desempenho>div:not(.d-topo):not(.kpis){min-height:0;overflow:auto}
+  #view-desempenho>div>.card{margin-bottom:14px}
+  .d-topo{margin-bottom:10px}
+  .kpis{margin-bottom:12px;gap:10px}
+  .kpi{padding:8px 14px}
+  .kpi b{font-size:1.3rem}
+
+  /* Resumos: lista de notas + editor ocupam a altura toda */
+  #view-resumos .rs-layout{height:100%;align-items:stretch}
+  .rs-side{position:static;height:100%;max-height:none}
+  #rsMain{min-height:0;height:100%}
+  #rsMain>.card{height:100%;display:flex;flex-direction:column;min-height:0}
+  #rsMain>.card.empty{justify-content:center;align-items:center}
+  #view-flashcards>.card{height:100%}
+  .rs-edit{flex:1;min-height:0;margin-top:8px;grid-template-rows:minmax(0,1fr)}
+  .rs-edit>div:first-child{display:flex;flex-direction:column;min-height:0}
+  textarea.rs{flex:1;min-height:0;height:100%;resize:none}
+  .md{min-height:0;overflow:auto}
+
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="lateral">
+    <div class="brand"><span>📚 Ciclo de Estudos</span>
+      <button class="btn sm" id="btnTema" onclick="alternarTema()" title="Alternar tema" aria-label="Alternar tema">🌓</button></div>
+    <nav class="navs" id="tabs">
+      <button class="tab" data-tab="montar" onclick="showTab('montar')">🧩 Montar ciclo</button>
+      <button class="tab" data-tab="semana" onclick="showTab('semana')">📅 Semana</button>
+      <button class="tab" data-tab="desempenho" onclick="showTab('desempenho')">📈 Desempenho</button>
+      <button class="tab" data-tab="resumos" onclick="showTab('resumos')">📝 Resumos</button>
+      <button class="tab" data-tab="flashcards" onclick="showTab('flashcards')">🃏 Flashcards</button>
+    </nav>
+    <details class="lat" open><summary>Calendário</summary><div id="latCal"></div></details>
+    <details class="lat" open><summary>Hoje e semana</summary><div id="latHoje"></div></details>
+    <details class="lat" open><summary>Pomodoro</summary>
+      <div class="pomo">
+        <div class="pomo-top"><div class="fase" id="pomoFase"></div><div class="tempo" id="pomoTempo"></div></div>
+        <div class="row">
+          <button class="btn primary sm" id="pomoBtn" onclick="pomoToggle()"></button>
+          <button class="btn sm" id="pomoEncerrar" onclick="pomoEncerrar()">Encerrar</button>
+          <button class="btn sm" onclick="pomoReset()" title="Reiniciar">↺</button>
+        </div>
+        <p class="muted" id="pomoSessoes" style="margin:8px 0 0"></p>
+        <details style="margin-top:8px;text-align:left"><summary class="muted" style="cursor:pointer">Ajustar tempos (min)</summary>
+          <div class="grid2" style="margin-top:8px">
+            <label class="f">Foco<input type="number" min="1" id="pi-foco" onchange="setPomo('foco',this.value)"></label>
+            <label class="f">Pausa<input type="number" min="1" id="pi-pausa" onchange="setPomo('pausa',this.value)"></label>
+            <label class="f">Pausa longa<input type="number" min="1" id="pi-longa" onchange="setPomo('longa',this.value)"></label>
+            <label class="f">Longa a cada<input type="number" min="2" id="pi-ate" onchange="setPomo('ate',this.value)"></label>
+          </div>
+        </details>
+      </div>
+    </details>
+    <button class="bk-status" id="bkStatus" onclick="abrirBackup()" title="Backup e exportação dos dados"></button>
+  </aside>
+
+  <div class="main">
+    <div class="aviso" id="aviso" hidden></div>
+
+    <main>
+      <section id="view-montar"></section>
+      <section id="view-semana" hidden></section>
+      <section id="view-desempenho" hidden></section>
+      <section id="view-resumos" hidden></section>
+      <section id="view-flashcards" hidden></section>
+    </main>
+  </div>
+</div>
+
+<div class="backdrop" id="modal" hidden>
+  <div class="box" role="dialog" aria-modal="true">
+    <h3 id="mt"></h3>
+    <div id="mb"></div>
+    <div class="actions" id="ma"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONSTANTES E ESTADO
+// ============================================================
+const KEY = 'cicloEstudos.app.v1';
+const MATERIAS_PADRAO = [
+  'Língua Portuguesa','Direito Constitucional','Direito Administrativo','Direito Tributário',
+  'Contabilidade Geral','Estatística','Noções de Igualdade Racial','Informática',
+  'Gestão Organizacional','Raciocínio Lógico'
+];
+// cores por matéria: tons pastel, legíveis como preenchimento de gráfico
+const PALETA = ['#8fb0f2','#f08e7e','#7fcf8c','#c49af0','#f4cd5f','#5ec9c0','#f08fb8','#a8d65a','#f4a35f','#9aa4f2',
+  '#6fb7a0','#d9b27a','#b58ae0','#e87d7d','#6cb8e6','#8fcf6a','#e8946a','#e07ab0','#9aa8b5','#c4dc6a'];
+
+// ----- datas (sempre no fuso local do computador) -----
+const NOMES_DIA = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+const NOMES_DIA_LONGO = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+const parseISO = iso => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d); };
+const toISO = dt => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+const hoje = () => toISO(new Date());
+const addDias = (iso, n) => { const d = parseISO(iso); d.setDate(d.getDate() + n); return toISO(d); };
+const idxDia = iso => (parseISO(iso).getDay() + 6) % 7;      // 0 = segunda … 6 = domingo
+const segundaDe = iso => addDias(iso, -idxDia(iso));
+
+function defaults() {
+  return {
+    tema: 'auto',
+    config: { passos: 20, modo: 'Livre', custom: [], ocultas: [], duracao: 1,       // 'horas' e 'mats' são criados por migrarConfig()
+              dias: [true, true, true, true, true, true, false], porDia: null },
+    semana: null,
+    fechadas: [],
+    pomo: { foco: 25, pausa: 5, longa: 15, ate: 4 },
+    cores: {},
+    notas: [],       // [{ id, titulo, materia, texto (Markdown), criado, atualizado }]
+    modelos: [],     // montagens salvas para reaproveitar: [{ id, nome, criado, config:{ modo, horas, duracao, mats, dias, porDia } }]
+    assuntos: [],    // [{ id, materia, nome }]  (matéria aberta em assuntos)
+    questoes: [],    // registros de questões: [{ id, data (ISO), materia, assuntoId|null, feitas, acertos }]
+    sessoes: [],     // horas dos focos do Pomodoro: [{ id, data (ISO), materia, assuntoId|null, minutos, tipo }]
+    backup: { nomePasta: '', ultimoBackup: 0, arquivos: {}, hashes: {} }   // a pasta em si fica no IndexedDB
+  };
+}
+
+// matérias da lista padrão antiga (já removidas): se não estiverem em uso, são limpas dos dados salvos
+const MATERIAS_ANTIGAS = ['Administração Financeira e Orçamentária (AFO)', 'Administração Pública', 'Auditoria', 'Contabilidade Geral e Avançada',
+  'Contabilidade de Custos', 'Contabilidade Pública', 'Direito Civil', 'Direito Empresarial', 'Direito Penal', 'Economia', 'Finanças',
+  'Legislação Tributária', 'Matemática Financeira'];
+
+// garante que listas e objetos novos existam em dados salvos por versões anteriores
+function normalizarEstado(s) {
+  ['notas', 'assuntos', 'questoes', 'sessoes', 'fechadas', 'modelos'].forEach(k => { if (!Array.isArray(s[k])) s[k] = []; });
+  ['cores'].forEach(k => { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; });
+  migrarConfig(s.config);
+  s.modelos.forEach(m => { if (m && m.config && !Array.isArray(m.config.mats)) m.config.mats = []; });
+  // a lista padrão mudou: as matérias da lista antiga que não estão em uso de verdade (notas, assuntos, questões, horas,
+  // semana atual ou semanas fechadas) saem do ciclo, dos modelos e da lista de escolha
+  const real = new Set();
+  [...s.notas, ...s.assuntos, ...s.questoes, ...s.sessoes].forEach(x => real.add(x.materia));
+  if (s.semana) s.semana.passos.forEach(p => real.add(p.materia));
+  s.fechadas.forEach(r => Object.keys(r.porMateria || {}).forEach(k => real.add(k)));
+  const aposentadas = MATERIAS_ANTIGAS.filter(n => !real.has(n));
+  s.config.custom = s.config.custom.filter(n => !aposentadas.includes(n));
+  s.config.mats = s.config.mats.filter(m => !aposentadas.includes(m.nome));
+  s.modelos.forEach(m => { if (m.config) m.config.mats = (m.config.mats || []).filter(x => !aposentadas.includes(x.nome)); });
+  // e o que continua em uso e não está na lista vira matéria "própria" (a menos que você a tenha tirado da lista)
+  const conhecidas = new Set([...MATERIAS_PADRAO, ...s.config.custom, ...s.config.ocultas].map(x => x.toLowerCase()));
+  const usadas = [...real];
+  s.config.mats.forEach(m => usadas.push(m.nome));
+  s.modelos.forEach(m => ((m.config && m.config.mats) || []).forEach(x => usadas.push(x.nome)));
+  usadas.forEach(n => { if (n && !conhecidas.has(n.toLowerCase())) { s.config.custom.push(n); conhecidas.add(n.toLowerCase()); } });
+  return s;
+}
+// nº de passos = meta semanal (h) ÷ duração do passo (declaração de função: é usada antes do restante do script carregar)
+function passosDe(c) { return Math.max(1, Math.round(c.horas / c.duracao)); }
+// converte a configuração antiga (duas listas por modo + quantidade) para a lista única de matérias e a meta em horas
+function migrarConfig(c) {
+  if (!Array.isArray(c.mats)) {
+    const mapa = new Map(), L = (c.linhas && c.linhas.Livre) || [], R = (c.linhas && c.linhas.Recomendado) || [];
+    L.slice(0, (c.qtd && c.qtd.Livre) || L.length).forEach(l => { if (l && l.nome) mapa.set(l.nome, { nome: l.nome, rep: parseInt(l.peso) || 0, peso: 3 }); });
+    R.slice(0, (c.qtd && c.qtd.Recomendado) || R.length).forEach(l => {
+      if (!l || !l.nome) return;
+      const m = mapa.get(l.nome) || { nome: l.nome, rep: 0, peso: 3 };
+      m.peso = parseInt(l.peso) || 3; mapa.set(l.nome, m);
+    });
+    c.mats = [...mapa.values()];
+  }
+  delete c.linhas; delete c.qtd;
+  if (!(c.duracao > 0)) c.duracao = 1;
+  if (!(c.horas > 0)) c.horas = Math.round((c.passos || 20) * c.duracao * 100) / 100;
+  c.passos = passosDe(c);
+  c.mats.forEach(m => { m.rep = Math.min(Math.max(parseInt(m.rep) || 0, 0), c.passos); m.peso = Math.min(Math.max(parseInt(m.peso) || 3, 1), 5); });
+  if (!Array.isArray(c.custom)) c.custom = [];
+  if (!Array.isArray(c.ocultas)) c.ocultas = [];
+  return c;
+}
+
+function migrarModelosAntigos(s) {
+  // Traz os modelos salvos pelo gerador original, se existirem
+  const mapa = new Map();
+  ['Livre', 'Recomendado'].forEach(modo => {
+    try {
+      const m = JSON.parse(localStorage.getItem('cicloEstudosModeloV2_' + modo));
+      if (!m) return;
+      (m.materiasCustomizadas || []).forEach(n => { if (!s.config.custom.includes(n)) s.config.custom.push(n); });
+      (m.configuracaoMaterias || []).slice(0, parseInt(m.qtdMaterias) || 99).forEach(x => {
+        if (!x || !x.nome) return;
+        const e = mapa.get(x.nome) || { nome: x.nome, rep: 0, peso: 3 };
+        if (modo === 'Livre') e.rep = parseInt(x.peso) || 0; else e.peso = parseInt(x.peso) || 3;
+        mapa.set(x.nome, e);
+      });
+      s.config.passos = parseInt(m.horasTotais) || s.config.passos;
+      s.config.modo = m.modo || s.config.modo;
+    } catch (e) {}
+  });
+  s.config.mats = [...mapa.values()];
+}
+
+function carregar() {
+  const d = defaults();
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      const s = Object.assign(d, p);
+      s.config = Object.assign(defaults().config, p.config || {});
+      s.pomo = Object.assign(defaults().pomo, p.pomo || {});
+      s.backup = Object.assign(defaults().backup, p.backup || {});
+      normalizarEstado(s);
+      // semanas salvas antes do calendário: deriva a semana real (seg–dom) a partir da data de início
+      if (s.semana && !s.semana.seg) { s.semana.seg = segundaDe(s.semana.inicio || hoje()); s.semana.dom = addDias(s.semana.seg, 6); }
+      return s;
+    }
+  } catch (e) {}
+  migrarModelosAntigos(d);
+  return normalizarEstado(d);
+}
+
+let state = carregar();
+let storageOk = true;
+function persistir() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); storageOk = true; }
+  catch (e) { storageOk = false; }
+}
+function salvar() { persistir(); agendarBackup(); renderLateral(); }
+
+// ============================================================
+// UTILIDADES
+// ============================================================
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const round2 = x => Math.round(x * 100) / 100;
+const soma = (arr, f) => arr.reduce((a, x) => a + f(x), 0);
+const fmtData = iso => { const [, m, d] = String(iso).split('-'); return d + '/' + m; };
+function fmtH(h) {
+  const m = Math.round((h || 0) * 60);
+  if (m < 60) return m + 'min';
+  return Math.floor(m / 60) + 'h' + String(m % 60).padStart(2, '0');
+}
+function cor(nome) {
+  if (state.cores[nome] === undefined) {
+    const usados = Object.values(state.cores);
+    let i = 0; while (usados.includes(i % PALETA.length) && usados.length < PALETA.length) i++;
+    state.cores[nome] = i % PALETA.length;
+  }
+  return PALETA[state.cores[nome]];
+}
+const todasMaterias = () => [...MATERIAS_PADRAO, ...state.config.custom].filter(m => !state.config.ocultas.includes(m));
+
+// ============================================================
+// MODAL
+// ============================================================
+let modalBotoes = [];
+function modal(titulo, html, botoes) {
+  $('mt').textContent = titulo;
+  $('mb').innerHTML = html;
+  modalBotoes = botoes;
+  $('ma').innerHTML = botoes.map((b, i) => `<button class="btn ${b.c || ''}" onclick="modalBtn(${i})">${esc(b.t)}</button>`).join('');
+  $('modal').hidden = false;
+}
+function fecharModal() { $('modal').hidden = true; }
+function modalBtn(i) { const f = modalBotoes[i].f; fecharModal(); if (f) f(); }
+function alerta(titulo, msg) { modal(titulo, `<p>${esc(msg)}</p>`, [{ t: 'OK', c: 'primary' }]); }
+function confirmar(msg, fn, rotulo) {
+  modal('Confirmação', `<p>${esc(msg)}</p>`, [{ t: 'Cancelar' }, { t: rotulo || 'Sim', c: 'primary', f: fn }]);
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal(); });
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) fecharModal(); });
+
+// ============================================================
+// TEMA E ABAS
+// ============================================================
+function aplicarTema() {
+  const r = document.documentElement;
+  if (state.tema === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', state.tema);
+}
+function alternarTema() {
+  const escuroAgora = state.tema === 'dark' || (state.tema === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  state.tema = escuroAgora ? 'light' : 'dark';
+  aplicarTema(); salvar();
+}
+
+let abaAtual = 'montar';
+let dataRender = hoje();   // data usada no último desenho das telas (detecta a virada do dia)
+function showTab(nome) {
+  rsFlush();
+  abaAtual = nome;
+  atualizarAviso();
+  renderLateral();
+  ['montar', 'semana', 'desempenho', 'resumos', 'flashcards'].forEach(n => { $('view-' + n).hidden = n !== nome; });
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === nome));
+  if (nome === 'montar') renderMontar();
+  if (nome === 'semana') renderSemana();
+  if (nome === 'desempenho') renderDesempenho();
+  if (nome === 'resumos') renderResumos();
+  if (nome === 'flashcards') renderFlashcards();
+}
+
+// ============================================================
+// LÓGICA DO CICLO (reaproveitada do gerador original)
+// ============================================================
+function calcularDistribuicao(materias, totalPeso, horasTotais) {
+  if (totalPeso === 0 || horasTotais === 0) return [];
+  let dist = materias.map(m => {
+    const pct = m.peso / totalPeso;
+    const reais = horasTotais * pct;
+    const arred = Math.round(reais);
+    const final = arred > 0 ? arred : 1;
+    return { nome: m.nome, peso: m.peso, horas: final, erro: reais - final };
+  });
+  let diff = horasTotais - soma(dist, d => d.horas);
+  while (diff !== 0) {
+    if (diff > 0) {
+      dist.sort((a, b) => a.erro - b.erro);
+      dist[0].horas++; dist[0].erro -= 1; diff--;
+    } else {
+      dist.sort((a, b) => b.erro - a.erro);
+      const alvo = dist.find(d => d.horas > 1);
+      if (!alvo) break;
+      alvo.horas--; alvo.erro += 1; diff++;
+    }
+  }
+  return dist;
+}
+
+function gerarCicloEspacado(materias, totalSlots) {
+  const mats = materias.map(m => ({ nome: m.nome, restante: m.peso }));
+  const ciclo = [];
+  let ultimo = -1, primeira = '';
+  while (ciclo.length < totalSlots) {
+    let melhor = -1, maior = -Infinity;
+    const ultimoSlot = ciclo.length === totalSlots - 1;
+    for (let i = 0; i < mats.length; i++) {
+      const m = mats[i];
+      if (m.restante <= 0) continue;
+      let pr = m.restante * 1000 + (i === ultimo ? 0 : 1);
+      if (ultimoSlot && primeira && m.nome === primeira) pr -= 20000;
+      if (pr > maior) { maior = pr; melhor = i; }
+    }
+    if (melhor === -1) break;
+    if (ciclo.length === 0) primeira = mats[melhor].nome;
+    ciclo.push(mats[melhor].nome);
+    mats[melhor].restante--;
+    ultimo = melhor;
+  }
+  return ciclo;
+}
+
+// ============================================================
+// ABA: MONTAR CICLO
+// ============================================================
+// ----- tamanho do ciclo: meta semanal em horas ÷ duração do passo = nº de passos -----
+const snapshotConfig = () => { const c = state.config; return JSON.parse(JSON.stringify({ modo: c.modo, horas: c.horas, duracao: c.duracao, mats: c.mats, dias: c.dias, porDia: c.porDia })); };
+// carrega uma montagem salva (modelo ou semana anterior) no formulário, sem gerar a semana
+function aplicarSnapshot(m) {
+  const c = state.config;
+  Object.assign(c, JSON.parse(JSON.stringify(m)));
+  c.passos = passosDe(c);
+  const conhecidas = todasMaterias().map(x => x.toLowerCase());
+  c.mats.forEach(x => { if (!conhecidas.includes(x.nome.toLowerCase())) { if (!c.custom.includes(x.nome)) c.custom.push(x.nome); conhecidas.push(x.nome.toLowerCase()); } });
+}
+function somaLivre() { return soma(state.config.mats, m => m.rep); }
+
+function renderMontar() {
+  const c = state.config, livre = c.modo === 'Livre', passos = c.passos;
+  const livres = todasMaterias().filter(m => !c.mats.some(x => x.nome === m));
+  const ultima = [...state.fechadas].reverse().find(r => r.modelo);
+  const horasEf = round2(passos * c.duracao);
+
+  // quantos passos cada matéria vai ter (prévia)
+  const total = soma(c.mats, m => livre ? m.rep : m.peso);
+  const prev = {};
+  if (livre) c.mats.forEach(m => { prev[m.nome] = m.rep; });
+  else if (total && c.mats.length <= passos) calcularDistribuicao(c.mats.map(m => ({ nome: m.nome, peso: m.peso })), total, passos).forEach(d => { prev[d.nome] = d.horas; });
+
+  const rows = c.mats.map((m, i) => `<div class="mrow2">
+      <span class="dot" style="background:${cor(m.nome)}"></span>
+      <span class="nm" title="${esc(m.nome)}">${esc(m.nome)}</span>
+      ${livre ? `<label class="muted" title="Repetições no ciclo">Rep. <input type="number" min="0" max="${passos}" step="1" value="${m.rep}" onchange="cfgRep(${i},this.value)"></label>`
+              : `<label class="muted">Peso <select onchange="cfgPeso(${i},this.value)">${[1, 2, 3, 4, 5].map(p => `<option ${p === m.peso ? 'selected' : ''}>${p}</option>`).join('')}</select></label>`}
+      <span class="muted prev">${prev[m.nome] != null ? `≈ ${prev[m.nome]} passo(s) · ${fmtH(prev[m.nome] * c.duracao)}` : ''}</span>
+      <button class="btn sm" onclick="removerMat(${i})" aria-label="Tirar ${esc(m.nome)} do ciclo" title="Tirar do ciclo">✕</button>
+    </div>`).join('');
+
+  let contador = '', podeGerar = c.mats.length > 0;
+  if (livre && c.mats.length) {
+    const diff = passos - somaLivre();
+    podeGerar = diff === 0;
+    contador = diff === 0
+      ? `<div class="counter ok">Soma correta: ${passos} de ${passos} passos (${fmtH(horasEf)}).</div>`
+      : diff > 0 ? `<div class="counter warn">Faltam ${diff} passo(s) para completar o ciclo de ${passos}. <button class="btn sm" onclick="distribuirIgual()">Distribuir igualmente</button></div>`
+                 : `<div class="counter bad">Tire ${-diff} passo(s). O total do ciclo é ${passos}. <button class="btn sm" onclick="distribuirIgual()">Distribuir igualmente</button></div>`;
+  } else if (!livre && c.mats.length > passos) {
+    podeGerar = false;
+    contador = `<div class="counter bad">São ${c.mats.length} matérias para ${passos} passos. Aumente a meta de horas ou tire matérias.</div>`;
+  }
+
+  const modelosHtml = state.modelos.length ? state.modelos.map(m => `<div class="mdl">
+      <div class="t"><b>${esc(m.nome)}</b><div class="muted">${m.config.mats.length} matéria(s) · ${fmtH(passosDe(m.config) * m.config.duracao)} por semana · ${m.config.modo === 'Livre' ? 'Livre' : 'Ponderado'}</div></div>
+      <button class="btn sm primary" onclick="usarModelo('${m.id}')">Usar</button>
+      <button class="btn sm" onclick="atualizarModelo('${m.id}')" title="Substituir este modelo pela montagem atual">Atualizar</button>
+      <button class="btn sm" onclick="renomearModelo('${m.id}')" title="Renomear" aria-label="Renomear modelo">✎</button>
+      <button class="btn sm" onclick="excluirModelo('${m.id}')" title="Excluir" aria-label="Excluir modelo">🗑</button></div>`).join('')
+    : '<p class="muted" style="margin:10px 0 0">Nenhum modelo salvo ainda.</p>';
+
+  $('view-montar').innerHTML = `
+  <div class="card">
+    <h2>Modelos de ciclo</h2>
+    <p class="muted">Salve a montagem atual para reaproveitar nas próximas semanas. Ao usar um modelo, as matérias voltam preenchidas aqui e você ajusta (tira uma, muda as repetições) antes de gerar.</p>
+    <div class="row"><input id="mdNome" placeholder="Nome (ex.: Semana padrão 28h)" style="flex:1;min-width:150px" onkeydown="if(event.key==='Enter')salvarModelo()"><button class="btn primary" onclick="salvarModelo()">💾 Salvar como modelo</button></div>
+    ${ultima ? `<button class="btn" style="margin-top:8px" onclick="repetirUltima()">↻ Repetir o ciclo da última semana fechada (${fmtData(ultima.inicio)})</button>` : ''}
+    <div style="margin-top:6px">${modelosHtml}</div>
+  </div>
+
+  <div class="card">
+    <h2>Tamanho do ciclo</h2>
+    <div class="grid2">
+      <label class="f">Meta semanal (horas)
+        <input type="number" min="0.5" step="0.5" value="${c.horas}" onchange="cfgHoras(this.value)">
+      </label>
+      <label class="f">Duração de cada passo (horas)
+        <input type="number" min="0.25" step="0.25" value="${c.duracao}" onchange="cfgDuracao(this.value)">
+      </label>
+    </div>
+    <p class="muted" style="margin-top:8px">${fmtH(c.horas)} ÷ ${fmtH(c.duracao)} = <b>${passos} passos</b>${Math.abs(horasEf - c.horas) > 0.01 ? ` (arredondado: o ciclo terá ${fmtH(horasEf)})` : ''}. A duração de cada passo pode ser ajustada depois, na aba Semana.</p>
+    <div style="margin-top:8px"><div class="muted" style="margin-bottom:6px"><b>Tipo de montagem</b></div>
+      <div class="seg">
+        <button class="${livre ? 'on' : ''}" onclick="cfgModo('Livre')">Ciclo Livre</button>
+        <button class="${!livre ? 'on' : ''}" onclick="cfgModo('Recomendado')">Ciclo Ponderado</button>
+      </div>
+      <p class="muted" style="margin-top:6px">${livre ? 'Livre: você diz quantas vezes cada matéria aparece.' : 'Ponderado: você dá um peso de 1 a 5 e o app divide os passos proporcionalmente.'}</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Dias de estudo</h2>
+    <p class="muted">Hoje é <b>${NOMES_DIA_LONGO[idxDia(hoje())]}, ${fmtData(hoje())}</b>. A semana vai de segunda a domingo e os passos são distribuídos a partir de hoje, só nos dias marcados.</p>
+    <div class="chips" style="margin:10px 0">${NOMES_DIA.map((n, i) => `<button class="chip ${c.dias[i] ? 'on' : ''}" onclick="cfgDia(${i})" aria-pressed="${c.dias[i]}">${n}</button>`).join('')}</div>
+    <label class="f" style="max-width:260px">Passos por dia (vazio = automático)
+      <input type="number" min="1" step="1" value="${c.porDia || ''}" placeholder="automático" onchange="cfgPorDia(this.value)">
+    </label>
+    <p class="muted" style="margin-top:8px">${previaAgenda()}</p>
+  </div>
+
+  <div class="card m-materias">
+    <h2>Matérias do ciclo</h2>
+    <p class="muted">${livre ? `Defina quantas vezes cada matéria aparece. A soma deve ser ${passos} passos.` : `Dê um peso de 1 a 5; os ${passos} passos serão divididos proporcionalmente.`} Para incluir uma matéria, use o seletor abaixo da lista.</p>
+    ${contador}
+    <div class="lista-m">
+    ${rows || '<p class="muted">Nenhuma matéria no ciclo ainda. Use o seletor abaixo para adicionar.</p>'}
+    <select id="addMat" onchange="addMatSelect(this.value)" aria-label="Adicionar matéria" style="width:100%;margin-top:6px">
+      <option value="">＋ Adicionar matéria ao ciclo…</option>
+      ${livres.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('')}
+      <option value="__nova">✏️ Digitar uma matéria nova…</option>
+    </select>
+    <button class="btn sm" style="margin-top:8px" onclick="abrirGerenciarMaterias()">⚙ Gerenciar lista de matérias</button>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="btn primary" ${podeGerar ? '' : 'disabled'} onclick="gerar()">Gerar ciclo e abrir a semana</button>
+      <button class="btn danger" onclick="resetPadrao()">Voltar ao padrão</button>
+    </div>
+  </div>`;
+}
+
+// ----- modelos de ciclo -----
+function salvarModelo() {
+  const c = state.config;
+  if (!c.mats.length) { alerta('Modelo', 'Adicione ao menos uma matéria ao ciclo antes de salvar como modelo.'); return; }
+  const nome = $('mdNome').value.trim() || `Modelo ${state.modelos.length + 1}`;
+  const gravar = () => {
+    const ex = state.modelos.find(m => m.nome.toLowerCase() === nome.toLowerCase());
+    if (ex) { ex.config = snapshotConfig(); } else state.modelos.push({ id: novoId(), nome, criado: Date.now(), config: snapshotConfig() });
+    salvar(); renderMontar();
+  };
+  if (state.modelos.some(m => m.nome.toLowerCase() === nome.toLowerCase())) confirmar(`Já existe um modelo chamado "${nome}". Substituí-lo pela montagem atual?`, gravar, 'Substituir');
+  else gravar();
+}
+function usarModelo(id) {
+  const m = state.modelos.find(x => x.id === id);
+  const aplicar = () => { aplicarSnapshot(m.config); salvar(); renderMontar(); };
+  if (state.config.mats.length) confirmar(`Carregar o modelo "${m.nome}" substitui a montagem atual (matérias, meta e dias). Os modelos salvos não mudam. Continuar?`, aplicar, 'Carregar');
+  else aplicar();
+}
+function atualizarModelo(id) {
+  const m = state.modelos.find(x => x.id === id);
+  if (!state.config.mats.length) { alerta('Modelo', 'A montagem atual está vazia.'); return; }
+  confirmar(`Substituir o conteúdo do modelo "${m.nome}" pela montagem atual?`, () => { m.config = snapshotConfig(); salvar(); renderMontar(); }, 'Atualizar');
+}
+function renomearModelo(id) {
+  const m = state.modelos.find(x => x.id === id);
+  modal('Renomear modelo', `<label class="f">Nome<input id="mdNovoNome" value="${esc(m.nome)}"></label>`, [{ t: 'Cancelar' }, { t: 'Salvar', c: 'primary', f: () => {
+    const n = $('mdNovoNome').value.trim();
+    if (n) { m.nome = n; salvar(); renderMontar(); }
+  } }]);
+}
+function excluirModelo(id) {
+  const m = state.modelos.find(x => x.id === id);
+  confirmar(`Excluir o modelo "${m.nome}"? As semanas já geradas não mudam.`, () => { state.modelos = state.modelos.filter(x => x.id !== id); salvar(); renderMontar(); }, 'Excluir');
+}
+function repetirUltima() {
+  const r = [...state.fechadas].reverse().find(x => x.modelo);
+  if (r) repetirDoHistorico(r.id);
+}
+function repetirDoHistorico(id) {
+  const r = state.fechadas.find(x => x.id === id);
+  if (!r || !r.modelo) return;
+  const aplicar = () => { aplicarSnapshot(r.modelo); salvar(); showTab('montar'); };
+  if (state.config.mats.length && abaAtual === 'montar') confirmar('Carregar o ciclo dessa semana substitui a montagem atual. Continuar?', aplicar, 'Carregar');
+  else aplicar();
+}
+
+function cfgHoras(v) {
+  const n = parseFloat(v), c = state.config;
+  if (n > 0) c.horas = n;
+  sincronizarPassos(); salvar(); renderMontar();
+}
+function cfgDuracao(v) {
+  const n = parseFloat(v), c = state.config;
+  c.duracao = n > 0 ? n : 1;
+  sincronizarPassos(); salvar(); renderMontar();
+}
+// recalcula o nº de passos e mantém as repetições dentro do limite
+function sincronizarPassos() {
+  const c = state.config;
+  c.passos = passosDe(c);
+  c.mats.forEach(m => { if (m.rep > c.passos) m.rep = c.passos; });
+}
+function cfgDia(i) {
+  const c = state.config;
+  if (c.dias[i] && c.dias.filter(Boolean).length === 1) { alerta('Aviso', 'Mantenha ao menos um dia de estudo marcado.'); return; }
+  c.dias[i] = !c.dias[i]; salvar(); renderMontar();
+}
+function cfgPorDia(v) { const n = parseInt(v); state.config.porDia = n > 0 ? n : null; salvar(); renderMontar(); }
+
+// ----- calendário: semana real (seg–dom) e distribuição dos passos pelos dias -----
+// Semana alvo: a atual, se ainda houver dia de estudo de hoje em diante; senão a próxima.
+function semanaAlvo() {
+  let seg = segundaDe(hoje());
+  if (!diasDisponiveis(seg).length) seg = addDias(seg, 7);
+  return seg;
+}
+function diasDisponiveis(seg) {
+  const out = [], h = hoje();
+  for (let i = 0; i < 7; i++) { const d = addDias(seg, i); if (state.config.dias[i] && d >= h) out.push(d); }
+  return out;
+}
+function porDiaEf(n, nDias) { return state.config.porDia > 0 ? state.config.porDia : Math.max(1, Math.ceil(n / Math.max(1, nDias))); }
+// Atribui .dia aos passos informados, em ordem, a partir de hoje; o que não couber fica sem dia (null)
+function agendar(passos, seg) {
+  const dias = diasDisponiveis(seg), cap = porDiaEf(passos.length, dias.length);
+  passos.forEach((p, i) => { p.dia = dias[Math.floor(i / cap)] || null; });
+}
+function previaAgenda() {
+  const seg = semanaAlvo(), dias = diasDisponiveis(seg), n = state.config.passos;
+  const cap = porDiaEf(n, dias.length), cabem = cap * dias.length;
+  let t = `Semana ${fmtData(seg)} → ${fmtData(addDias(seg, 6))}${seg > segundaDe(hoje()) ? ' (próxima, pois não há mais dia de estudo nesta)' : ''} · ${dias.length} dia(s) de estudo disponíveis · ${cap} passo(s) por dia.`;
+  if (cabem < n) t += ` ⚠️ Só cabem ${cabem} dos ${n} passos; ${n - cabem} ficarão sem dia.`;
+  return t;
+}
+
+function cfgModo(m) { state.config.modo = m; salvar(); renderMontar(); }
+function cfgRep(i, v) { const c = state.config, n = parseInt(v); c.mats[i].rep = n >= 0 ? Math.min(n, c.passos) : 0; salvar(); renderMontar(); }
+function cfgPeso(i, v) { state.config.mats[i].peso = parseInt(v) || 3; salvar(); renderMontar(); }
+function removerMat(i) { state.config.mats.splice(i, 1); salvar(); renderMontar(); }
+function distribuirIgual() {
+  const c = state.config, n = c.mats.length;
+  if (!n) return;
+  const base = Math.floor(c.passos / n), extra = c.passos % n;
+  c.mats.forEach((m, i) => { m.rep = base + (i < extra ? 1 : 0); });
+  salvar(); renderMontar();
+}
+// um seletor para tudo: escolhe uma matéria da lista ou digita uma nova
+function addMatSelect(v) {
+  if (!v) return;
+  if (v === '__nova') { abrirNovaMateria(); $('addMat').value = ''; return; }
+  const c = state.config;
+  if (!c.mats.some(x => x.nome === v)) c.mats.push({ nome: v, rep: 1, peso: 3 });
+  salvar(); renderMontar();
+}
+// tirar (ou trazer de volta) matérias da lista de escolha, sem apagar notas, questões ou semanas que usam o nome
+function abrirGerenciarMaterias() {
+  const c = state.config, lista = todasMaterias();
+  modal('Lista de matérias', `<p class="muted">São estas as matérias que aparecem para escolher no app. Tirar uma matéria da lista a remove também do ciclo que está sendo montado, mas não apaga notas, questões ou semanas que já usam o nome dela.</p>
+    <div>${lista.map(m => `<div class="reg"><span class="dot" style="background:${cor(m)}"></span><span class="t">${esc(m)}</span><button class="btn sm danger" data-m="${esc(m)}" onclick="tirarMateria(this.dataset.m)">Tirar da lista</button></div>`).join('') || '<p class="muted">A lista está vazia.</p>'}</div>
+    ${c.ocultas.length ? `<h3 style="margin-top:14px">Tiradas da lista</h3>${c.ocultas.map(m => `<div class="reg"><span class="t">${esc(m)}</span><button class="btn sm" data-m="${esc(m)}" onclick="trazerMateria(this.dataset.m)">Trazer de volta</button></div>`).join('')}` : ''}
+    <p class="muted" style="margin-top:10px">Para incluir uma matéria nova, use "Digitar uma matéria nova…" no seletor.</p>`,
+    [{ t: 'Fechar', c: 'primary' }]);
+}
+function tirarMateria(nome) {
+  const c = state.config;
+  if (!c.ocultas.includes(nome)) c.ocultas.push(nome);
+  c.mats = c.mats.filter(m => m.nome !== nome);
+  salvar(); renderMontar(); abrirGerenciarMaterias();
+}
+function trazerMateria(nome) {
+  const c = state.config;
+  c.ocultas = c.ocultas.filter(m => m !== nome);
+  salvar(); renderMontar(); abrirGerenciarMaterias();
+}
+function abrirNovaMateria() {
+  modal('Nova matéria', `<label class="f">Nome (várias, separadas por vírgula)<input id="novaMat" placeholder="Ex.: Legislação Específica, Inglês"></label>
+    <p class="muted" style="margin-top:8px">A matéria nova fica na lista para usar nas próximas semanas e já entra neste ciclo.</p>`,
+    [{ t: 'Cancelar' }, { t: 'Adicionar', c: 'primary', f: () => {
+      const c = state.config, nomes = $('novaMat').value.split(',').map(s => s.trim()).filter(Boolean);
+      if (!nomes.length) return;
+      nomes.forEach(n => {
+        const ex = todasMaterias().find(m => m.toLowerCase() === n.toLowerCase()), nome = ex || n;
+        if (!ex) c.custom.push(n);
+        if (!c.mats.some(x => x.nome === nome)) c.mats.push({ nome, rep: 1, peso: 3 });
+      });
+      salvar(); renderMontar();
+    } }]);
+  setTimeout(() => { const i = $('novaMat'); if (i) i.focus(); }, 0);
+}
+
+function resetPadrao() {
+  confirmar('Voltar ao padrão apaga as matérias adicionadas e a configuração atual do ciclo. A semana em andamento e o histórico não são afetados. Continuar?', () => {
+    state.config = migrarConfig(defaults().config); salvar(); renderMontar();
+  });
+}
+
+function temProgresso() {
+  const s = state.semana;
+  return !!s && s.passos.some(p => p.feito || p.horasFeitas > 0);
+}
+
+function gerar() {
+  const c = state.config, livre = c.modo === 'Livre';
+  if (!c.mats.length) { alerta('Erro de configuração', 'Adicione ao menos uma matéria ao ciclo.'); return; }
+  const mats = c.mats.map(m => ({ nome: m.nome, peso: livre ? m.rep : m.peso })).filter(m => m.peso > 0);
+  const total = soma(mats, m => m.peso);
+  if (!total) { alerta('Erro de configuração', livre ? 'Defina as repetições de ao menos uma matéria.' : 'Defina o peso de ao menos uma matéria.'); return; }
+  if (livre && total !== c.passos) { alerta('Erro de soma', `A soma das repetições (${total}) deve ser igual a ${c.passos} passos.`); return; }
+  if (!livre && mats.length > c.passos) { alerta('Erro de configuração', `São ${mats.length} matérias para ${c.passos} passos. Aumente a meta de horas ou tire matérias.`); return; }
+
+  const construir = () => {
+    const lista = livre
+      ? gerarCicloEspacado(mats, total)
+      : gerarCicloEspacado(calcularDistribuicao(mats, total, c.passos).map(d => ({ nome: d.nome, peso: d.horas })), c.passos);
+    const seg = semanaAlvo();
+    state.semana = {
+      id: Date.now(), inicio: hoje(), seg, dom: addDias(seg, 6), meta: null, pomodoros: 0,
+      modelo: snapshotConfig(),      // guarda a montagem usada, para "repetir este ciclo" depois
+      passos: lista.map((nome, i) => ({ id: i + 1, materia: nome, dia: null, horasPlanejadas: c.duracao, horasFeitas: 0, feito: false, nota: '' }))
+    };
+    lista.forEach(cor);
+    agendar(state.semana.passos, seg);
+    const semDia = state.semana.passos.filter(p => !p.dia).length;
+    salvar(); showTab('semana');
+    if (semDia) alerta('Passos sem dia', `${semDia} passo(s) não couberam nos dias de estudo restantes da semana e ficaram em "Sem dia". Aumente os "passos por dia", marque mais dias ou mova-os manualmente.`);
+  };
+  if (temProgresso()) confirmar('Já existe uma semana com marcações. Gerar um novo ciclo substitui a semana atual sem salvar estatísticas. Continuar?', construir);
+  else if (state.semana) confirmar('Gerar um novo ciclo substitui a semana atual. Continuar?', construir);
+  else construir();
+}
+
+// ============================================================
+// ABA: SEMANA
+// ============================================================
+const metaEf = s => s.meta != null ? s.meta : round2(soma(s.passos, p => p.horasPlanejadas));
+const horasFeitas = s => round2(soma(s.passos, p => p.horasFeitas));
+
+function renderSemana() {
+  const s = state.semana, v = $('view-semana');
+  if (!s) {
+    v.innerHTML = `<div class="card empty"><h2>Nenhuma semana em andamento</h2>
+      <p class="muted">Monte um ciclo para começar a acompanhar a semana.</p>
+      <button class="btn primary" onclick="showTab('montar')">Montar ciclo</button></div>`;
+    return;
+  }
+  const n = s.passos.length, feitos = s.passos.filter(p => p.feito).length;
+  const horas = horasFeitas(s), meta = metaEf(s), falta = Math.max(0, round2(meta - horas));
+  const pctP = n ? Math.round(feitos / n * 100) : 0;
+  const pctH = meta ? Math.min(100, Math.round(horas / meta * 100)) : 0;
+
+  const h0 = hoje();
+  dataRender = h0;
+  const optDia = p => `<option value="">Sem dia</option>` + Array.from({ length: 7 }, (_, i) => {
+    const d = addDias(s.seg, i);
+    return `<option value="${d}" ${p.dia === d ? 'selected' : ''}>${NOMES_DIA[i]} ${fmtData(d)}</option>`;
+  }).join('');
+  const linhaPasso = p => `
+    <div class="passo ${p.feito ? 'done' : ''}">
+      <input type="checkbox" ${p.feito ? 'checked' : ''} onchange="togglePasso(${p.id},this.checked)" aria-label="Concluir passo ${p.id}">
+      <div style="min-width:0"><div class="nome"><span class="num">${p.id}.</span><span class="dot" style="background:${cor(p.materia)}"></span>${esc(p.materia)}</div>
+        <div class="bar sm"><i style="width:${p.horasPlanejadas ? Math.min(100, Math.round(p.horasFeitas / p.horasPlanejadas * 100)) : 0}%;background:${cor(p.materia)}"></i></div></div>
+      <div><span class="cap">planejado (h)</span><input class="h" type="number" min="0.25" step="0.25" value="${p.horasPlanejadas}" onchange="setPlan(${p.id},this.value)"></div>
+      <div class="feito-col"><span class="cap">feito (h)</span><input class="h" type="number" min="0" step="0.25" value="${p.horasFeitas}" onchange="setFeito(${p.id},this.value)"></div>
+      <div class="sub">
+        <input class="nota" placeholder="Anotação: tópico, questões, acertos…" value="${esc(p.nota)}" onchange="setNota(${p.id},this.value)">
+        <select class="dia" onchange="setDia(${p.id},this.value)" aria-label="Dia do passo ${p.id}">${optDia(p)}</select>
+        <button class="btn sm" onclick="abrirResumoMateria(${p.id})" title="Abrir ou criar o resumo desta matéria">📝 Resumo</button>
+      </div>
+    </div>`;
+  const grupo = (titulo, itens, dia) => {
+    const fe = itens.filter(p => p.feito).length, pend = itens.length - fe;
+    const hp = soma(itens, p => p.horasPlanejadas), hf = soma(itens, p => p.horasFeitas);
+    const badges = (dia === h0 ? '<span class="badge hoje">HOJE</span>' : '') +
+      (dia && dia < h0 && pend > 0 ? `<span class="badge atraso">${pend} atrasado(s)</span>` : '');
+    return `<div class="dia-h" ${dia ? `id="dia-${dia}"` : ''}><b>${titulo}</b>${badges}<span class="muted">${fe}/${itens.length} passos · ${fmtH(hf)}/${fmtH(hp)}</span></div>${itens.map(linhaPasso).join('')}`;
+  };
+  const semDiaItens = s.passos.filter(p => !p.dia || p.dia < s.seg || p.dia > s.dom);
+  const grupos = [];
+  for (let i = 0; i < 7; i++) {
+    const d = addDias(s.seg, i), itens = s.passos.filter(p => p.dia === d);
+    if (itens.length) grupos.push(grupo(`${NOMES_DIA_LONGO[i]} ${fmtData(d)}`, itens, d));
+  }
+  if (semDiaItens.length) grupos.push(grupo(grupos.length ? 'Sem dia' : 'Passos', semDiaItens, null));
+  const linhas = grupos.join('');
+  const passosHoje = s.passos.filter(p => p.dia === h0);
+  const hojeFeitos = passosHoje.filter(p => p.feito).length;
+  const fora = h0 > s.dom ? ' · ⚠️ semana encerrada' : h0 < s.seg ? ' · semana futura' : '';
+
+  const ordem = [...new Set(s.passos.map(p => p.materia))];
+  const porMat = ordem.map(m => {
+    const pl = soma(s.passos.filter(p => p.materia === m), p => p.horasPlanejadas);
+    const fe = soma(s.passos.filter(p => p.materia === m), p => p.horasFeitas);
+    const w = pl ? Math.min(100, fe / pl * 100) : 0;
+    return `<div class="mat"><span class="dot" style="background:${cor(m)}"></span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(m)}">${esc(m)}</span>
+      <span class="muted">${fmtH(fe)}/${fmtH(pl)}</span></div>
+      <div class="bar" style="margin:-4px 0 10px"><i style="width:${w}%;background:${cor(m)}"></i></div>`;
+  }).join('');
+
+  const tira = Array.from({ length: 7 }, (_, i) => {
+    const d = addDias(s.seg, i), it = s.passos.filter(p => p.dia === d), fe = it.filter(p => p.feito).length;
+    const folga = !state.config.dias[i] && !it.length, w = it.length ? Math.round(fe / it.length * 100) : 0;
+    return `<button class="wd ${d === h0 ? 'hoje' : ''} ${folga ? 'folga' : ''}" onclick="irParaDia('${d}')" title="Ir para ${NOMES_DIA_LONGO[i]}">
+      <span class="n">${NOMES_DIA[i]}</span><span class="dt">${fmtData(d)}</span><b>${it.length ? fe + '/' + it.length : folga ? 'folga' : '—'}</b><div class="bar"><i style="width:${w}%"></i></div></button>`;
+  }).join('');
+  v.innerHTML = `
+  <div class="hojebar">📅 Hoje: ${NOMES_DIA_LONGO[idxDia(h0)]}, ${fmtData(h0)}<span class="muted">· Semana ${fmtData(s.seg)} → ${fmtData(s.dom)}${fora}</span></div>
+  <div class="card">
+    <div class="stats">
+      <div class="stat"><span class="muted">Hoje</span><b>${passosHoje.length ? hojeFeitos + '/' + passosHoje.length : '—'}</b><span class="muted">${passosHoje.length ? 'passos do dia' : 'sem passos hoje'}</span></div>
+      <div class="stat"><span class="muted">Passos</span><b>${feitos}/${n}</b><div class="bar"><i style="width:${pctP}%"></i></div></div>
+      <div class="stat"><span class="muted">Horas estudadas</span><b>${fmtH(horas)}</b><div class="bar"><i style="width:${pctH}%"></i></div></div>
+      <div class="stat"><span class="muted">Meta da semana (h)</span>
+        <input type="number" min="0" step="0.5" value="${meta}" style="width:100px" onchange="setMeta(this.value)"></div>
+      <div class="stat"><span class="muted">Faltam</span><b>${fmtH(falta)}</b></div>
+    </div>
+  </div>
+  <div class="weekstrip">${tira}</div>
+  <div class="layout">
+    <div class="col-l">
+      <div class="card lista-card">
+        <div class="row" style="justify-content:space-between;margin-bottom:8px">
+          <h2 style="margin:0">Ciclo da semana <span class="muted">· início ${fmtData(s.inicio)}</span></h2>
+          <span class="row"><button class="btn sm" onclick="copiarCiclo()">📋 Copiar lista</button><span id="okCopia" class="muted" hidden>Copiado!</span></span>
+        </div>
+        <div class="scroll">${linhas}</div>
+      </div>
+      <div class="row acoes">
+        <button class="btn primary" onclick="fecharSemana()">✅ Fechar semana</button>
+        <button class="btn" onclick="reagendar()">📅 Reagendar pendentes a partir de hoje</button>
+        <button class="btn danger" onclick="limparSemana()">Limpar marcações sem salvar</button>
+      </div>
+    </div>
+    <div class="col-r">
+      <div class="card"><h2>Ciclo</h2>${roscaCiclo(s)}</div>
+      <div class="card"><h2>Por matéria</h2>${porMat}</div>
+    </div>
+  </div>`;
+}
+
+const achar = id => state.semana.passos.find(p => p.id === id);
+function togglePasso(id, v) {
+  const p = achar(id); p.feito = v;
+  if (v && p.horasFeitas === 0) p.horasFeitas = p.horasPlanejadas;
+  salvar(); renderSemana();
+}
+function setPlan(id, v) { const n = parseFloat(v); achar(id).horasPlanejadas = n > 0 ? n : 1; salvar(); renderSemana(); }
+function setFeito(id, v) { const n = parseFloat(v); achar(id).horasFeitas = n > 0 ? n : 0; salvar(); renderSemana(); }
+function setNota(id, v) { achar(id).nota = v; salvar(); }
+function setDia(id, v) { achar(id).dia = v || null; salvar(); renderSemana(); }
+function reagendar() {
+  confirmar('Os passos ainda não concluídos serão redistribuídos a partir de hoje, nos seus dias de estudo, e os dias que você ajustou à mão nesses passos serão sobrescritos. Continuar?', () => {
+    const s = state.semana, pend = s.passos.filter(p => !p.feito);
+    agendar(pend, s.seg);
+    const semDia = pend.filter(p => !p.dia).length;
+    salvar(); renderSemana();
+    if (semDia) alerta('Passos sem dia', `${semDia} passo(s) não couberam nos dias restantes desta semana e ficaram em "Sem dia".`);
+  }, 'Reagendar');
+}
+function setMeta(v) { const n = parseFloat(v); state.semana.meta = n >= 0 ? n : null; salvar(); renderSemana(); }
+
+function copiarCiclo() {
+  const txt = state.semana.passos.map((p, i) => `${i + 1}. ${p.materia}`).join('\n');
+  const ok = () => { const e = $('okCopia'); if (e) { e.hidden = false; setTimeout(() => e.hidden = true, 1800); } };
+  const fallback = () => {
+    const t = document.createElement('textarea'); t.value = txt; document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); ok(); } catch (e) {} document.body.removeChild(t);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, fallback); else fallback();
+}
+
+function limparMarcacoes() {
+  state.semana.passos.forEach(p => { p.feito = false; p.horasFeitas = 0; p.nota = ''; });
+  state.semana.pomodoros = 0;
+  // nova rodada: semana real da data de hoje, com os passos redistribuídos a partir de hoje
+  const seg = semanaAlvo();
+  Object.assign(state.semana, { id: Date.now(), inicio: hoje(), seg, dom: addDias(seg, 6) });
+  agendar(state.semana.passos, seg);
+}
+function limparSemana() {
+  confirmar('Isso zera as marcações, horas e anotações da semana SEM salvar estatísticas. Para guardar o resultado, use "Fechar semana". Continuar?', () => {
+    limparMarcacoes(); salvar(); renderSemana();
+  }, 'Limpar');
+}
+
+// ----- resumo / fechamento -----
+function resumo(s) {
+  const n = s.passos.length, feitos = s.passos.filter(p => p.feito).length;
+  const horas = horasFeitas(s), meta = metaEf(s);
+  const porMateria = {};
+  s.passos.forEach(p => { if (p.horasFeitas > 0) porMateria[p.materia] = round2((porMateria[p.materia] || 0) + p.horasFeitas); });
+  return {
+    id: Date.now(), inicio: s.seg || s.inicio, fim: s.dom || hoje(),
+    cicloFechado: n > 0 && feitos === n, passosFeitos: feitos, passosTotal: n,
+    pctConcluido: n ? Math.round(feitos / n * 100) : 0,
+    horasEstudadas: horas, metaHoras: meta, horasFaltando: Math.max(0, round2(meta - horas)),
+    porMateria, pomodoros: s.pomodoros || 0, modelo: s.modelo || null
+  };
+}
+
+function pieSVG(porMateria) {
+  const dados = Object.entries(porMateria).map(([nome, valor]) => ({ nome, valor })).filter(d => d.valor > 0).sort((a, b) => b.valor - a.valor);
+  const total = soma(dados, d => d.valor);
+  if (!total) return '<p class="muted" style="text-align:center">Nenhuma hora registrada nesta semana.</p>';
+  const R = 80, C = 90;
+  let fatias = '', a0 = -Math.PI / 2;
+  if (dados.length === 1) {
+    fatias = `<circle cx="${C}" cy="${C}" r="${R}" fill="${cor(dados[0].nome)}"/>`;
+  } else {
+    dados.forEach(d => {
+      const ang = d.valor / total * Math.PI * 2, a1 = a0 + ang;
+      const x0 = C + R * Math.cos(a0), y0 = C + R * Math.sin(a0), x1 = C + R * Math.cos(a1), y1 = C + R * Math.sin(a1);
+      fatias += `<path d="M${C} ${C} L${x0.toFixed(2)} ${y0.toFixed(2)} A${R} ${R} 0 ${ang > Math.PI ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z" fill="${cor(d.nome)}" stroke="var(--card)" stroke-width="2"><title>${esc(d.nome)}: ${fmtH(d.valor)}</title></path>`;
+      a0 = a1;
+    });
+  }
+  const leg = dados.map(d => `<div><span class="dot" style="background:${cor(d.nome)}"></span><span style="flex:1">${esc(d.nome)}</span><b>${fmtH(d.valor)}</b><span class="muted">${Math.round(d.valor / total * 100)}%</span></div>`).join('');
+  return `<div class="pie"><svg viewBox="0 0 180 180" width="180" height="180" role="img" aria-label="Horas por matéria">${fatias}</svg><div class="legend">${leg}</div></div>`;
+}
+
+function resumoHTML(r) {
+  return `<div class="stats" style="margin-bottom:14px">
+    <div class="stat"><span class="muted">Ciclo</span><b>${r.cicloFechado ? '✅ Fechado' : '⏳ Incompleto'}</b></div>
+    <div class="stat"><span class="muted">Concluído</span><b>${r.pctConcluido}%</b><span class="muted">${r.passosFeitos}/${r.passosTotal} passos</span></div>
+    <div class="stat"><span class="muted">Estudado</span><b>${fmtH(r.horasEstudadas)}</b><span class="muted">meta ${fmtH(r.metaHoras)}</span></div>
+    <div class="stat"><span class="muted">Faltaram</span><b>${fmtH(r.horasFaltando)}</b>${r.pomodoros ? `<span class="muted">🍅 ${r.pomodoros} pomodoro(s)</span>` : ''}</div>
+  </div>${pieSVG(r.porMateria)}`;
+}
+
+function fecharSemana() {
+  const s = state.semana, r = resumo(s);
+  const encerrar = (novoCiclo) => {
+    state.fechadas.push(r);
+    if (novoCiclo) { if (s.modelo) aplicarSnapshot(s.modelo); state.semana = null; salvar(); showTab('montar'); }
+    else { limparMarcacoes(); salvar(); showTab('semana'); }
+  };
+  modal('Fechar semana', resumoHTML(r), [
+    { t: 'Cancelar' },
+    { t: 'Salvar e montar a próxima semana', f: () => encerrar(true) },
+    { t: 'Salvar e limpar marcações', c: 'primary', f: () => encerrar(false) }
+  ]);
+}
+
+// ============================================================
+// POMODORO
+// ============================================================
+const P = { fase: 'foco', rodando: false, fim: 0, resta: state.pomo.foco * 60, sessoes: 0, tick: null };
+const pomoDur = f => (f === 'foco' ? state.pomo.foco : f === 'pausa' ? state.pomo.pausa : state.pomo.longa) * 60;
+const NOMES_FASE = { foco: '🍅 Foco', pausa: '☕ Pausa', longa: '🌴 Pausa longa' };
+
+function setPomo(k, v) {
+  const n = parseInt(v); if (!(n > 0)) return;
+  state.pomo[k] = n; salvar();
+  if (!P.rodando) { P.resta = pomoDur(P.fase); updatePomoUI(); }
+}
+function fmtMMSS(sec) { return String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0'); }
+function updatePomoUI() {
+  if (!$('pomoTempo')) return;
+  $('pomoFase').textContent = NOMES_FASE[P.fase];
+  $('pomoTempo').textContent = fmtMMSS(P.resta);
+  $('pomoBtn').textContent = P.rodando ? '⏸ Pausar' : '▶ Iniciar';
+  $('pomoEncerrar').hidden = P.fase !== 'foco';
+  $('pomoSessoes').textContent = `Focos concluídos nesta sessão: ${P.sessoes}`;
+}
+function atualizarTitulo() {
+  document.title = P.rodando ? `(${fmtMMSS(P.resta)}) ${NOMES_FASE[P.fase]}` : 'Ciclo de Estudos';
+}
+function pomoToggle() {
+  if (P.rodando) {
+    clearInterval(P.tick); P.resta = Math.max(0, Math.round((P.fim - Date.now()) / 1000)); P.rodando = false;
+  } else {
+    P.fim = Date.now() + P.resta * 1000; P.rodando = true; P.tick = setInterval(pomoTick, 250);
+  }
+  updatePomoUI(); atualizarTitulo();
+}
+function pomoTick() {
+  P.resta = Math.max(0, Math.ceil((P.fim - Date.now()) / 1000));
+  if (P.resta <= 0) { pomoTerminou(); return; }
+  updatePomoUI(); atualizarTitulo();
+}
+function pomoReset() {
+  clearInterval(P.tick); P.rodando = false; P.resta = pomoDur(P.fase); updatePomoUI(); atualizarTitulo();
+}
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.3, 0.6].forEach(t => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.15, ctx.currentTime + t); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.25);
+      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.25);
+    });
+  } catch (e) {}
+}
+function proximaFase(concluiuFoco) {
+  clearInterval(P.tick); P.rodando = false;
+  if (concluiuFoco) {
+    P.sessoes++;
+    P.fase = P.sessoes % state.pomo.ate === 0 ? 'longa' : 'pausa';
+  } else P.fase = 'foco';
+  P.resta = pomoDur(P.fase);
+  updatePomoUI(); atualizarTitulo();
+}
+function pomoTerminou() {
+  const eraFoco = P.fase === 'foco', min = state.pomo.foco;
+  beep();
+  proximaFase(eraFoco);
+  if (eraFoco) { if (state.semana) state.semana.pomodoros = (state.semana.pomodoros || 0) + 1; salvar(); registrarTempo(min); }
+}
+function pomoEncerrar() {
+  if (P.fase !== 'foco') return;
+  const decorrido = P.rodando ? pomoDur('foco') - Math.max(0, Math.ceil((P.fim - Date.now()) / 1000)) : pomoDur('foco') - P.resta;
+  const min = Math.round(decorrido / 60);
+  proximaFase(min >= 1);
+  if (min >= 1) { registrarTempo(min); } else { pomoReset(); }
+}
+
+// Pergunta a qual passo somar o tempo do foco
+function registrarTempo(min) {
+  const s = state.semana;
+  if (!s) return;
+  const h = hoje();
+  const pend = s.passos.filter(p => !p.feito).sort((a, b) => (b.dia === h) - (a.dia === h)), resto = s.passos.filter(p => p.feito);
+  const op = [...pend, ...resto].map(p => `<option value="${p.id}">${p.id}. ${esc(p.materia)}${p.feito ? ' (feito)' : ''}</option>`).join('');
+  modal(`Foco concluído: ${min} min`,
+    `<p>A qual passo somar esse tempo?</p>
+     <label class="f"><select id="regPasso" onchange="regAtualizarAssuntos()">${op}<option value="0">Não somar a nenhum passo</option></select></label>
+     <div class="grid2" style="margin-top:10px">
+       <label class="f">Tipo de estudo<select id="regTipo"><option>Teoria</option><option>Questões</option><option>Revisão</option></select></label>
+       <label class="f">Assunto (opcional)<select id="regAssunto"></select></label>
+     </div>
+     <label class="f" style="margin-top:10px"><span><input type="checkbox" id="regFeito"> Marcar o passo como concluído</span></label>`,
+    [{ t: 'Pular' }, { t: 'Somar', c: 'primary', f: () => {
+      const id = parseInt($('regPasso').value);
+      if (id) {
+        const p = achar(id);
+        p.horasFeitas = round2(p.horasFeitas + min / 60);
+        if ($('regFeito').checked) p.feito = true;
+        state.sessoes.push({ id: novoId(), data: hoje(), materia: p.materia, assuntoId: $('regAssunto').value || null, minutos: min, tipo: $('regTipo').value });
+        salvar();
+        if (abaAtual === 'semana') renderSemana();
+        if (abaAtual === 'desempenho') renderDesempenho();
+      }
+    } }]);
+  regAtualizarAssuntos();
+}
+// preenche o seletor de assunto com os assuntos da matéria do passo escolhido
+function regAtualizarAssuntos() {
+  const sel = $('regAssunto'), id = parseInt($('regPasso').value);
+  if (!sel) return;
+  const p = id && state.semana ? achar(id) : null;
+  const lista = p ? state.assuntos.filter(a => a.materia === p.materia) : [];
+  sel.innerHTML = '<option value="">— sem assunto —</option>' + lista.map(a => `<option value="${a.id}">${esc(a.nome)}</option>`).join('');
+}
+
+function verSemana(id) {
+  const r = state.fechadas.find(x => x.id === id);
+  if (r) modal(`Semana ${fmtData(r.inicio)} → ${fmtData(r.fim)}`, resumoHTML(r), [{ t: 'Fechar', c: 'primary' }]);
+}
+// ============================================================
+// SEMANAS FECHADAS (visão "Semanas" da aba Desempenho)
+// ============================================================
+function renderSemanasFechadas() {
+  const v = $('view-desempenho'), f = state.fechadas;
+  v.classList.add('vis-semanas');
+  const fech = f.filter(r => r.cicloFechado).length;
+  const horas = round2(soma(f, r => r.horasEstudadas));
+  const media = f.length ? Math.round(soma(f, r => r.pctConcluido) / f.length) : 0;
+  let grafico = '<p class="muted">O gráfico aparece quando você fechar a primeira semana.</p>';
+  if (f.length) {
+    const ult = f.slice(-12), W = 640, H = 200, pad = 28, bw = Math.min(40, (W - pad * 2) / ult.length - 8);
+    const maxV = Math.max(1, ...ult.map(r => Math.max(r.horasEstudadas, r.metaHoras)));
+    const passo = (W - pad * 2) / ult.length;
+    const barras = ult.map((r, i) => {
+      const x = pad + i * passo + (passo - bw) / 2, h = r.horasEstudadas / maxV * (H - pad * 2), y = H - pad - h;
+      const ym = H - pad - r.metaHoras / maxV * (H - pad * 2);
+      return `<rect x="${x}" y="${y}" width="${bw}" height="${Math.max(h, 0)}" rx="4" fill="${r.cicloFechado ? 'var(--ok)' : 'var(--accent)'}"><title>${fmtData(r.inicio)}–${fmtData(r.fim)}: ${fmtH(r.horasEstudadas)} de ${fmtH(r.metaHoras)}</title></rect>
+        <line x1="${x - 4}" x2="${x + bw + 4}" y1="${ym}" y2="${ym}" stroke="var(--muted)" stroke-width="2" stroke-dasharray="3 2"/>
+        <text x="${x + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="10" fill="var(--muted)">${fmtData(r.inicio)}</text>
+        <text x="${x + bw / 2}" y="${y - 4}" text-anchor="middle" font-size="10" fill="var(--text)">${round2(r.horasEstudadas)}</text>`;
+    }).join('');
+    grafico = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Horas estudadas por semana">${barras}
+      <line x1="${pad}" x2="${W - pad}" y1="${H - pad}" y2="${H - pad}" stroke="var(--line)"/></svg>
+      <p class="muted" style="margin:6px 0 0">Barras verdes: ciclo fechado · da cor do destaque: incompleto · tracejado: meta da semana</p>`;
+  }
+  const lista = f.length ? [...f].reverse().map(r => `
+    <div class="hist">
+      <div style="flex:1;min-width:180px"><b>${fmtData(r.inicio)} → ${fmtData(r.fim)}</b>
+        <div class="muted">${fmtH(r.horasEstudadas)} de ${fmtH(r.metaHoras)} · faltaram ${fmtH(r.horasFaltando)} · ${r.pctConcluido}% (${r.passosFeitos}/${r.passosTotal})${r.pomodoros ? ' · 🍅 ' + r.pomodoros : ''}</div></div>
+      <span class="badge ${r.cicloFechado ? 'ok' : 'no'}">${r.cicloFechado ? 'Ciclo fechado' : 'Incompleto'}</span>
+      ${r.modelo ? `<button class="btn sm" onclick="repetirDoHistorico(${r.id})" title="Carregar as matérias desta semana na aba Montar ciclo">↻ Repetir ciclo</button>` : ''}
+      <button class="btn sm" onclick="verSemana(${r.id})">Ver detalhes</button>
+      <button class="btn sm danger" onclick="excluirSemana(${r.id})">Excluir</button>
+    </div>`).join('') : '<p class="muted">Nenhuma semana fechada ainda. Ao fechar uma semana, as estatísticas dela aparecem aqui.</p>';
+
+  v.innerHTML = `${topoDesempenho()}
+  <div class="kpis">
+    <div class="kpi"><span class="muted">Semanas fechadas</span><b>${f.length}</b></div>
+    <div class="kpi"><span class="muted">Ciclos completos</span><b>${fech}${f.length ? ' de ' + f.length : ''}</b></div>
+    <div class="kpi"><span class="muted">Horas nessas semanas</span><b>${fmtH(horas)}</b></div>
+    <div class="kpi"><span class="muted">Passos concluídos (média)</span><b>${f.length ? media + '%' : '—'}</b></div>
+  </div>
+  <div><div class="card"><h2>Semanas fechadas</h2>${lista}</div></div>
+  <div>
+    <div class="card"><h2>Horas por semana</h2>${grafico}</div>
+    <div class="card"><h2>Sobre estas horas</h2><p class="muted" style="margin:0">Nas semanas fechadas, as horas somam o que foi marcado nos passos (focos do Pomodoro e horas digitadas à mão). Na visão <b>Estudo</b>, as horas vêm só dos focos do Pomodoro.</p></div>
+  </div>`;
+}
+function excluirSemana(id) {
+  confirmar('Excluir esta semana do histórico? Não dá para desfazer.', () => {
+    state.fechadas = state.fechadas.filter(x => x.id !== id); salvar(); renderDesempenho();
+  }, 'Excluir');
+}
+function exportar() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `ciclo-estudos-backup-${hoje()}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function importar(inp) {
+  const arq = inp.files[0]; inp.value = '';
+  if (!arq) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(rd.result);
+      if (!d || !Array.isArray(d.fechadas) || !d.config) throw new Error('formato');
+      confirmar('Importar substitui TODOS os dados atuais (ciclo, semana e histórico) pelos do arquivo. Continuar?', () => {
+        const base = defaults(), bkLocal = state.backup;
+        state = Object.assign(base, d);
+        state.backup = Object.assign(defaults().backup, bkLocal);   // a pasta de backup é desta máquina, não do arquivo
+        state.config = Object.assign(defaults().config, d.config);
+        state.pomo = Object.assign(defaults().pomo, d.pomo || {});
+        normalizarEstado(state);
+        salvar(); aplicarTema(); showTab(state.semana ? 'semana' : 'montar');
+      }, 'Importar');
+    } catch (e) { alerta('Erro', 'Arquivo inválido. Use um backup exportado por este app.'); }
+  };
+  rd.readAsText(arq);
+}
+
+// ============================================================
+// INÍCIO
+// ============================================================
+// ============================================================
+// RESUMOS: notas em Markdown e [[links]]
+// ============================================================
+const rsUI = { notaId: null, modo: 'dividido', busca: '' };
+const rsFechados = new Set();   // itens de lista recolhidos na pré-visualização (só nesta sessão)
+let rsTimer = null;
+
+const novoId = () => 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+const hashStr = s => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+const desesc = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+const norm = s => String(s).trim().toLowerCase();
+const notaPorId = id => state.notas.find(n => n.id === id);
+const notaAtual = () => rsUI.notaId ? notaPorId(rsUI.notaId) : null;
+const notaPorTitulo = t => state.notas.find(n => norm(n.titulo) === norm(t));
+const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function tituloUnico(base, ignorarId) {
+  const t = String(base).trim() || 'Sem título';
+  let k = 2, cand = t;
+  while (state.notas.some(n => n.id !== ignorarId && norm(n.titulo) === norm(cand))) cand = `${t} (${k++})`;
+  return cand;
+}
+function baixar(blob, nome) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = nome;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+// grupos (matérias) fechados na lista de notas: preferência de tela, fica fora do backup dos dados
+const rsFechadosG = (() => { try { return new Set(JSON.parse(lsGet('ciclo.rsGruposFechados') || '[]')); } catch (e) { return new Set(); } })();
+const chaveG = m => m || '__sem__';
+function rsSalvarGrupos() { lsSet('ciclo.rsGruposFechados', JSON.stringify([...rsFechadosG])); }
+function rsToggleGrupo(m) {
+  const k = chaveG(m);
+  if (rsFechadosG.has(k)) rsFechadosG.delete(k); else rsFechadosG.add(k);
+  rsSalvarGrupos(); $('rsLista').innerHTML = htmlLista();
+}
+function rsTodosGrupos(abrir) {
+  if (abrir) rsFechadosG.clear(); else state.notas.forEach(n => rsFechadosG.add(chaveG(n.materia)));
+  rsSalvarGrupos(); $('rsLista').innerHTML = htmlLista();
+}
+// garante que o grupo da nota escolhida esteja aberto (para ela aparecer na lista)
+function rsAbrirGrupoDe(id) { const n = notaPorId(id); if (n && rsFechadosG.delete(chaveG(n.materia))) rsSalvarGrupos(); }
+
+// ----- Markdown -> HTML (próprio, sem bibliotecas) -----
+function inl(s) {
+  const cods = [];
+  let t = esc(s).replace(/`([^`]+)`/g, (m, c) => { cods.push(c); return '\u0000' + (cods.length - 1) + '\u0000'; });
+  t = t.replace(/\[\[([^\]]+)\]\]/g, (m, n) =>
+    `<a href="#" class="wiki ${notaPorTitulo(desesc(n)) ? '' : 'novo'}" data-t="${n.trim()}" onclick="abrirWiki(this.dataset.t);return false">${n}</a>`);
+  t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  t = t.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\s][^*]*?)\*/g, '$1<i>$2</i>').replace(/~~(.+?)~~/g, '<s>$1</s>');
+  return t.replace(/\u0000(\d+)\u0000/g, (m, i) => `<code>${cods[i]}</code>`);
+}
+const LISTRE = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
+function mdParaHtml(txt, nid) {
+  const L = txt.replace(/\r\n?/g, '\n').split('\n'), out = [];
+  const comecaBloco = l => /^\s*```/.test(l) || /^#{1,6}\s/.test(l) || LISTRE.test(l) || /^\s*>/.test(l) || /^\s*([-*_])(\s*\1){2,}\s*$/.test(l);
+  let i = 0;
+  while (i < L.length) {
+    const l = L[i];
+    if (/^\s*```/.test(l)) {
+      const buf = []; i++;
+      while (i < L.length && !/^\s*```/.test(L[i])) buf.push(L[i++]);
+      i++; out.push(`<pre><code>${esc(buf.join('\n'))}</code></pre>`); continue;
+    }
+    if (!l.trim()) { i++; continue; }
+    let m = l.match(/^(#{1,6})\s+(.*)$/);
+    if (m) { out.push(`<h${m[1].length}>${inl(m[2])}</h${m[1].length}>`); i++; continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(l)) { out.push('<hr>'); i++; continue; }
+    if (/^\s*>/.test(l)) {
+      const buf = [];
+      while (i < L.length && /^\s*>/.test(L[i])) buf.push(L[i++].replace(/^\s*>\s?/, ''));
+      out.push(`<blockquote>${mdParaHtml(buf.join('\n'), nid)}</blockquote>`); continue;
+    }
+    if (l.includes('|') && i + 1 < L.length && /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(L[i + 1])) {
+      const cel = s => s.trim().replace(/^\||\|$/g, '').split('|').map(x => x.trim());
+      const cab = cel(l); i += 2;
+      const linhas = [];
+      while (i < L.length && L[i].trim() && L[i].includes('|')) linhas.push(cel(L[i++]));
+      out.push(`<table><thead><tr>${cab.map(c => `<th>${inl(c)}</th>`).join('')}</tr></thead><tbody>${linhas.map(r => `<tr>${r.map(c => `<td>${inl(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`);
+      continue;
+    }
+    if (LISTRE.test(l)) {
+      const itens = [];
+      while (i < L.length) {
+        const lm = L[i].match(LISTRE);
+        if (lm) { itens.push({ indent: lm[1].replace(/\t/g, '  ').length, ord: /\d/.test(lm[2]), texto: lm[3] }); i++; }
+        else if (!L[i].trim() && i + 1 < L.length && LISTRE.test(L[i + 1])) i++;
+        else break;
+      }
+      out.push(htmlLista2(itens, nid)); continue;
+    }
+    const buf = [];
+    while (i < L.length && L[i].trim() && !comecaBloco(L[i])) buf.push(L[i++]);
+    if (!buf.length) { buf.push(L[i++]); }
+    out.push(`<p>${buf.map(l => inl(l)).join('<br>')}</p>`);
+  }
+  return out.join('\n');
+}
+function htmlLista2(itens, nid) {
+  const raiz = { filhos: [], indent: -1 }, pilha = [raiz];
+  itens.forEach(it => {
+    while (pilha.length > 1 && it.indent <= pilha[pilha.length - 1].indent) pilha.pop();
+    const no = Object.assign({ filhos: [] }, it);
+    pilha[pilha.length - 1].filhos.push(no); pilha.push(no);
+  });
+  const conteudo = t => {
+    const cx = t.match(/^\[( |x|X)\]\s+(.*)$/);
+    return cx ? `<input type="checkbox" disabled ${cx[1] === ' ' ? '' : 'checked'}> ${inl(cx[2])}` : inl(t);
+  };
+  const rend = nos => {
+    if (!nos.length) return '';
+    const tag = nos[0].ord ? 'ol' : 'ul';
+    return `<${tag}>` + nos.map(n => {
+      if (!n.filhos.length) return `<li>${conteudo(n.texto)}</li>`;
+      const k = nid + ':' + hashStr(n.texto);
+      return `<li class="k"><details ${rsFechados.has(k) ? '' : 'open'} data-k="${k}" ontoggle="rsToggle(this)"><summary>${conteudo(n.texto)}</summary>${rend(n.filhos)}</details></li>`;
+    }).join('') + `</${tag}>`;
+  };
+  return rend(raiz.filhos);
+}
+function rsToggle(d) { if (d.open) rsFechados.delete(d.dataset.k); else rsFechados.add(d.dataset.k); }
+
+// ----- renderização da aba -----
+function htmlLista() {
+  if (!state.notas.length) return '<p class="muted">Nenhuma nota ainda.</p>';
+  const q = norm(rsUI.busca);
+  const ns = state.notas.filter(n => !q || norm(n.titulo).includes(q) || norm(n.texto).includes(q));
+  if (!ns.length) return '<p class="muted">Nada encontrado.</p>';
+  const mats = [...todasMaterias()];
+  state.notas.forEach(n => { if (n.materia && !mats.includes(n.materia)) mats.push(n.materia); });
+  mats.push('');
+  return mats.map(m => {
+    const g = ns.filter(n => (n.materia || '') === m);
+    if (!g.length) return '';
+    const fechado = !q && rsFechadosG.has(chaveG(m));     // durante a busca os grupos ficam abertos
+    return `<div class="rs-g"><button class="rs-gt" data-m="${esc(m)}" onclick="rsToggleGrupo(this.dataset.m)" aria-expanded="${!fechado}" title="${fechado ? 'Abrir' : 'Fechar'} esta matéria"><span class="chev">${fechado ? '▸' : '▾'}</span><span class="sq" style="background:${m ? cor(m) : 'var(--muted)'}"></span><span class="gn">${esc(m || 'Sem matéria')}</span><span class="gc">${g.length}</span></button>
+      <button class="plus" data-m="${esc(m)}" onclick="novaNota(this.dataset.m)" title="Nova nota nesta matéria" aria-label="Nova nota">+</button></div>` +
+      (fechado ? '' : g.map(n => `<button class="rs-n ${n.id === rsUI.notaId ? 'on' : ''}" onclick="selecionarNota('${n.id}')">${esc(n.titulo)}</button>`).join(''));
+  }).join('');
+}
+
+function renderResumos() {
+  $('view-resumos').innerHTML = `<div class="rs-layout">
+    <aside class="card rs-side">
+      <input id="rsBusca" type="search" placeholder="🔍 Buscar nas notas…" value="${esc(rsUI.busca)}" oninput="rsBuscar(this.value)" style="width:100%;margin-bottom:8px">
+      <button class="rs-nav acc" onclick="novaNota()">＋ Nova nota</button>
+      <button class="rs-nav" onclick="abrirImportar()">⬆ Importar / colar texto</button>
+      ${state.notas.length ? `<div class="rs-tools"><button class="rs-link" onclick="rsTodosGrupos(false)">Recolher tudo</button> · <button class="rs-link" onclick="rsTodosGrupos(true)">Expandir tudo</button></div>` : ''}
+      <div id="rsLista">${htmlLista()}</div>
+    </aside>
+    <div id="rsMain"></div>
+  </div>`;
+  renderRsMain();
+}
+
+function htmlBacklinks(n) {
+  const alvo = norm(n.titulo);
+  const refs = state.notas.filter(o => o.id !== n.id && [...o.texto.matchAll(/\[\[([^\]]+)\]\]/g)].some(m => norm(m[1]) === alvo));
+  return refs.length ? `↩ Mencionada em: ${refs.map(o => `<button class="btn sm" onclick="selecionarNota('${o.id}')">${esc(o.titulo)}</button>`).join(' ')}` : '';
+}
+
+function htmlVazioResumos() {
+  const dica = `<ul class="muted" style="text-align:left;display:inline-block;margin:12px 0">
+    <li>Use <code>-</code> e <b>Tab</b> / <b>Shift+Tab</b> para montar tópicos que recolhem e expandem.</li>
+    <li>Digite <code>[[Nome da nota]]</code> para ligar notas; as ligações aparecem como "Mencionada em".</li></ul>`;
+  return `<div class="card empty"><h2>${state.notas.length ? 'Selecione uma nota' : 'Seus resumos'}</h2>
+    <p class="muted">Notas em Markdown, ligadas às matérias do seu ciclo.</p>${dica}<div class="row" style="justify-content:center">
+    <button class="btn primary" onclick="novaNota()">＋ Nova nota</button><button class="btn" onclick="abrirImportar()">⬆ Importar / colar texto</button></div></div>`;
+}
+
+function renderRsMain() {
+  const m = $('rsMain');
+  if (!m) return;
+  const n = notaAtual();
+  if (!n) { m.innerHTML = htmlVazioResumos(); return; }
+  const mats = [...todasMaterias()];
+  if (n.materia && !mats.includes(n.materia)) mats.push(n.materia);
+  m.innerHTML = `<div class="card">
+    <div class="crumb muted">Resumos › ${esc(n.materia || 'Sem matéria')} › ${esc(n.titulo)}</div>
+    <div class="row" style="flex-wrap:nowrap;align-items:center">
+      <input class="rs-titulo" id="rsTitulo" value="${esc(n.titulo)}" onchange="rsSetTitulo(this.value)" aria-label="Título da nota">
+    </div>
+    <div class="row" style="margin:6px 0">
+      <select onchange="rsSetMateria(this.value)" aria-label="Matéria"><option value="">Sem matéria</option>${mats.map(x => `<option value="${esc(x)}" ${x === n.materia ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
+      <div class="seg">${[['editar', 'Editar'], ['dividido', 'Dividido'], ['ver', 'Ver']].map(([k, r]) => `<button class="${rsUI.modo === k ? 'on' : ''}" onclick="rsModo('${k}')">${r}</button>`).join('')}</div>
+      <span style="flex:1"></span>
+      <button class="btn sm" onclick="rsExportarMd()">⬇ .md</button>
+      <button class="btn sm danger" onclick="rsExcluir()">Excluir</button>
+    </div>
+    <div class="rs-edit m-${rsUI.modo}">
+      <div><textarea class="rs" id="rsTexto" spellcheck="false" oninput="rsEditar(this.value)" onkeydown="rsTecla(event)" onblur="setTimeout(()=>{const s=$('rsSug');if(s)s.hidden=true},150)" placeholder="Escreva em Markdown. Ex.: - tópico, [[outra nota]]">\n${esc(n.texto)}</textarea><div class="sug" id="rsSug" hidden></div></div>
+      <div class="md" id="rsPrev"></div>
+    </div>
+    <div id="rsBack" class="muted" style="margin-top:12px">${htmlBacklinks(n)}</div>
+  </div>`;
+  $('rsPrev').innerHTML = mdParaHtml(n.texto, n.id);
+}
+
+function rsFlush() { if (rsTimer) { clearTimeout(rsTimer); rsTimer = null; salvar(); } }
+window.addEventListener('beforeunload', rsFlush);
+
+// ----- ações nas notas -----
+function selecionarNota(id) {
+  rsFlush(); rsUI.notaId = id; rsAbrirGrupoDe(id);
+  if (abaAtual === 'resumos') renderResumos(); else showTab('resumos');
+}
+function criarNota(titulo, materia, texto) {
+  const t = tituloUnico(titulo);
+  const n = { id: novoId(), titulo: t, materia: materia || '', texto: texto != null ? texto : `# ${t}\n\n- `, criado: Date.now(), atualizado: Date.now() };
+  state.notas.push(n); salvar();
+  return n;
+}
+function novaNota(materia) {
+  const atual = notaAtual();
+  const n = criarNota('Nova nota', materia !== undefined ? materia : (atual ? atual.materia : ''));
+  selecionarNota(n.id);
+  setTimeout(() => { const ta = $('rsTexto'); if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); } }, 0);
+}
+function abrirWiki(t) {
+  const atual = notaAtual();
+  const n = notaPorTitulo(t) || criarNota(t.trim(), atual ? atual.materia : '');
+  selecionarNota(n.id);
+}
+function abrirResumoMateria(passoId) {
+  const m = achar(passoId).materia;
+  const n = state.notas.find(x => x.materia === m) || criarNota(`${m} — resumo`, m);
+  selecionarNota(n.id);
+}
+function rsBuscar(v) { rsUI.busca = v; $('rsLista').innerHTML = htmlLista(); }
+function rsModo(m) { rsUI.modo = m; renderRsMain(); }
+function rsSetMateria(v) { const n = notaAtual(); n.materia = v; n.atualizado = Date.now(); rsAbrirGrupoDe(n.id); salvar(); renderResumos(); }
+function rsSetTitulo(v) {
+  const n = notaAtual(), antigo = n.titulo, novo = tituloUnico(v, n.id);
+  if (novo !== antigo) {
+    const re = new RegExp('\\[\\[\\s*' + escRe(antigo) + '\\s*\\]\\]', 'gi');
+    state.notas.forEach(o => { o.texto = o.texto.replace(re, `[[${novo}]]`); });   // mantém as ligações
+    n.titulo = novo; n.atualizado = Date.now(); salvar();
+  }
+  renderResumos();
+}
+function rsExcluir() {
+  const n = notaAtual();
+  confirmar(`Excluir a nota "${n.titulo}"? Se houver backup em pasta, o arquivo .md dela será apagado de lá.`, () => {
+    state.notas = state.notas.filter(x => x.id !== n.id);
+    rsUI.notaId = null; salvar(); renderResumos();
+  }, 'Excluir');
+}
+function rsExportarMd() { const n = notaAtual(); baixar(new Blob([n.texto], { type: 'text/markdown' }), nomeSeguro(n.titulo) + '.md'); }
+
+function rsEditar(v) {
+  const n = notaAtual();
+  if (!n) return;
+  n.texto = v; n.atualizado = Date.now();
+  $('rsPrev').innerHTML = mdParaHtml(v, n.id);
+  rsSugerir();
+  clearTimeout(rsTimer);
+  rsTimer = setTimeout(() => { rsTimer = null; salvar(); }, 500);
+}
+function inserir(ta, txt) {
+  if (!document.execCommand || !document.execCommand('insertText', false, txt)) {
+    ta.setRangeText(txt, ta.selectionStart, ta.selectionEnd, 'end');
+    ta.dispatchEvent(new Event('input'));
+  }
+}
+function rsIndentar(ta, volta) {
+  const v = ta.value, a = ta.selectionStart, b = ta.selectionEnd;
+  const ini = v.lastIndexOf('\n', a - 1) + 1;
+  let fim = v.indexOf('\n', b); if (fim < 0) fim = v.length;
+  let dA = 0, dT = 0;
+  const novas = v.slice(ini, fim).split('\n').map((l, i) => {
+    if (!volta) { if (i === 0) dA = 2; dT += 2; return '  ' + l; }
+    const r = l.startsWith('  ') ? 2 : (l.startsWith(' ') || l.startsWith('\t')) ? 1 : 0;
+    if (i === 0) dA = -r; dT -= r;
+    return l.slice(r);
+  });
+  ta.setSelectionRange(ini, fim);
+  inserir(ta, novas.join('\n'));
+  ta.setSelectionRange(Math.max(ini, a + dA), Math.max(ini, b + dT));
+}
+function rsTecla(e) {
+  const ta = e.target;
+  if (e.key === 'Tab') { e.preventDefault(); rsIndentar(ta, e.shiftKey); return; }
+  if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && ta.selectionStart === ta.selectionEnd) {
+    const pos = ta.selectionStart, ini = ta.value.lastIndexOf('\n', pos - 1) + 1, linha = ta.value.slice(ini, pos);
+    const m = linha.match(/^(\s*)([-*+]|\d+[.)])\s(\[[ xX]\]\s)?/);
+    if (!m || pos - ini < m[0].length) return;
+    e.preventDefault();
+    if (!linha.slice(m[0].length).trim()) {     // marcador vazio: sai do nível (ou encerra a lista)
+      ta.setSelectionRange(ini, pos);
+      inserir(ta, m[1].length >= 2 ? m[1].slice(2) + m[0].trimStart() : '');
+      return;
+    }
+    const marc = /\d/.test(m[2]) ? (parseInt(m[2]) + 1) + m[2].slice(-1) : m[2];
+    inserir(ta, '\n' + m[1] + marc + ' ' + (m[3] ? '[ ] ' : ''));
+  }
+}
+function rsSugerir() {
+  const ta = $('rsTexto'), box = $('rsSug'), atual = notaAtual();
+  if (!ta || !box || !atual) return;
+  const m = ta.value.slice(0, ta.selectionStart).match(/\[\[([^\]\n]*)$/);
+  if (!m) { box.hidden = true; return; }
+  const q = norm(m[1]);
+  const c = state.notas.filter(n => n.id !== atual.id && norm(n.titulo).includes(q)).slice(0, 6);
+  if (!c.length) { box.hidden = true; return; }
+  box.innerHTML = c.map(n => `<button class="btn sm" data-t="${esc(n.titulo)}" onmousedown="event.preventDefault();rsInserirLink(this.dataset.t)">${esc(n.titulo)}</button>`).join('');
+  box.hidden = false;
+}
+function rsInserirLink(t) {
+  const ta = $('rsTexto'), pos = ta.selectionStart, ini = ta.value.slice(0, pos).lastIndexOf('[[') + 2;
+  const fim = ta.value.slice(pos, pos + 2) === ']]' ? pos + 2 : pos;
+  ta.setRangeText(t + ']]', ini, fim, 'end');
+  ta.dispatchEvent(new Event('input')); ta.focus();
+}
+
+// ============================================================
+// FLASHCARDS (aba em branco: o sistema ainda vai ser desenhado)
+// ============================================================
+function renderFlashcards() {
+  $('view-flashcards').innerHTML = `<div class="card empty"><h2>🃏 Flashcards</h2>
+    <p class="muted">Esta aba está em branco de propósito. Vamos definir juntos como o sistema de flashcards vai funcionar.</p></div>`;
+}
+
+// ============================================================
+// IMPORTAR / ADAPTAR TEXTO PRONTO (NotebookLM, ChatGPT, Google Docs…)
+// ============================================================
+// Ajusta o texto para o formato do app. Função pura (testável): opções em `o`.
+function adaptarTexto(t, o) {
+  const L = String(t).replace(/\r\n?/g, '\n').replace(/^\uFEFF/, '').replace(/\u00a0/g, ' ').split('\n');
+  const out = [];
+  let dentro = false;
+  for (let i = 0; i < L.length; i++) {
+    let l = L[i];
+    if (/^\s*```/.test(l)) { dentro = !dentro; out.push(l); continue; }
+    if (dentro) { out.push(l); continue; }
+    if (o.citacoes) l = l.replace(/\s*\[(?:\d+(?:\s*[-–,]\s*\d+)*)\]/g, '');
+    if (o.marcadores) {
+      l = l.replace(/^(\t+)/, s => '  '.repeat(s.length)).replace(/^(\s*)[•◦▪‣∙·●○–—]\s+/, '$1- ').replace(/^(\s*)\*\s+/, '$1- ');
+    }
+    out.push(l);
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+}
+// Divide em várias notas a cada "## Título" (ignora ## dentro de blocos de código)
+function dividirSecoes(texto, base) {
+  const L = texto.split('\n'), partes = [];
+  let atual = { titulo: base, linhas: [] }, dentro = false, achou = 0;
+  L.forEach(l => {
+    if (/^\s*```/.test(l)) dentro = !dentro;
+    const m = !dentro && l.match(/^##\s+(.+)$/);
+    if (m) {
+      achou++;
+      if (atual.linhas.join('').trim()) partes.push(atual);
+      atual = { titulo: `${base} — ${m[1].trim()}`, linhas: [`# ${m[1].trim()}`] };
+    } else atual.linhas.push(l);
+  });
+  if (atual.linhas.join('').trim()) partes.push(atual);
+  return achou < 1 ? [{ titulo: base, texto }] : partes.map(p => ({ titulo: p.titulo, texto: p.linhas.join('\n').trim() + '\n' }));
+}
+function parseMd(txt, nome) {
+  const meta = {};
+  let corpo = txt.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
+  const m = corpo.match(/^---\n([\s\S]*?)\n---\n?/);
+  if (m) {
+    m[1].split('\n').forEach(l => { const k = l.match(/^(\w+):\s?(.*)$/); if (k) meta[k[1]] = k[2].trim(); });
+    corpo = corpo.slice(m[0].length).replace(/^\n+/, '');
+  }
+  return { id: meta.id, titulo: meta.titulo || nome.replace(/\.(md|markdown|txt)$/i, ''), materia: meta.materia || '', atualizado: parseInt(meta.atualizado) || 0, texto: corpo };
+}
+
+function abrirImportar() {
+  const at = notaAtual();
+  const mats = todasMaterias();
+  const chk = (id, on, rot, dica) => `<label class="chk"><input type="checkbox" id="${id}" ${on ? 'checked' : ''}><span><b>${rot}</b><br><span class="muted">${dica}</span></span></label>`;
+  modal('Importar / colar texto', `
+    <p class="muted">Cole o texto gerado no NotebookLM (ou ChatGPT, ou um .md do Google Docs) e/ou escolha arquivos <b>.md</b> ou <b>.txt</b>.</p>
+    <label class="f">Título (opcional)<input id="impTitulo" placeholder="Ex.: Contratos — resumo do NotebookLM"></label>
+    <label class="f" style="margin-top:8px">Matéria<select id="impMateria"><option value="">Sem matéria</option>${mats.map(m => `<option value="${esc(m)}" ${at && at.materia === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
+    <label class="f" style="margin-top:8px">Texto colado<textarea id="impTexto" rows="7" style="width:100%;font:inherit;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--card);color:var(--text)"></textarea></label>
+    <label class="f" style="margin-top:8px">Arquivos<input type="file" id="impArq" multiple accept=".md,.markdown,.txt"></label>
+    <div style="margin-top:10px"><b>Adaptar ao app</b>
+      ${chk('impCit', true, 'Remover citações [1], [2, 3]', 'O NotebookLM marca as fontes com números entre colchetes.')}
+      ${chk('impMarc', true, 'Normalizar marcadores e recuos', 'Troca •, ◦, – e tabs por "- " e espaços, para os tópicos funcionarem.')}
+      ${chk('impDividir', false, 'Dividir em várias notas por "## Seção"', 'Cada seção de nível 2 vira uma nota.')}
+    </div>`, [{ t: 'Cancelar' }, { t: 'Importar', c: 'primary', f: importarConfirmar }]);
+}
+async function importarConfirmar() {
+  const o = { citacoes: $('impCit').checked, marcadores: $('impMarc').checked, dividir: $('impDividir').checked };
+  const mat = $('impMateria').value, tit = $('impTitulo').value.trim(), txt = $('impTexto').value, arqs = [...$('impArq').files];
+  const itens = [];
+  if (txt.trim()) itens.push({ titulo: tit || (txt.match(/^#\s+(.+)$/m) || [])[1] || 'Importado em ' + fmtData(hoje()), materia: mat, texto: txt });
+  for (const f of arqs) {
+    try {
+      const conteudo = await f.text();
+      const p = parseMd(conteudo, f.name);
+      itens.push({ titulo: arqs.length === 1 && tit ? tit : p.titulo, materia: p.materia || mat, texto: p.texto });
+    } catch (e) {}
+  }
+  if (!itens.length) { alerta('Importar', 'Cole um texto ou escolha ao menos um arquivo.'); return; }
+  let notas = 0, ultima = null;
+  itens.forEach(it => {
+    const texto = adaptarTexto(it.texto, o);
+    const partes = o.dividir ? dividirSecoes(texto, it.titulo) : [{ titulo: it.titulo, texto }];
+    partes.forEach(p => {
+      let tx = p.texto;
+      if (!/^\s*#\s/.test(tx)) tx = `# ${p.titulo}\n\n${tx}`;
+      const n = criarNota(p.titulo, it.materia, tx);
+      notas++; ultima = n;
+    });
+  });
+  if (ultima) { rsUI.notaId = ultima.id; rsAbrirGrupoDe(ultima.id); showTab('resumos'); }
+  alerta('Importação concluída', `${notas} nota(s) criada(s).`);
+}
+
+// ============================================================
+// EXPORTAR (.zip) E BACKUP EM PASTA
+// ============================================================
+const nomeSeguro = s => (String(s).replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\s+/g, ' ').trim().replace(/[. ]+$/, '').slice(0, 80)) || 'sem-titulo';
+function caminhoNota(n, usados) {
+  const pasta = nomeSeguro(n.materia || 'Sem matéria');
+  let c = `${pasta}/${nomeSeguro(n.titulo)}.md`;
+  if (usados.has(c.toLowerCase())) c = `${pasta}/${nomeSeguro(n.titulo)} (${n.id.slice(-4)}).md`;
+  usados.add(c.toLowerCase());
+  return c;
+}
+const notaParaArquivo = n => `---\nid: ${n.id}\ntitulo: ${n.titulo.replace(/\n/g, ' ')}\nmateria: ${n.materia}\natualizado: ${n.atualizado}\n---\n\n${n.texto}`;
+
+const CRC_T = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function criarZip(arqs) {            // arquivos sem compressão (método 0), nomes em UTF-8
+  const enc = new TextEncoder(), loc = [], cen = [];
+  let off = 0;
+  const d = new Date(), dosT = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  const dosD = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  arqs.forEach(a => {
+    const nome = enc.encode(a.nome), dados = enc.encode(a.texto), crc = crc32(dados);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+    h.setUint16(10, dosT, true); h.setUint16(12, dosD, true); h.setUint32(14, crc, true);
+    h.setUint32(18, dados.length, true); h.setUint32(22, dados.length, true); h.setUint16(26, nome.length, true); h.setUint16(28, 0, true);
+    loc.push(new Uint8Array(h.buffer), nome, dados);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
+    c.setUint16(12, dosT, true); c.setUint16(14, dosD, true); c.setUint32(16, crc, true);
+    c.setUint32(20, dados.length, true); c.setUint32(24, dados.length, true); c.setUint16(28, nome.length, true);
+    c.setUint32(42, off, true);
+    cen.push(new Uint8Array(c.buffer), nome);
+    off += 30 + nome.length + dados.length;
+  });
+  const tamCen = cen.reduce((s, x) => s + x.length, 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, arqs.length, true); e.setUint16(10, arqs.length, true);
+  e.setUint32(12, tamCen, true); e.setUint32(16, off, true);
+  return new Blob([...loc, ...cen, new Uint8Array(e.buffer)], { type: 'application/zip' });
+}
+function arquivosDeBackup() {
+  const usados = new Set();
+  const arqs = state.notas.map(n => ({ nome: caminhoNota(n, usados), texto: notaParaArquivo(n) }));
+  arqs.push({ nome: '_backup-app.json', texto: JSON.stringify(state, null, 2) });
+  return arqs;
+}
+function exportarZip() { baixar(criarZip(arquivosDeBackup()), `ciclo-estudos-${hoje()}.zip`); }
+
+// ----- backup automático em pasta (File System Access API: Chrome/Edge) -----
+const BK = { handle: null, estado: 'inativo', timer: null, erro: '' };   // estado: inativo | ok | gravando | permissao | erro
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('cicloEstudos', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function idbGet(k) { const db = await idb(); return new Promise((res, rej) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+async function idbSet(k, v) { const db = await idb(); return new Promise((res, rej) => { const q = db.transaction('kv', 'readwrite').objectStore('kv').put(v, k); q.onsuccess = () => res(); q.onerror = () => rej(q.error); }); }
+
+async function dirDe(raiz, caminho, criar) {
+  let d = raiz;
+  for (const p of caminho.split('/').slice(0, -1)) d = await d.getDirectoryHandle(p, { create: criar });
+  return d;
+}
+async function escreverArquivo(caminho, conteudo) {
+  const d = await dirDe(BK.handle, caminho, true);
+  const f = await d.getFileHandle(caminho.split('/').pop(), { create: true });
+  const w = await f.createWritable(); await w.write(conteudo); await w.close();
+}
+async function apagarArquivo(caminho) {
+  try { const d = await dirDe(BK.handle, caminho, false); await d.removeEntry(caminho.split('/').pop()); } catch (e) {}
+}
+async function bkCarregarHandle() {
+  if (!window.showDirectoryPicker) return;
+  try {
+    const h = await idbGet('pasta');
+    if (h) { BK.handle = h; BK.estado = (await h.queryPermission({ mode: 'readwrite' })) === 'granted' ? 'ok' : 'permissao'; }
+  } catch (e) {}
+}
+function agendarBackup() {
+  if (!BK.handle || BK.estado !== 'ok') return;
+  clearTimeout(BK.timer); BK.timer = setTimeout(() => bkGravarTudo(false), 2000);
+}
+async function bkGravarTudo(force) {
+  if (!BK.handle) return;
+  clearTimeout(BK.timer);
+  BK.estado = 'gravando'; atualizarStatusBackup();
+  try {
+    const b = state.backup, usados = new Set(), novos = {}, novosHashes = {}, antigos = force ? {} : b.hashes;
+    for (const n of state.notas) {
+      const caminho = caminhoNota(n, usados), conteudo = notaParaArquivo(n), h = hashStr(caminho + '\u0001' + conteudo);
+      novos[n.id] = caminho; novosHashes[n.id] = h;
+      if (antigos[n.id] !== h) await escreverArquivo(caminho, conteudo);
+    }
+    for (const [id, antigo] of Object.entries(b.arquivos)) if (novos[id] !== antigo) await apagarArquivo(antigo);   // só apaga o que o app criou
+    await escreverArquivo('_backup-app.json', JSON.stringify(state));
+    b.arquivos = novos; b.hashes = novosHashes; b.ultimoBackup = Date.now(); BK.estado = 'ok'; BK.erro = '';
+  } catch (e) {
+    BK.estado = e && e.name === 'NotAllowedError' ? 'permissao' : 'erro';
+    BK.erro = (e && e.message) || String(e);
+  }
+  persistir(); atualizarStatusBackup();
+}
+async function bkEscolher() {
+  let h;
+  try { h = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch (e) { return; }
+  BK.handle = h; state.backup.nomePasta = h.name; state.backup.hashes = {}; state.backup.arquivos = {};
+  try { await idbSet('pasta', h); } catch (e) {}
+  try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
+  persistir(); await bkGravarTudo(true);
+}
+async function bkReconectar() {
+  try {
+    if ((await BK.handle.requestPermission({ mode: 'readwrite' })) === 'granted') await bkGravarTudo(false);
+    else alerta('Backup', 'A permissão não foi concedida. O backup continua desligado.');
+  } catch (e) { alerta('Backup', 'Não foi possível reconectar: ' + (e.message || e)); }
+}
+async function varrerPasta(dir, prefixo, out, prof) {
+  for await (const [nome, h] of dir.entries()) {
+    if (nome.startsWith('.') || nome.startsWith('_')) continue;
+    if (h.kind === 'directory') { if (prof < 3) await varrerPasta(h, prefixo + nome + '/', out, prof + 1); }
+    else if (/\.(md|markdown)$/i.test(nome)) out.push({ nome, pasta: prefixo.split('/')[0], file: await h.getFile() });
+  }
+}
+async function bkRestaurar() {
+  if (!window.showDirectoryPicker) return;
+  let h;
+  try { h = await window.showDirectoryPicker({ mode: 'readwrite' }); } catch (e) { return; }
+  let json = null;
+  try { json = JSON.parse(await (await (await h.getFileHandle('_backup-app.json')).getFile()).text()); } catch (e) {}
+  const arqs = [];
+  await varrerPasta(h, '', arqs, 0);
+  if (!json && !arqs.length) { alerta('Restaurar', 'Nenhum backup encontrado nesta pasta.'); return; }
+  const aplicar = async () => {
+    if (json && Array.isArray(json.fechadas) && json.config) {
+      const local = state.backup;
+      state = Object.assign(defaults(), json);
+      state.config = Object.assign(defaults().config, json.config);
+      state.pomo = Object.assign(defaults().pomo, json.pomo || {});
+      state.backup = Object.assign(defaults().backup, local);
+      normalizarEstado(state);
+    }
+    let novas = 0, atualizadas = 0;
+    for (const a of arqs) {                       // incorpora edições feitas direto nos .md e arquivos novos
+      const p = parseMd(await a.file.text(), a.nome), ex = p.id && notaPorId(p.id);
+      if (ex) {
+        if (a.file.lastModified > ex.atualizado + 2000 && p.texto !== ex.texto) { ex.texto = p.texto; ex.atualizado = a.file.lastModified; atualizadas++; }
+      } else {
+        state.notas.push({ id: p.id || novoId(), titulo: tituloUnico(p.titulo), materia: p.materia || (a.pasta && a.pasta !== 'Sem matéria' ? a.pasta : ''), texto: p.texto, criado: a.file.lastModified, atualizado: a.file.lastModified });
+        novas++;
+      }
+    }
+    BK.handle = h; BK.estado = 'ok'; state.backup.nomePasta = h.name; state.backup.hashes = {}; state.backup.arquivos = {};
+    try { await idbSet('pasta', h); } catch (e) {}
+    rsUI.notaId = null;
+    persistir(); aplicarTema(); showTab(abaAtual);
+    alerta('Restaurado', `Dados restaurados da pasta "${h.name}"${json ? '' : ' (sem _backup-app.json)'}: ${novas} nota(s) nova(s), ${atualizadas} atualizada(s) por edição direta no arquivo.`);
+  };
+  if (state.notas.length || state.semana || state.fechadas.length) confirmar('Restaurar substitui os dados atuais pelos da pasta (e junta os .md novos ou editados). Continuar?', aplicar, 'Restaurar');
+  else await aplicar();
+}
+function htmlBackup() {
+  const sup = !!window.showDirectoryPicker, b = state.backup;
+  let st;
+  if (!sup) st = 'Este navegador não permite gravar numa pasta. Use "Exportar tudo (.zip)" de vez em quando, ou abra o app no Chrome/Edge.';
+  else if (BK.estado === 'gravando') st = '⏳ Gravando backup…';
+  else if (BK.estado === 'ok') st = `✅ Backup na pasta <b>${esc(b.nomePasta)}</b>` + (b.ultimoBackup ? ` · ${new Date(b.ultimoBackup).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : '');
+  else if (BK.estado === 'permissao') st = `⚠️ Pasta <b>${esc(b.nomePasta)}</b> desconectada. Clique em Reconectar.`;
+  else if (BK.estado === 'erro') st = `❌ Erro no backup: ${esc(BK.erro)}`;
+  else st = '⚠️ Sem backup automático. Escolha uma pasta dentro do Google Drive, OneDrive ou Dropbox.';
+  return `<p class="muted" style="margin:8px 0">${st}</p><div class="row" style="flex-direction:column;align-items:stretch">
+    ${sup ? `<button class="btn sm" onclick="bkEscolher()">${BK.handle ? 'Trocar pasta' : 'Escolher pasta de backup'}</button>` : ''}
+    ${BK.estado === 'permissao' ? '<button class="btn sm primary" onclick="bkReconectar()">Reconectar pasta</button>' : ''}
+    ${BK.estado === 'ok' ? '<button class="btn sm" onclick="bkGravarTudo(true)">Gravar tudo agora</button>' : ''}
+    ${sup ? '<button class="btn sm" onclick="bkRestaurar()">Restaurar de uma pasta</button>' : ''}
+    <button class="btn sm" onclick="exportarZip()">⬇ Exportar tudo (.zip: notas .md + dados)</button>
+    <button class="btn sm" onclick="exportar()">⬇ Exportar backup completo (.json)</button>
+    <button class="btn sm" onclick="$('arqImport').click()">⬆ Importar backup (.json)</button>
+  </div>`;
+}
+function atualizarStatusBackup() {
+  const e = $('rsBackup');
+  if (e) e.innerHTML = htmlBackup();
+  const b = $('bkStatus');
+  if (!b) return;
+  let t, c = '';
+  if (!window.showDirectoryPicker) { t = '⚠ Backup só manual'; c = 'warn'; }
+  else if (BK.estado === 'gravando') t = '⏳ Gravando backup…';
+  else if (BK.estado === 'ok') { t = '☁ Backup em dia' + (state.backup.ultimoBackup ? ' · ' + new Date(state.backup.ultimoBackup).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''); c = 'ok'; }
+  else if (BK.estado === 'permissao') { t = '⚠ Backup desconectado'; c = 'warn'; }
+  else if (BK.estado === 'erro') { t = '❌ Erro no backup'; c = 'bad'; }
+  else { t = '⚠ Sem backup automático'; c = 'warn'; }
+  b.className = 'bk-status ' + c; b.textContent = t;
+}
+// painel único de dados e backup (aberto pelo botão no rodapé da barra lateral)
+function abrirBackup() {
+  modal('Dados e backup', `<p class="muted">Seus dados ficam neste navegador. Para não perdê-los se o navegador for limpo, escolha uma pasta (de preferência dentro do Google Drive, OneDrive ou Dropbox) onde o app guarda cópias automáticas.${storageOk ? '' : ' <b style="color:var(--bad)">O navegador está bloqueando o armazenamento local!</b>'}</p>
+    <div id="rsBackup">${htmlBackup()}</div>
+    <input type="file" id="arqImport" accept="application/json,.json" hidden onchange="importar(this)">`, [{ t: 'Fechar', c: 'primary' }]);
+}
+
+// ============================================================
+// BARRA LATERAL: calendário do mês, hoje/semana e Pomodoro (sempre visíveis)
+// ============================================================
+let calMes = { y: new Date().getFullYear(), m: new Date().getMonth() };
+function calNav(d) { const dt = new Date(calMes.y, calMes.m + d, 1); calMes = { y: dt.getFullYear(), m: dt.getMonth() }; renderLateral(); }
+function calHoje() { const t = new Date(); calMes = { y: t.getFullYear(), m: t.getMonth() }; renderLateral(); }
+function irParaDia(iso) { const e = $('dia-' + iso); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+function calClick(iso) {
+  const s = state.semana;
+  if (s && iso >= s.seg && iso <= s.dom) { showTab('semana'); setTimeout(() => irParaDia(iso), 0); return; }
+  const r = state.fechadas.find(x => iso >= x.inicio && iso <= x.fim);
+  if (r) verSemana(r.id);
+}
+function renderLateral() {
+  const cal = $('latCal'), hj = $('latHoje');
+  if (!cal || !hj) return;
+  const h = hoje(), s = state.semana;
+
+  // calendário (6 linhas, semana começando na segunda)
+  const ini = segundaDe(toISO(new Date(calMes.y, calMes.m, 1)));
+  const titulo = new Date(calMes.y, calMes.m, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^./, c => c.toUpperCase());
+  let cel = NOMES_DIA.map(n => `<div class="dn">${n[0]}</div>`).join('');
+  const diasNoMes = new Date(calMes.y, calMes.m + 1, 0).getDate(), linhasCal = Math.ceil((idxDia(toISO(new Date(calMes.y, calMes.m, 1))) + diasNoMes) / 7);
+  for (let i = 0; i < linhasCal * 7; i++) {
+    const d = addDias(ini, i), dt = parseISO(d);
+    const naSemana = !!s && d >= s.seg && d <= s.dom;
+    const fech = state.fechadas.find(x => d >= x.inicio && d <= x.fim);
+    const ps = s ? s.passos.filter(p => p.dia === d) : [];
+    const dica = fmtData(d) + (ps.length ? ` · ${ps.filter(p => p.feito).length}/${ps.length} passos` : '') + (fech ? (fech.cicloFechado ? ' · ciclo fechado' : ' · semana incompleta') : '');
+    cel += `<button class="cd ${dt.getMonth() !== calMes.m ? 'fora' : ''} ${naSemana ? 'sem' : ''} ${d === h ? 'hoje' : ''} ${fech ? (fech.cicloFechado ? 'fok' : 'fno') : ''} ${naSemana || fech ? '' : 'nc'}" onclick="calClick('${d}')" title="${dica}">${dt.getDate()}${ps.length ? `<i class="pt ${ps.every(p => p.feito) ? 'ok' : ''}"></i>` : ''}</button>`;
+  }
+  cal.innerHTML = `<div class="cal"><div class="cal-h"><button onclick="calNav(-1)" aria-label="Mês anterior">‹</button><button class="mes" onclick="calHoje()" title="Voltar para o mês de hoje">${titulo}</button><button onclick="calNav(1)" aria-label="Próximo mês">›</button></div>
+    <div class="cal-g">${cel}</div>
+    <p class="muted cal-leg"><span style="color:var(--ok)">▬</span> fechado · <span style="color:var(--warn)">▬</span> incompleto · <span style="color:var(--accent)">●</span> passos</p></div>`;
+
+  // hoje e progresso da semana
+  if (!s) {
+    hj.innerHTML = '<p class="muted" style="margin:0 0 8px">Nenhuma semana em andamento.</p><button class="btn sm" onclick="showTab(\'montar\')">Montar ciclo</button>';
+  } else {
+    const doDia = s.passos.filter(p => p.dia === h), n = s.passos.length, feitos = s.passos.filter(p => p.feito).length;
+    const horas = horasFeitas(s), meta = metaEf(s), pctH = meta ? Math.min(100, Math.round(horas / meta * 100)) : 0;
+    hj.innerHTML = `<div class="muted" style="margin-bottom:4px">${NOMES_DIA_LONGO[idxDia(h)]}, ${fmtData(h)} · hoje ${doDia.filter(p => p.feito).length}/${doDia.length} · semana ${feitos}/${n}</div>` +
+      (doDia.length
+        ? doDia.slice(0, 3).map(p => `<label class="lh ${p.feito ? 'done' : ''}"><input type="checkbox" ${p.feito ? 'checked' : ''} onchange="togglePasso(${p.id},this.checked)"><span class="dot" style="background:${cor(p.materia)}"></span><span class="t" title="${esc(p.materia)}">${esc(p.materia)}</span></label>`).join('')
+        : '<p class="muted" style="margin:0">Sem passos hoje.</p>') +
+      `<div class="bar" style="margin-top:8px" title="Horas da semana"><i style="width:${pctH}%"></i></div><div class="muted" style="margin-top:3px">${fmtH(horas)} de ${fmtH(meta)} na semana</div>`;
+  }
+
+  hj.insertAdjacentHTML('beforeend', htmlQuestoesHoje());
+  atualizarStatusBackup();
+
+  // pomodoro: valores dos ajustes e estado do cronômetro
+  ['foco', 'pausa', 'longa', 'ate'].forEach(k => { const e = $('pi-' + k); if (e && document.activeElement !== e) e.value = state.pomo[k]; });
+  updatePomoUI();
+}
+
+// ============================================================
+// GRÁFICOS (SVG próprio, sem bibliotecas)
+// ============================================================
+function arcoAnel(cx, cy, R, r, a0, a1) {
+  const p = (rad, a) => [(cx + rad * Math.cos(a)).toFixed(2), (cy + rad * Math.sin(a)).toFixed(2)];
+  const [x0, y0] = p(R, a0), [x1, y1] = p(R, a1), [x2, y2] = p(r, a1), [x3, y3] = p(r, a0), g = a1 - a0 > Math.PI ? 1 : 0;
+  return `M${x0} ${y0} A${R} ${R} 0 ${g} 1 ${x1} ${y1} L${x2} ${y2} A${r} ${r} 0 ${g} 0 ${x3} ${y3} Z`;
+}
+// rosca com legenda: dados = [{ nome, valor, cor, rotulo }]
+function roscaSVG(dados, centro, sub) {
+  const total = soma(dados, d => d.valor);
+  if (!total) return '<p class="muted" style="text-align:center">Sem dados no período.</p>';
+  let a0 = -Math.PI / 2, seg = '';
+  dados.filter(d => d.valor > 0).forEach(d => {
+    const ang = Math.min(d.valor / total * Math.PI * 2, Math.PI * 2 - 0.0001);
+    seg += `<path d="${arcoAnel(90, 90, 82, 54, a0, a0 + ang)}" fill="${d.cor}" stroke="var(--card)" stroke-width="1.5"><title>${esc(d.nome)}: ${esc(d.rotulo)}</title></path>`;
+    a0 += d.valor / total * Math.PI * 2;
+  });
+  const leg = dados.filter(d => d.valor > 0).map(d => `<span><i class="dot" style="background:${d.cor}"></i>${esc(d.nome)} · ${esc(d.rotulo)}</span>`).join('');
+  return `<div class="rosca"><svg viewBox="0 0 180 180" role="img" aria-label="${esc(sub)}">${seg}<text x="90" y="88" text-anchor="middle" font-size="20" font-weight="700" fill="var(--text)">${esc(centro)}</text><text x="90" y="106" text-anchor="middle" font-size="10" fill="var(--muted)">${esc(sub)}</text></svg><div class="rosca-leg">${leg}</div></div>`;
+}
+// rosca do ciclo da semana: um segmento por passo; feito = cor cheia, pendente = clara
+function roscaCiclo(s) {
+  const n = s.passos.length;
+  if (!n) return '';
+  const fatia = Math.PI * 2 / n, gap = Math.min(0.03, fatia * 0.25);
+  let seg = '';
+  s.passos.forEach((p, i) => {
+    const a0 = -Math.PI / 2 + i * fatia + gap / 2, a1 = -Math.PI / 2 + (i + 1) * fatia - gap / 2;
+    seg += `<path d="${arcoAnel(90, 90, 82, 54, a0, a1)}" fill="${cor(p.materia)}" opacity="${p.feito ? 1 : 0.32}"><title>${p.id}. ${esc(p.materia)}${p.feito ? ' ✓' : ''}</title></path>`;
+  });
+  const feitos = s.passos.filter(p => p.feito).length;
+  const leg = [...new Set(s.passos.map(p => p.materia))].map(m => `<span><i class="dot" style="background:${cor(m)}"></i>${esc(m)}</span>`).join('');
+  return `<div class="rosca"><svg viewBox="0 0 180 180" role="img" aria-label="Ciclo da semana">${seg}<text x="90" y="88" text-anchor="middle" font-size="22" font-weight="700" fill="var(--text)">${feitos}/${n}</text><text x="90" y="106" text-anchor="middle" font-size="10" fill="var(--muted)">passos feitos</text></svg><div class="rosca-leg">${leg}</div></div>`;
+}
+// barras empilhadas: cols = [{ label, partes:[{ v, cor, t }] }]
+function barrasSVG(cols, fmt) {
+  const W = 640, H = 170, pad = 16, base = H - 24, tot = c => soma(c.partes, p => p.v);
+  const max = Math.max(0, ...cols.map(tot));
+  if (!max) return '<p class="muted" style="text-align:center">Sem dados no período.</p>';
+  const n = cols.length, passo = (W - pad * 2) / n, bw = Math.max(4, Math.min(34, passo * 0.62));
+  let g = '';
+  cols.forEach((c, i) => {
+    const x = pad + i * passo + (passo - bw) / 2;
+    let y = base;
+    c.partes.forEach(p => {
+      const h = p.v / max * (base - 20);
+      if (h <= 0) return;
+      y -= h;
+      g += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${p.cor}"><title>${esc(p.t)}</title></rect>`;
+    });
+    if (tot(c) > 0 && n <= 14) g += `<text x="${(x + bw / 2).toFixed(1)}" y="${(y - 4).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--text)">${fmt(tot(c))}</text>`;
+    if (n <= 10 || i % Math.ceil(n / 10) === 0) g += `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="10" fill="var(--muted)">${c.label}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img">${g}<line x1="${pad}" x2="${W - pad}" y1="${base}" y2="${base}" stroke="var(--line)"/></svg>`;
+}
+
+// ============================================================
+// DESEMPENHO: assuntos por matéria, questões do dia e horas (Pomodoro)
+// ============================================================
+const dsUI = { periodo: '30', visao: 'estudo', abertas: new Set() };
+const MIN_QUESTOES = 5;   // abaixo disso o nível fica "Poucos dados"
+const NOMES_NIVEL = { na: 'Poucos dados', fraco: 'Fraco', medio: 'Médio', bom: 'Bom', dom: 'Dominado' };
+function nivelDe(f, a) { if (f < MIN_QUESTOES) return 'na'; const p = a / f * 100; return p < 60 ? 'fraco' : p < 75 ? 'medio' : p < 90 ? 'bom' : 'dom'; }
+const corNivel = k => ({ na: 'var(--muted)', fraco: 'var(--bad)', medio: 'var(--warn)', bom: 'var(--accent)', dom: 'var(--ok)' }[k]);
+const iniPeriodo = () => dsUI.periodo === '7' ? addDias(hoje(), -6) : dsUI.periodo === '30' ? addDias(hoje(), -29) : '0000-00-00';
+const pctDe = (a, f) => f ? Math.round(a / f * 100) : 0;
+const horasDe = ss => round2(soma(ss, x => x.minutos) / 60);
+
+function topoDesempenho() {
+  const sem = dsUI.visao === 'semanas';
+  return `<div class="d-topo"><h2>Desempenho</h2>
+    <div class="seg">${[['estudo', 'Estudo'], ['semanas', 'Semanas']].map(([k, r]) => `<button class="${dsUI.visao === k ? 'on' : ''}" onclick="dsVisao('${k}')">${r}</button>`).join('')}</div>
+    ${sem ? '' : `<div class="seg">${[['7', '7 dias'], ['30', '30 dias'], ['tudo', 'Tudo']].map(([k, r]) => `<button class="${dsUI.periodo === k ? 'on' : ''}" onclick="dsPeriodo('${k}')">${r}</button>`).join('')}</div>`}
+    <span style="flex:1"></span>${sem ? '' : '<button class="btn primary" onclick="abrirQuestoes()">＋ Registrar questões</button>'}</div>`;
+}
+function dsVisao(k) { dsUI.visao = k; renderDesempenho(); }
+
+function renderDesempenho() {
+  if (dsUI.visao === 'semanas') { renderSemanasFechadas(); return; }
+  $('view-desempenho').classList.remove('vis-semanas');
+  const v = $('view-desempenho'), ini = iniPeriodo();
+  const qs = state.questoes.filter(q => q.data >= ini), ss = state.sessoes.filter(x => x.data >= ini);
+  const feitas = soma(qs, q => q.feitas), acertos = soma(qs, q => q.acertos);
+  const dias = new Set([...qs.map(q => q.data), ...ss.map(x => x.data)]).size;
+  const ordem = todasMaterias(), mats = [];
+  const add = m => { if (m && !mats.includes(m)) mats.push(m); };
+  state.assuntos.forEach(a => add(a.materia)); state.questoes.forEach(q => add(q.materia)); state.sessoes.forEach(x => add(x.materia));
+  if (state.semana) state.semana.passos.forEach(p => add(p.materia));
+  const pos = m => ordem.indexOf(m) < 0 ? 999 : ordem.indexOf(m);
+  mats.sort((a, b) => pos(a) - pos(b));
+
+  const linhaAs = (m, id, nome, qm, sm) => {
+    const qa_ = qm.filter(q => (q.assuntoId || null) === id), ff = soma(qa_, q => q.feitas), aa = soma(qa_, q => q.acertos);
+    const hh = horasDe(sm.filter(x => (x.assuntoId || null) === id)), nv = nivelDe(ff, aa);
+    if (!id && !ff && !hh) return '';
+    return `<div class="as"><span class="nm" title="${esc(nome)}">${esc(nome)}</span>
+      <div><div class="bar sm"><i style="width:${pctDe(aa, ff)}%;background:${corNivel(nv)}"></i></div><div class="st">${ff ? `${aa}/${ff} · ${pctDe(aa, ff)}%` : 'sem questões'}${hh ? ' · ' + fmtH(hh) : ''}</div></div>
+      <span class="lv ${nv}">${NOMES_NIVEL[nv]}</span>
+      <span class="acoes"><button class="btn sm" data-m="${esc(m)}" onclick="abrirQuestoes({materia:this.dataset.m,assuntoId:'${id || ''}'})" title="Registrar questões">＋</button>${id ? `<button class="btn sm" onclick="dsRenomear('${id}')" title="Renomear" aria-label="Renomear">✎</button><button class="btn sm" onclick="dsExcluir('${id}')" title="Excluir" aria-label="Excluir">🗑</button>` : ''}</span></div>`;
+  };
+  const blocoMateria = m => {
+    const qm = qs.filter(q => q.materia === m), sm = ss.filter(x => x.materia === m);
+    const f = soma(qm, q => q.feitas), a = soma(qm, q => q.acertos), nv = nivelDe(f, a);
+    const as = state.assuntos.filter(x => x.materia === m);
+    const linhas = as.map(x => linhaAs(m, x.id, x.nome, qm, sm)).join('') + linhaAs(m, null, '(sem assunto)', qm, sm);
+    return `<details class="ds-m" ${dsUI.abertas.has(m) ? 'open' : ''} data-m="${esc(m)}" ontoggle="dsToggle(this)">
+      <summary><span class="sq" style="background:${cor(m)}"></span><span class="nm" title="${esc(m)}">${esc(m)}</span>
+        <span class="resumo-m">${f ? `${a}/${f} · ${pctDe(a, f)}%` : 'sem questões'} · ${fmtH(horasDe(sm))}</span><span class="lv ${nv}">${NOMES_NIVEL[nv]}</span></summary>
+      ${linhas}${as.length ? '' : '<p class="muted" style="padding-left:24px;margin:4px 0 8px">Nenhum assunto ainda. Adicione acima.</p>'}</details>`;
+  };
+
+  // gráficos
+  const porMat = mats.map(m => ({ nome: m, valor: horasDe(ss.filter(x => x.materia === m)), cor: cor(m) })).filter(d => d.valor > 0).sort((a, b) => b.valor - a.valor);
+  porMat.forEach(d => { d.rotulo = fmtH(d.valor); });
+  const horas = horasDe(ss);
+  const tipos = ['Teoria', 'Questões', 'Revisão'].map(t => `${t}: <b>${fmtH(horasDe(ss.filter(x => (x.tipo || 'Teoria') === t)))}</b>`).join(' · ');
+  const N = dsUI.periodo === '7' ? 7 : 30;
+  const colsHoras = Array.from({ length: N }, (_, i) => {
+    const iso = addDias(hoje(), -(N - 1 - i));
+    return { label: fmtData(iso), partes: mats.map(m => { const h = horasDe(ss.filter(x => x.data === iso && x.materia === m)); return { v: h, cor: cor(m), t: `${fmtData(iso)} · ${m}: ${fmtH(h)}` }; }) };
+  });
+  const colsQ = Array.from({ length: N }, (_, i) => {
+    const iso = addDias(hoje(), -(N - 1 - i)), q = state.questoes.filter(x => x.data === iso), f = soma(q, x => x.feitas), a = soma(q, x => x.acertos);
+    return { label: fmtData(iso), partes: [{ v: a, cor: 'var(--accent)', t: `${fmtData(iso)}: ${a} acertos` }, { v: f - a, cor: 'var(--bad)', t: `${fmtData(iso)}: ${f - a} erros` }] };
+  });
+  const acertoMat = mats.map(m => { const qm = qs.filter(q => q.materia === m), f = soma(qm, q => q.feitas), a = soma(qm, q => q.acertos); return { m, f, a }; }).filter(x => x.f > 0).sort((a, b) => pctDe(b.a, b.f) - pctDe(a.a, a.f));
+  const ultimos = [...state.questoes].sort((a, b) => b.data.localeCompare(a.data) || b.id.localeCompare(a.id)).slice(0, 8);
+  const optMat = [...new Set([...ordem, ...mats])].map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+
+  v.innerHTML = `
+  ${topoDesempenho()}
+  <div class="kpis">
+    <div class="kpi"><span class="muted">Horas (Pomodoro)</span><b>${fmtH(horas)}</b></div>
+    <div class="kpi"><span class="muted">Questões feitas</span><b>${feitas}</b></div>
+    <div class="kpi"><span class="muted">Acertos</span><b>${feitas ? pctDe(acertos, feitas) + '%' : '—'}</b></div>
+    <div class="kpi"><span class="muted">Dias com estudo</span><b>${dias}</b></div>
+  </div>
+  <div>
+    <div class="card"><h2>Matérias e assuntos</h2>
+      <p class="muted" style="margin-top:-6px">O nível de cada assunto vem da porcentagem de acertos no período (mínimo de ${MIN_QUESTOES} questões): abaixo de 60% é Fraco, até 74% Médio, até 89% Bom e 90% ou mais Dominado.</p>
+      <div class="row" style="margin:10px 0 14px">
+        <select id="dsMat" aria-label="Matéria" style="max-width:230px">${optMat}</select>
+        <input id="dsNomes" placeholder="Assuntos (separe por vírgula)" style="flex:1;min-width:160px" onkeydown="if(event.key==='Enter')dsAddAssuntos()">
+        <button class="btn" onclick="dsAddAssuntos()">+ Adicionar</button></div>
+      ${mats.length ? mats.map(blocoMateria).join('') : '<p class="muted">Nada ainda. Adicione assuntos a uma matéria ou registre questões.</p>'}
+    </div>
+  </div>
+  <div>
+    <div class="card"><h2>Horas por matéria</h2>${roscaSVG(porMat, fmtH(horas), 'estudadas')}<p class="muted" style="text-align:center;margin:10px 0 0">${tipos}</p></div>
+    <div class="card"><h2>Horas por dia</h2>${barrasSVG(colsHoras, fmtH)}</div>
+  </div>
+  <div>
+    <div class="card"><h2>Questões por dia</h2>${barrasSVG(colsQ, x => String(x))}<p class="muted" style="margin:6px 0 0"><span style="color:var(--accent)">■</span> acertos · <span style="color:var(--bad)">■</span> erros</p></div>
+    <div class="card"><h2>Acerto por matéria</h2>${acertoMat.length ? acertoMat.map(x => `<div class="mat"><span class="dot" style="background:${cor(x.m)}"></span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(x.m)}">${esc(x.m)}</span><span class="muted">${x.a}/${x.f} · ${pctDe(x.a, x.f)}%</span></div><div class="bar" style="margin:-4px 0 10px"><i style="width:${pctDe(x.a, x.f)}%;background:${corNivel(nivelDe(x.f, x.a))}"></i></div>`).join('') : '<p class="muted">Registre questões para ver o desempenho por matéria.</p>'}</div>
+    <div class="card"><h2>Últimos registros</h2>${ultimos.length ? ultimos.map(q => { const a = q.assuntoId ? assuntoPorId(q.assuntoId) : null; return `<div class="reg"><span class="muted">${fmtData(q.data)}</span><span class="t">${esc(q.materia)}${a ? ' › ' + esc(a.nome) : ''}</span><b>${q.acertos}/${q.feitas}</b><button class="btn sm" onclick="dsExcluirQ('${q.id}')" title="Apagar este registro" aria-label="Apagar registro">🗑</button></div>`; }).join('') : '<p class="muted">Nenhum registro ainda.</p>'}</div>
+  </div>`;
+}
+const assuntoPorId = id => state.assuntos.find(a => a.id === id);
+function dsPeriodo(p) { dsUI.periodo = p; renderDesempenho(); }
+function dsToggle(d) { if (d.open) dsUI.abertas.add(d.dataset.m); else dsUI.abertas.delete(d.dataset.m); }
+
+function dsAddAssuntos() {
+  const m = $('dsMat').value, nomes = $('dsNomes').value.split(/[,\n;]/).map(s => s.trim()).filter(Boolean);
+  if (!nomes.length) { alerta('Aviso', 'Digite o nome de um ou mais assuntos (separados por vírgula).'); return; }
+  let novos = 0;
+  nomes.forEach(n => {
+    if (!state.assuntos.some(a => a.materia === m && norm(a.nome) === norm(n))) { state.assuntos.push({ id: novoId(), materia: m, nome: n }); novos++; }
+  });
+  dsUI.abertas.add(m); salvar(); renderDesempenho();
+  const sel = $('dsMat'); if (sel) sel.value = m;
+  if (!novos) alerta('Aviso', 'Esses assuntos já existem nessa matéria.');
+}
+function dsRenomear(id) {
+  const a = assuntoPorId(id);
+  modal('Renomear assunto', `<label class="f">Nome<input id="dsNovoNome" value="${esc(a.nome)}"></label>`, [{ t: 'Cancelar' }, { t: 'Salvar', c: 'primary', f: () => {
+    const n = $('dsNovoNome').value.trim();
+    if (!n) return;
+    if (state.assuntos.some(x => x.id !== id && x.materia === a.materia && norm(x.nome) === norm(n))) { alerta('Aviso', 'Já existe um assunto com esse nome nessa matéria.'); return; }
+    a.nome = n; salvar(); renderDesempenho();
+  } }]);
+}
+function dsExcluir(id) {
+  const a = assuntoPorId(id);
+  confirmar(`Excluir o assunto "${a.nome}"? Os registros de questões e horas dele continuam, mas passam a contar como "sem assunto".`, () => {
+    state.assuntos = state.assuntos.filter(x => x.id !== id);
+    state.questoes.forEach(q => { if (q.assuntoId === id) q.assuntoId = null; });
+    state.sessoes.forEach(x => { if (x.assuntoId === id) x.assuntoId = null; });
+    salvar(); renderDesempenho();
+  }, 'Excluir');
+}
+function dsExcluirQ(id) {
+  confirmar('Apagar este registro de questões? Não dá para desfazer.', () => { state.questoes = state.questoes.filter(q => q.id !== id); salvar(); renderDesempenho(); }, 'Apagar');
+}
+
+// ----- registro de questões do dia -----
+function abrirQuestoes(o = {}) {
+  const mats = [...new Set([...todasMaterias(), ...state.assuntos.map(a => a.materia)])];
+  const hojeDoCiclo = state.semana ? state.semana.passos.find(p => p.dia === hoje()) : null;
+  const m0 = o.materia || (hojeDoCiclo && hojeDoCiclo.materia) || mats[0];
+  modal('Registrar questões', `
+    <div class="grid2">
+      <label class="f">Data<input type="date" id="qData" value="${esc(o.data || hoje())}" max="${hoje()}"></label>
+      <label class="f">Matéria<select id="qMat" onchange="qAtualizarAssuntos()">${mats.map(m => `<option value="${esc(m)}" ${m === m0 ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></label>
+    </div>
+    <label class="f" style="margin-top:10px">Assunto<select id="qAss"></select></label>
+    <label class="f" style="margin-top:10px">…ou criar um assunto novo<input id="qNovo" placeholder="Ex.: Prescrição" value="${esc(o.novo || '')}"></label>
+    <div class="grid2" style="margin-top:10px">
+      <label class="f">Questões feitas<input type="number" id="qFeitas" min="1" step="1" value="${Number.isFinite(o.feitas) ? o.feitas : ''}"></label>
+      <label class="f">Acertos<input type="number" id="qAcertos" min="0" step="1" value="${Number.isFinite(o.acertos) ? o.acertos : ''}"></label>
+    </div>`, [{ t: 'Cancelar' }, { t: 'Salvar', c: 'primary', f: salvarQuestoes }]);
+  qAtualizarAssuntos(o.assuntoId);
+}
+function qAtualizarAssuntos(sel) {
+  const m = $('qMat').value;
+  $('qAss').innerHTML = '<option value="">— sem assunto —</option>' + state.assuntos.filter(a => a.materia === m).map(a => `<option value="${a.id}" ${a.id === sel ? 'selected' : ''}>${esc(a.nome)}</option>`).join('');
+}
+function salvarQuestoes() {
+  const d = { data: $('qData').value, materia: $('qMat').value, assuntoId: $('qAss').value, novo: $('qNovo').value.trim(), feitas: parseInt($('qFeitas').value), acertos: parseInt($('qAcertos').value) };
+  let erro = '';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d.data)) erro = 'Informe a data.';
+  else if (d.data > hoje()) erro = 'A data não pode ser no futuro.';
+  else if (!d.materia) erro = 'Escolha a matéria.';
+  else if (!(d.feitas >= 1)) erro = 'Informe quantas questões você fez (mínimo 1).';
+  else if (!(d.acertos >= 0) || d.acertos > d.feitas) erro = 'Os acertos precisam estar entre 0 e o número de questões feitas.';
+  if (erro) { modal('Dados inválidos', `<p>${esc(erro)}</p>`, [{ t: 'Corrigir', c: 'primary', f: () => abrirQuestoes(d) }]); return; }
+  let id = d.assuntoId || null;
+  if (d.novo) {
+    let ex = state.assuntos.find(a => a.materia === d.materia && norm(a.nome) === norm(d.novo));
+    if (!ex) { ex = { id: novoId(), materia: d.materia, nome: d.novo }; state.assuntos.push(ex); }
+    id = ex.id;
+  }
+  state.questoes.push({ id: novoId(), data: d.data, materia: d.materia, assuntoId: id, feitas: d.feitas, acertos: d.acertos });
+  dsUI.abertas.add(d.materia);
+  salvar();
+  if (abaAtual === 'desempenho') renderDesempenho();
+}
+function htmlQuestoesHoje() {
+  const q = state.questoes.filter(x => x.data === hoje()), f = soma(q, x => x.feitas), a = soma(q, x => x.acertos);
+  return `<div class="row" style="margin-top:8px;justify-content:space-between;flex-wrap:nowrap"><span class="muted">Questões hoje: <b>${f}</b>${f ? ` · ${pctDe(a, f)}%` : ''}</span><button class="btn sm" onclick="abrirQuestoes()" title="Registrar questões" aria-label="Registrar questões">＋ Questões</button></div>`;
+}
+
+// Avisos globais no topo: semana encerrada e dicas de restauração
+function dispensarHint() { lsSet('ciclo.hintRestaurar', '1'); atualizarAviso(); }
+function atualizarAviso() {
+  const el = $('aviso'), s = state.semana;
+  if (s && hoje() > s.dom) {
+    el.innerHTML = `<span>📅 A semana ${fmtData(s.seg)} → ${fmtData(s.dom)} já terminou. Feche-a para salvar as estatísticas.</span>` +
+      (abaAtual === 'semana' ? '' : `<button class="btn sm" onclick="showTab('semana')">Ir para a semana</button>`);
+    el.hidden = false;
+  } else if (!s && !state.notas.length && !state.fechadas.length && window.showDirectoryPicker && !lsGet('ciclo.hintRestaurar')) {
+    el.innerHTML = `<span>💾 Já usou o app antes e perdeu os dados? Restaure de uma pasta de backup.</span><span class="row"><button class="btn sm" onclick="bkRestaurar()">Restaurar de uma pasta</button><button class="btn sm" onclick="dispensarHint()">Dispensar</button></span>`;
+    el.hidden = false;
+  } else el.hidden = true;
+}
+// Virada de dia com a página aberta: atualiza o destaque de "hoje" e o aviso
+function checarVirada() {
+  if (hoje() === dataRender) return;
+  dataRender = hoje(); atualizarAviso(); renderLateral();
+  const ativo = document.activeElement;
+  if (abaAtual === 'semana' && !(ativo && /INPUT|SELECT/.test(ativo.tagName))) renderSemana();
+  else if (abaAtual === 'montar') renderMontar();
+}
+setInterval(checarVirada, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checarVirada(); });
+
+aplicarTema();
+// em telas estreitas a barra lateral vem recolhida (o menu continua visível)
+if (window.matchMedia && matchMedia('(max-width:900px)').matches) document.querySelectorAll('details.lat').forEach(d => { d.open = false; });
+showTab(state.semana ? 'semana' : 'montar');
+// reconecta com a pasta de backup salva (se o navegador a lembrar) e atualiza o status
+bkCarregarHandle().then(() => { atualizarStatusBackup(); if (BK.estado === 'ok') agendarBackup(); });
+</script>
+</body>
+</html>

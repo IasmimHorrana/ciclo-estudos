@@ -1,0 +1,16 @@
+# dependências e builds
+node_modules/
+dist/
+.vite/
+coverage/
+
+# segredos: nunca vão para o Git (URL e chave do Supabase ficam aqui)
+.env
+.env.*
+!.env.example
+
+# arquivos temporários do preview e do sistema
+.claude/
+*.log
+.DS_Store
+Thumbs.db

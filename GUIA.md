@@ -1,0 +1,245 @@
+# Guia do app Ciclo de Estudos
+
+Arquivo único: `ciclo-estudos.html` (HTML + CSS + JS, sem dependências, funciona offline).
+Para usar: abrir o arquivo no navegador. Para mexer: editar o arquivo e dar F5.
+
+**Autoria:** app pessoal de Iasmim, evoluído a partir do gerador de ciclos de Gabriel Ângelo (a lógica de geração e espaçamento do ciclo vem dele). O crédito não aparece mais na tela do app (removido a pedido); fica registrado apenas aqui.
+
+> Regra do projeto: toda mudança no app atualiza este guia (seções afetadas + entrada no Histórico de mudanças no fim).
+
+---
+
+## 1. Como o app funciona (visão rápida)
+
+### Layout (tela cheia com barra lateral)
+
+O app usa a largura inteira do navegador. À esquerda há uma **barra lateral fixa**, presente em todas as abas, com:
+- o **menu** de navegação (Montar ciclo, Semana, Desempenho, Resumos, Flashcards) e o botão de tema;
+- o **calendário do mês** (‹ › mudam o mês, clicar no nome volta para hoje). Hoje fica em destaque, a semana em andamento tem fundo claro, um ponto marca dias com passos (verde = todos feitos) e um traço verde ou laranja na base marca semanas fechadas (ciclo fechado ou incompleto). Clicar em um dia da semana atual abre a aba Semana naquele dia; clicar em um dia de semana fechada abre o resumo dela;
+- **Hoje e semana**: os passos de hoje (dá para marcar direto ali), as barras de passos e horas da semana, as **questões feitas hoje** e o botão ＋ Registrar questões;
+- o **Pomodoro**, que continua rodando enquanto você troca de aba;
+- no rodapé, o botão de **status do backup** ("☁ Backup em dia · 14:32", "⚠ Sem backup automático"…), que abre o painel **Dados e backup**.
+
+**Tela única (computador).** Em telas a partir de 1100 px de largura e 620 px de altura o app **não rola a página**: a barra lateral e a área principal ocupam exatamente a altura da janela, cada aba é dividida em colunas (Montar: modelos | tamanho e dias | matérias; Semana: lista do ciclo | rosca e matérias; Desempenho: matérias e assuntos | rosca e horas | questões e registros (na visão Semanas: lista | gráfico); Resumos: notas | editor | pré-visualização) e **só as listas longas rolam dentro do próprio quadro**. Em telas menores (celular, janela pequena) o layout volta a empilhar e a página rola normalmente. Todas as regras disso estão no bloco de CSS `TELA ÚNICA`, dentro de uma `@media (min-width:1100px) and (min-height:620px)`.
+
+Cada seção da lateral pode ser recolhida clicando no título. Em telas estreitas (celular) a lateral vira um bloco no topo, com as seções recolhidas.
+
+Cinco abas:
+
+| Aba | O que faz |
+|---|---|
+| **Montar ciclo** | Modelos salvos, meta semanal em horas, modo (Livre ou Ponderado), dias de estudo e a lista de matérias do ciclo (em duas colunas em tela larga). O botão "Gerar ciclo e abrir a semana" cria a semana. Ver "Montar o ciclo e repetir semanas". |
+| **Semana** | Tira com os 7 dias (clique leva ao dia), checklist do ciclo por dia (cada passo com barra de progresso na cor da matéria), rosca do ciclo, horas, anotações, meta, atalho 📝 Resumo e "Fechar semana". |
+| **Desempenho** | Duas visões: **Estudo** (matérias abertas em assuntos, registro de questões, nível de cada assunto e gráficos de horas e acertos) e **Semanas** (semanas fechadas, horas × meta, repetir ciclo). Ver seção "Desempenho". |
+| **Resumos** | Notas em Markdown por matéria (estilo RemNote): tópicos, `[[links]]`, importação de texto pronto e backup em pasta. Ver seção "Resumos". |
+| **Flashcards** | Aba em branco, de propósito: o sistema ainda vai ser desenhado em conversa (ver "Flashcards"). |
+
+Fluxo: **Montar ciclo → gerar → Semana (preenchida automaticamente) → estudar e marcar → Fechar semana → Desempenho › Semanas**. Os resumos acompanham as matérias do ciclo.
+
+### Montar o ciclo e repetir semanas
+
+**Tamanho do ciclo.** Você informa a **meta semanal em horas** (ex.: 28) e a **duração de cada passo** (ex.: 1h); o app calcula os passos (28 ÷ 1 = 28). Se a conta não fechar (28 ÷ 1,5), arredonda e avisa quantas horas o ciclo terá.
+
+**Matérias do ciclo.** Existe uma lista única de matérias, e cada uma tem repetições (modo Livre) e peso de 1 a 5 (modo Ponderado), então trocar de modo não perde as matérias.
+- Para incluir: seletor "＋ Adicionar matéria ao ciclo…" no fim da lista. Escolha uma matéria da lista (as 10 matérias padrão e as que você criou) ou "Digitar uma matéria nova…" (aceita várias, separadas por vírgula; a nova fica salva para as próximas semanas).
+- Para tirar do ciclo: ✕ na linha. Isso só tira do ciclo, não apaga a matéria da lista.
+- Para tirar uma matéria **da lista de escolha** (ex.: uma que você não estuda mais): botão **⚙ Gerenciar lista de matérias**, no fim da lista. Ali "Tirar da lista" remove a matéria dos seletores do app (ciclo, Desempenho, Resumos, importador) e do ciclo em montagem, sem apagar notas, questões ou semanas que usam o nome; as tiradas ficam numa seção "Tiradas da lista" com "Trazer de volta".
+- Modo Livre: a soma das repetições precisa ser igual ao total de passos; o botão "Distribuir igualmente" divide o total entre as matérias.
+- Modo Ponderado: o app mostra, ao lado de cada matéria, quantos passos e horas ela terá.
+
+**Modelos e repetição.** Para não montar do zero toda semana:
+1. Monte o ciclo e dê um nome em **Modelos de ciclo → Salvar como modelo** (ex.: "Semana padrão 28h"). Salvar com o mesmo nome substitui o modelo.
+2. Na semana seguinte, **Usar** o modelo carrega as matérias, a meta e os dias no formulário; ajuste (tire uma matéria, mude repetições) e gere. O modelo salvo não muda sozinho; **Atualizar** o substitui pela montagem atual.
+3. Atalhos sem nomear: ao **Fechar semana**, "Salvar e montar a próxima semana" já devolve o ciclo recém-fechado ao formulário; "↻ Repetir o ciclo da última semana fechada" faz o mesmo a qualquer momento; e no **Histórico** cada semana tem "↻ Repetir ciclo".
+Cada semana gerada guarda uma cópia da montagem usada (`semana.modelo`), por isso o "repetir" funciona mesmo que você tenha mudado o formulário depois.
+
+### Calendário e dias
+
+O app usa a data do computador (fuso local) e trabalha com a **semana real, de segunda a domingo**:
+
+- Na aba Montar, "Dias de estudo" define quais dias da semana você estuda (padrão seg–sáb) e, opcionalmente, quantos passos por dia (vazio = automático: passos ÷ dias restantes).
+- `gerar()` distribui os passos, em ordem, **a partir de hoje** e só nos dias marcados (`agendar()`). Se não restar nenhum dia de estudo na semana atual, usa a próxima semana. Passos que não couberem (só acontece com "passos por dia" manual) ficam em "Sem dia", com aviso.
+- Na aba Semana os passos aparecem agrupados por dia, com **HOJE** em destaque e o selo **atrasado** em dias passados com passos pendentes. Cada passo tem um seletor para mudar o dia à mão.
+- "Reagendar pendentes a partir de hoje" redistribui os passos não concluídos nos dias que ainda restam (sobrescreve dias ajustados à mão nesses passos).
+- Se a semana em andamento já terminou no calendário, aparece um aviso no topo de todas as abas pedindo para fechá-la. O app também percebe a virada do dia com a página aberta (checagem a cada minuto e ao voltar para a aba).
+- Ao fechar a semana com "Salvar e limpar marcações" (ou "Limpar marcações sem salvar"), o ciclo é reagendado na semana real da data de hoje.
+- Não há integração com Google Calendar nem com outro calendário externo.
+
+Ao clicar em "Gerar ciclo e abrir a semana", a função `gerar()` cria `state.semana` com um passo por posição do ciclo e abre a aba Semana já preenchida. Se já existir uma semana em andamento, o app pergunta antes de substituí-la, e a semana antiga se perde sem salvar estatística (para guardar, feche a semana antes).
+
+## Desempenho (assuntos, questões e horas)
+
+No topo da aba há o seletor **Estudo | Semanas**.
+
+**Visão Semanas** (ocupa o lugar da antiga aba Histórico): indicadores (semanas fechadas, ciclos completos, horas nessas semanas, % médio de passos concluídos), a lista de semanas fechadas (ciclo fechado ou incompleto, horas × meta, quanto faltou, % de passos, pomodoros) com **↻ Repetir ciclo**, **Ver detalhes** (pizza por matéria) e **Excluir**, e o gráfico de horas por semana com a meta tracejada. Clicar num dia de semana fechada no calendário da lateral abre o mesmo "Ver detalhes". Atenção: nas semanas fechadas as horas somam o que foi marcado nos passos (Pomodoro + horas digitadas à mão); na visão Estudo, só os focos do Pomodoro.
+
+### Visão Estudo
+
+- **Assuntos:** cada matéria pode ter vários assuntos (campo "Assuntos, separados por vírgula", com ✎ para renomear e 🗑 para excluir; excluir um assunto não apaga os registros, eles passam a contar como "(sem assunto)").
+- **Registrar questões:** botão ＋ (na aba, na lateral e em cada assunto): data (não aceita futuro), matéria, assunto (ou criar um novo ali mesmo), questões feitas e acertos. Os últimos 8 registros aparecem na aba, com 🗑 para corrigir engano.
+- **Horas:** vêm do **Pomodoro**. Ao fim de cada foco, além do passo, você escolhe o **tipo de estudo** (Teoria, Questões ou Revisão) e, opcionalmente, o **assunto**; cada foco vira uma sessão em `state.sessoes`. Horas digitadas à mão no passo não entram nos gráficos, só os focos do Pomodoro.
+- **Nível do assunto** (`nivelDe()`), calculado só pela porcentagem de acertos **dentro do período escolhido** (7 dias, 30 dias ou Tudo): menos de 5 questões = Poucos dados; abaixo de 60% = Fraco; até 74% = Médio; até 89% = Bom; 90% ou mais = Dominado. O nível não altera o ciclo (decisão: só informar).
+- **Gráficos** (SVG próprio): indicadores no topo (horas, questões, % de acerto, dias com estudo), rosca de horas por matéria (com horas por tipo de estudo), barras de horas por dia, barras de questões por dia (acertos x erros) e acerto por matéria.
+- A rosca da aba Semana mostra um segmento por passo do ciclo: cor cheia = feito, clara = pendente.
+
+## Resumos (aba estilo RemNote)
+
+**Notas.** Cada nota tem título, matéria e texto em Markdown. A barra lateral agrupa por matéria (mesmas cores da pizza), tem busca e o botão `+` em cada matéria. Modos: Editar, Dividido (editor + pré-visualização) e Ver.
+
+**Fechar grupos.** Cada matéria da lista de notas é um grupo que se fecha ou abre ao clicar no nome dela (▾ aberto, ▸ fechado; o número mostra quantas notas há dentro, mesmo fechado). "Recolher tudo" e "Expandir tudo" ficam logo acima da lista. O estado fica guardado no navegador (chave `ciclo.rsGruposFechados`, uma preferência de tela que não entra no backup dos dados). Regras: durante a **busca** os grupos aparecem abertos para mostrar tudo que casa; escolher, criar, importar ou mover uma nota para um grupo fechado **abre** esse grupo para a nota aparecer.
+
+**Sintaxe que o app entende**
+- `- tópico` com recuo de 2 espaços: vira tópicos que recolhem e expandem na pré-visualização. Atalhos no editor: `Tab` / `Shift+Tab` recuam, `Enter` continua o marcador.
+- `[[Nome da nota]]`: link entre notas (ao digitar `[[` aparecem sugestões). Link para nota inexistente aparece em laranja e cria a nota ao clicar. A nota de destino mostra "Mencionada em". Renomear uma nota atualiza os links nas outras.
+- Também: títulos `#`, **negrito**, *itálico*, `código`, blocos de código, citações `>`, tabelas, `- [ ]` / `- [x]`, links `[texto](https://…)`.
+
+**Flashcards.** Saíram da aba Resumos: o texto `pergunta :: resposta` agora aparece como texto comum e nada nas notas vira cartão. A aba **Flashcards** existe, mas está vazia; o sistema (como criar, estudar e agendar revisões) será definido depois, em conversa. A versão anterior (cartões `::` com revisão espaçada em 4 níveis) foi removida do código; o campo `cartoes` que ela gravava, se existir em dados salvos antes, é ignorado e não é apagado.
+
+**Importar / colar texto (NotebookLM e similares).** Botão "Importar / colar texto": cole o texto e/ou escolha arquivos `.md` ou `.txt`. Opções de adaptação (`adaptarTexto()`):
+- remover citações `[1]`, `[2, 3]`, `[1-3]` (o NotebookLM numera as fontes);
+- normalizar marcadores (•, ◦, –, tabs) para `- ` com recuos de 2 espaços;
+- opcional: dividir em várias notas a cada `## Seção`.
+
+Dica para o Google Docs: *Arquivo → Fazer download → Markdown (.md)* gera um arquivo que este importador lê direto.
+
+**Backup e exportação** (painel **Dados e backup**, aberto pelo botão de status no rodapé da barra lateral; é o único lugar com essas opções)
+- **Pasta de backup** (Chrome/Edge): você escolhe uma pasta, de preferência dentro do Google Drive, OneDrive ou Dropbox do computador; o app grava `Matéria/Título.md` (com cabeçalho `id`, `titulo`, `materia`, `atualizado`) e `_backup-app.json` (o app inteiro: ciclo, semana, semanas fechadas, assuntos, questões) 2 segundos depois de cada alteração. A nuvem é a do sincronizador da pasta.
+- A cada sessão o navegador pode pedir permissão de novo: botão **Reconectar pasta**.
+- **Restaurar de uma pasta**: lê `_backup-app.json` e junta os `.md` (inclusive os que você editou direto no arquivo, ex.: no Obsidian ou VS Code, e os arquivos novos). Se o app abrir vazio, um aviso no topo oferece restaurar.
+- O app só apaga na pasta os arquivos que ele mesmo criou (renomear ou excluir uma nota).
+- **Exportar tudo (.zip)** funciona em qualquer navegador e traz os mesmos arquivos do backup. Também há **Exportar / Importar backup completo (.json)**, que leva o app inteiro em um arquivo só.
+- Limpar os dados do site apaga o `localStorage` e também a lembrança da pasta no navegador; por isso a restauração é uma ação sua (escolher a pasta de novo). Ao ativar o backup o app pede ao navegador armazenamento persistente.
+
+## 2. Estrutura do arquivo
+
+Tudo está dentro de `ciclo-estudos.html`, nesta ordem:
+
+1. `<style>`: variáveis de tema no topo (`:root`, claro e escuro), depois estilos dos componentes.
+2. HTML: barra lateral (`<aside class="side">`), área principal com cinco `<section>` (`view-montar`, `view-semana`, `view-desempenho`, `view-resumos`, `view-flashcards`) e o modal.
+3. `<script>`, dividido por blocos comentados com `// ====`:
+   - Constantes e estado
+   - Utilidades
+   - Modal
+   - Tema e abas
+   - Lógica do ciclo
+   - Aba Montar
+   - Aba Semana
+   - Pomodoro
+   - Semanas fechadas (visão do Desempenho)
+   - Início
+
+## 3. Dados (o "estado")
+
+Tudo vive no objeto `state`, salvo no `localStorage` do navegador sob a chave `cicloEstudos.app.v1` (função `salvar()`; carregamento em `carregar()`).
+
+```
+state = {
+  tema: 'auto' | 'light' | 'dark',
+  config: { horas /* meta semanal */, duracao /* h por passo */, passos /* derivado: horas ÷ duracao */, modo,
+            mats:[{ nome, rep /* Livre */, peso /* Ponderado, 1–5 */ }], custom:[…] /* matérias criadas por você */, ocultas:[…] /* tiradas da lista */,
+            dias:[7 booleanos seg..dom], porDia: null | número },
+  modelos: [{ id, nome, criado, config:{ modo, horas, duracao, mats, dias, porDia } }],
+  semana: null | { id, inicio, seg, dom, meta, pomodoros, modelo /* cópia da montagem usada */,       // seg/dom = segunda e domingo da semana (ISO yyyy-mm-dd)
+                   passos:[{id, materia, dia, horasPlanejadas, horasFeitas, feito, nota}] },  // dia = ISO ou null
+  fechadas: [{ id, inicio, fim, modelo /* idem */, cicloFechado, passosFeitos, passosTotal, pctConcluido,
+               horasEstudadas, metaHoras, horasFaltando, porMateria:{matéria:horas}, pomodoros }],
+  pomo: { foco, pausa, longa, ate },
+  cores: { matéria: índiceNaPaleta },
+  notas: [{ id, titulo, materia, texto /* Markdown */, criado, atualizado }],
+  assuntos: [{ id, materia, nome }],
+  questoes: [{ id, data /* ISO */, materia, assuntoId /* ou null */, feitas, acertos }],
+  sessoes: [{ id, data /* ISO */, materia, assuntoId /* ou null */, minutos, tipo /* Teoria | Questões | Revisão */ }],   // focos do Pomodoro
+  backup: { nomePasta, ultimoBackup, arquivos: {idNota: caminho}, hashes: {idNota: hash} }   // a pasta em si fica no IndexedDB
+}
+```
+
+Pontos de atenção:
+- Se você **mudar o formato** do `state`, atualize `defaults()`, `carregar()` e `normalizarEstado()` (garante que listas novas existam em dados salvos antes) para não quebrar dados já salvos (e anote no Histórico de mudanças).
+- `meta` da semana: `null` significa "soma das horas planejadas" (`metaEf()`).
+- Os dados ficam só no navegador onde foram criados. O painel Dados e backup (pasta automática, .zip e .json) é a proteção contra perda.
+- Na primeira abertura, o app importa modelos do gerador antigo (`cicloEstudosModeloV2_*`) se existirem (`migrarModelosAntigos()`).
+
+## 4. Onde mexer para cada tipo de mudança
+
+| Quero… | Onde mexer |
+|---|---|
+| Mudar cores, fontes, espaçamentos | Variáveis em `:root` no começo do `<style>` (há um bloco para tema claro e dois para escuro: mantenha os três em sincronia) |
+| Cores das matérias (pizza, bolinhas) | Constante `PALETA` |
+| Lista de matérias padrão (hoje são 10: Língua Portuguesa, Direito Constitucional, Direito Administrativo, Direito Tributário, Contabilidade Geral, Estatística, Noções de Igualdade Racial, Informática, Gestão Organizacional, Raciocínio Lógico) | Constante `MATERIAS_PADRAO`. A lista de escolha é `todasMaterias()` (padrão + próprias − tiradas). Ao trocar a lista padrão, `normalizarEstado()` limpa dos dados salvos as matérias da lista antiga (`MATERIAS_ANTIGAS`) que **não** estiverem em uso de verdade (notas, assuntos, questões, horas, semana atual ou semanas fechadas) e mantém disponíveis as que estiverem; para tirar qualquer matéria pela tela, use "Gerenciar lista de matérias" |
+| Tempos padrão do Pomodoro | `defaults()` → `pomo` |
+| Algoritmo de distribuição/espaçamento | `calcularDistribuicao()` e `gerarCicloEspacado()` (vêm do original, mexa com cuidado) |
+| O que `gerar()` valida ou cria | `gerar()` |
+| Regras de calendário e distribuição por dias | Helpers de data no começo do `<script>` (`hoje`, `addDias`, `segundaDe`, `idxDia`) e bloco "calendário" depois de `cfgPorDia` (`semanaAlvo`, `diasDisponiveis`, `agendar`, `previaAgenda`) |
+| Aviso de semana encerrada / virada de dia | `atualizarAviso()` e `checarVirada()` perto do fim do `<script>` |
+| Agrupamento por dia na aba Semana | `renderSemana()` (`grupo`, `linhaPasso`), `setDia()`, `reagendar()` |
+| Visual da aba Montar | `renderMontar()` |
+| Modelos (salvar, usar, atualizar) e "repetir ciclo" | `salvarModelo()`, `usarModelo()`, `atualizarModelo()`, `repetirUltima()`, `repetirDoHistorico()`, `aplicarSnapshot()` / `snapshotConfig()` |
+| Lista de matérias do ciclo (adicionar, tirar, distribuir) | `addMatSelect()`, `abrirNovaMateria()`, `removerMat()`, `distribuirIgual()`, `cfgRep()`, `cfgPeso()` |
+| Conta horas → passos | `passosDe()` e `sincronizarPassos()` |
+| Conversão de dados antigos da configuração | `migrarConfig()` (chamada por `normalizarEstado()`) |
+| Colunas/campos de cada passo | `renderSemana()` (HTML do passo) + modelo do passo em `gerar()` + handlers (`togglePasso`, `setPlan`, `setFeito`, `setNota`) |
+| O que é salvo ao fechar a semana | `resumo()` (dados) e `resumoHTML()` / `pieSVG()` (exibição) |
+| Semanas fechadas (lista, gráfico por semana, repetir/excluir) | `renderSemanasFechadas()`; o seletor Estudo \| Semanas é `topoDesempenho()` / `dsVisao()` |
+| Botão de status e painel de backup | `atualizarStatusBackup()`, `abrirBackup()`, `htmlBackup()` |
+| Níveis dos assuntos (cortes de 60/75/90%, mínimo de questões) | `nivelDe()` e `MIN_QUESTOES` no bloco `// DESEMPENHO` |
+| Gráficos (rosca, barras) | `roscaSVG()`, `roscaCiclo()`, `barrasSVG()` e `arcoAnel()` no bloco `// GRÁFICOS`; o conteúdo da aba está em `renderDesempenho()` |
+| Registro de questões / assuntos | `abrirQuestoes()`, `salvarQuestoes()`, `dsAddAssuntos()`, `dsRenomear()`, `dsExcluir()` |
+| Registro de foco do Pomodoro (tipo, assunto) | `registrarTempo()` e `regAtualizarAssuntos()` |
+| Cores das matérias nos gráficos (pastéis) | constante `PALETA` |
+| Aparência da aba Resumos | CSS `/* ----- Resumos ----- */` e `renderResumos()`, `renderRsMain()`, `htmlLista()` |
+| Grupos fechados na lista de notas | `rsFechadosG`, `rsToggleGrupo()`, `rsTodosGrupos()`, `rsAbrirGrupoDe()` (perto de `lsSet`) e `htmlLista()` |
+| Markdown (o que é renderizado) | `inl()` (inline) e `mdParaHtml()` / `htmlLista2()` (blocos) |
+| Aba Flashcards (hoje em branco) | `renderFlashcards()` e a seção `view-flashcards` |
+| Importação (o que é adaptado do NotebookLM) | `adaptarTexto()`, `dividirSecoes()`, `abrirImportar()` / `importarConfirmar()` |
+| Backup em pasta, restaurar, ZIP | bloco `// EXPORTAR (.zip) E BACKUP EM PASTA` (`bkGravarTudo`, `bkRestaurar`, `criarZip`) |
+| Barra lateral (calendário, hoje, Pomodoro) | HTML `<aside class="side">` no começo do `<body>`, CSS `/* ----- barra lateral …` e `renderLateral()` (é chamada por `salvar()` e `showTab()`, então se atualiza sozinha) |
+| Tela única (nada de rolar a página) e colunas de cada aba | bloco CSS `TELA ÚNICA` (`@media (min-width:1100px) and (min-height:620px)`); ao criar um quadro novo, dê `min-height:0` e `overflow:auto` ao que pode crescer, para a rolagem ficar dentro dele |
+| Largura e colunas de cada aba | CSS `.app`, `.main`, `#view-montar`, `#view-desempenho` (e `.vis-semanas`), `.layout` (Semana) e `.rs-layout` (Resumos); tela estreita em `@media (max-width:900px)` |
+| Cores do tema (verde-menta, inspirado no Estudei) | variáveis `:root` no topo do CSS (`--bg`, `--side`, `--accent`…), nos três blocos (claro, escuro automático e escuro manual) |
+| Comportamento do Pomodoro | bloco `// POMODORO` (`pomoTick`, `pomoTerminou`, `pomoEncerrar`, `registrarTempo`); os botões e campos ficam na barra lateral (ids `pomo*` e `pi-*`) |
+
+Padrão usado nas telas: cada aba tem um `render…()` que recria o HTML da seção. Os eventos chamam funções globais via `onclick`/`onchange` no HTML gerado, alteram `state`, chamam `salvar()` e depois o `render…()` da aba. Siga esse padrão ao adicionar campos.
+
+Segurança: todo texto vindo do usuário (nome de matéria, anotação) deve passar por `esc()` antes de entrar em `innerHTML`.
+
+## 5. Como testar uma mudança
+
+1. Abra o arquivo no navegador e faça F5.
+2. Abra o console (F12) e confirme que não há erros.
+3. Roteiro mínimo: gerar um ciclo Livre e um Ponderado, marcar passos, mudar horas, recarregar (deve persistir), rodar um Pomodoro (ajuste o foco para 1 min), fechar a semana, ver Desempenho › Semanas, exportar e importar o backup.
+4. Teste também em tela estreita (celular) e no tema escuro.
+
+Dica: para testar sem perder seus dados reais, abra o arquivo em uma janela anônima, onde o `localStorage` é separado.
+
+## 6. Limitações conhecidas / ideias futuras
+
+- Dados só no navegador; a proteção contra limpeza é o backup em pasta (Chrome/Edge) ou o .zip/JSON manual. Firefox e Safari não gravam em pasta.
+- Resumos: sem imagens coladas nas notas, sem PDF importado e sem integração direta com o NotebookLM (o caminho é copiar/colar ou arquivo .md/.txt). Muitas notas grandes podem se aproximar do limite de ~5 MB do `localStorage`.
+- Desempenho: as horas dos gráficos vêm só dos focos do Pomodoro; o nível dos assuntos não influencia o ciclo (o ciclo continua sendo montado só pelos pesos das matérias); não há metas de questões por dia nem comparação entre períodos.
+- Ideias: sugerir o assunto mais fraco em cada passo do ciclo, meta diária de questões, calendário mensal com provas e flashcards por matéria (como o planejador de provas do RemNote), importar PDF/DOCX.
+- Pomodoro avulso: o tempo é somado ao passo escolhido por você, não é ligado automaticamente a um passo.
+- Sem metas por matéria nem lembretes.
+- Calendário: sem meta diária em horas, sem dias de folga/prova e sem integração com Google Calendar (ideias para depois).
+- Possível evolução: instalar como app (PWA).
+
+---
+
+## Histórico de mudanças
+
+| Data | Mudança |
+|---|---|
+| 2026-10-09 | Versão inicial: abas Montar/Semana/Histórico, checklist semanal, Pomodoro avulso, fechamento de semana com pizza, histórico com gráfico, backup JSON, tema claro/escuro. Base: gerador de ciclos de Gabriel Ângelo. |
+| 2026-10-09 | Calendário: semana real seg–dom, dias de estudo e passos por dia na aba Montar, passos distribuídos a partir de hoje e agrupados por dia na aba Semana (HOJE, atrasado, mover dia, reagendar pendentes), aviso de semana encerrada e detecção da virada do dia. Correção: `hoje()` agora usa o fuso local (antes usava UTC e podia marcar o dia seguinte à noite). Semanas salvas antes desta versão ganham `seg`/`dom` automaticamente. |
+| 2026-10-09 | Aba **Resumos**: notas em Markdown por matéria, tópicos recolhíveis, `[[links]]` com backlinks, flashcards `::` com revisão espaçada (4 respostas), atalho 📝 Resumo em cada passo da semana, importação de texto/arquivos (NotebookLM, .md, .csv) com adaptação automática, backup automático em pasta sincronizada com restauração, exportar .zip. Estilo visual renovado inspirado no RemNote (paleta, barra lateral, botões de revisão). Novos campos no estado: `notas`, `cartoes`, `backup`. |
+| 2026-10-09 | Layout em tela cheia com **barra lateral fixa** em todas as abas: menu, calendário do mês (clicável), passos de hoje e progresso da semana, e Pomodoro sempre visível (saiu da aba Semana). Aba Semana ganhou a tira dos 7 dias; Montar e Histórico passaram a usar duas colunas. Sem mudança no formato dos dados. |
+| 2026-10-09 | Removido o rodapé com o crédito e o aviso de dados no navegador. |
+| 2026-10-09 | Correção: as abas Semana, Resumos e Histórico apareciam embaixo da aba Montar ciclo. Causa: `display:grid` em `#view-montar` e `#view-historico` anulava o atributo `hidden`. Agora há a regra global `[hidden]{display:none !important}`. **Ao criar novas seções com `display:grid/flex`, essa regra já protege o `hidden`.** |
+| 2026-10-09 | **Grupos que fecham na lista de notas** (aba Resumos): clicar no nome da matéria fecha ou abre as notas dela, com "Recolher tudo / Expandir tudo", contador de notas por grupo e estado lembrado entre sessões. Nome longo de matéria agora é cortado com "…" em vez de quebrar a linha. Sem mudança no formato dos dados. |
+| 2026-10-09 | **Gerenciar lista de matérias**: botão no fim da lista de matérias do ciclo para tirar (e trazer de volta) matérias da lista de escolha, via novo campo `config.ocultas`. Matérias da lista antiga (como "Administração Financeira e Orçamentária (AFO)") que ficaram guardadas sem uso real são limpas automaticamente dos dados salvos, do ciclo em montagem e dos modelos. |
+| 2026-10-09 | **Aba Histórico removida**: as semanas fechadas passaram para o Desempenho, na visão **Semanas** (seletor Estudo \| Semanas), com indicadores, lista, gráfico, repetir ciclo, ver detalhes e excluir. O **backup** saiu da aba Resumos e do Histórico e foi para um painel único (**Dados e backup**), aberto por um botão de status sempre visível no rodapé da barra lateral. Ao fechar a semana com "Salvar e limpar marcações" o app agora volta para a aba Semana. Barra lateral levemente compactada (sem a linha de focos concluídos; "hoje x/y" no cabeçalho). Sem mudança no formato dos dados. |
+| 2026-10-09 | **Flashcards saíram da aba Resumos** (cartões `::`, revisão e contador, importação de cartões por CSV e as opções de Pergunta/Resposta e Termo na importação) e foi criada a aba **Flashcards**, vazia, para desenhar o sistema depois. Campo `cartoes` removido do estado (dados antigos com ele continuam abrindo). |
+| 2026-10-09 | Lista padrão de matérias reduzida para as 10 do estudo atual (as outras 10 foram removidas). Matérias antigas que já estavam em uso continuam disponíveis; novas se adicionam pelo seletor "Digitar uma matéria nova…". |
+| 2026-10-09 | **Tela única**: no computador a página não rola mais; barra lateral e área principal ocupam a altura da janela, as abas viraram colunas e só as listas longas rolam dentro do quadro (passos da semana, matérias, assuntos, registros). Barra lateral compactada (calendário com 5 ou 6 linhas conforme o mês, "Hoje e semana" mais curto, Pomodoro numa linha) para caber em uma tela de 900 px de altura. Na aba Semana cada passo ficou numa linha só. Telas pequenas continuam com o layout empilhado. |
+| 2026-10-09 | Aba **Montar ciclo** reformulada: **meta semanal em horas** (os passos são calculados), **lista única de matérias** com "＋ Adicionar matéria" (escolher da lista ou digitar nova) e ✕ para tirar, botão "Distribuir igualmente", prévia de passos no modo Ponderado. Novos **modelos de ciclo** (salvar, usar, atualizar, renomear, excluir), "Repetir o ciclo da última semana fechada", "↻ Repetir ciclo" no Histórico e "Salvar e montar a próxima semana" ao fechar. **Mudança no formato de `config`** (`mats`, `horas` no lugar de `linhas`/`qtd`) com migração automática dos dados salvos; novos campos `modelos` e `semana.modelo`. |
+| 2026-10-09 | Nova aba **Desempenho**: matérias abertas em **assuntos**, registro de **questões** (feitas e acertos por dia, matéria e assunto), nível automático de cada assunto pelos acertos, indicadores e gráficos (rosca de horas por matéria, horas por dia, questões por dia, acerto por matéria). O foco do Pomodoro agora registra tipo (Teoria/Questões/Revisão) e assunto. A aba Semana ganhou a rosca do ciclo e a barra de progresso em cada passo. Visual trocado para verde-menta com cores pastel por matéria (inspirado no Estudei). Novos campos no estado: `assuntos`, `questoes`, `sessoes` (+ `normalizarEstado()` para dados antigos). |
+| 2026-10-09 | Correção na barra lateral: os campos de tempo do Pomodoro ("Ajustar tempos") passavam da largura e cortavam a lateral; agora encolhem para caber e a lateral não rola na horizontal. |
