@@ -93,11 +93,11 @@ function CartaoPasso({ p, cores }: { p: Passo; cores: Record<string, number> }) 
       onClick={() => abrirEdicao(p)}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), abrirEdicao(p))}
       title="Clique para editar o passo"
-      className={cn('group relative cursor-pointer rounded-lg border-l-4 px-3 py-3 shadow-sm outline-none transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring', p.feito && 'opacity-55')}
+      className={cn('group relative flex h-28 shrink-0 cursor-pointer flex-col overflow-hidden rounded-lg border-l-4 px-3 py-3 shadow-sm outline-none transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring', p.feito && 'opacity-55')}
       style={{ background: fundoDe(cor), borderLeftColor: cor }}
     >
       <div className="flex items-start gap-1.5">
-        <b className={cn('min-w-0 flex-1 text-sm leading-tight', p.feito && 'line-through')}>{p.materia}</b>
+        <b className={cn('line-clamp-2 min-w-0 flex-1 text-sm leading-tight', p.feito && 'line-through')}>{p.materia}</b>
         <button
           onClick={(e) => {
             e.stopPropagation()
@@ -112,11 +112,11 @@ function CartaoPasso({ p, cores }: { p: Passo; cores: Record<string, number> }) 
           {p.feito && <Check className="size-3" strokeWidth={3} />}
         </button>
       </div>
-      <div className="mt-2.5 flex flex-wrap items-center gap-1">
+      <div className="mt-auto flex flex-wrap items-center gap-1 pt-1.5">
         <span className="rounded-full bg-card/80 px-1.5 py-px text-[0.65rem] font-bold">{fmtH(p.horasPlanejadas)}</span>
         {p.horasFeitas > 0 && <span className="rounded-full bg-card/80 px-1.5 py-px text-[0.65rem] font-semibold text-muted-foreground">feito {fmtH(p.horasFeitas)}</span>}
       </div>
-      {p.nota && <p className="m-0 mt-1 line-clamp-2 text-[0.7rem] leading-snug text-muted-foreground">{p.nota}</p>}
+      {p.nota && <p className="m-0 mt-1 truncate text-[0.7rem] leading-snug text-muted-foreground" title={p.nota}>{p.nota}</p>}
     </div>
   )
 }
