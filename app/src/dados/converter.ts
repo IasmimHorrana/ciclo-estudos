@@ -37,6 +37,7 @@ export function paraDados(b: BackupLegado, agora: number): Dados {
     modelos: b.modelos.map((m) => ({ ...m, ...ctl(agora, m.criado) })),
     notas: b.notas.map((n) => ({ ...n, ...ctl(agora, n.atualizado) })),
     assuntos: b.assuntos.map((a) => ({ ...a, ...ctl(agora) })),
+    materiasEdital: b.materiasEdital.map((m) => ({ ...m, ...ctl(agora) })),
     questoes: b.questoes.map((q) => ({ ...q, ...ctl(agora) })),
     sessoes: b.sessoes.map((s) => ({ ...s, ...ctl(agora) })),
   }
@@ -63,6 +64,7 @@ export function paraArquivo(d: Dados, agora = Date.now()) {
     notas: d.notas.map(semControle),
     modelos: d.modelos.map(semControle),
     assuntos: d.assuntos.map(semControle),
+    materiasEdital: d.materiasEdital.map(semControle),
     questoes: d.questoes.map(semControle),
     sessoes: d.sessoes.map(semControle),
   }

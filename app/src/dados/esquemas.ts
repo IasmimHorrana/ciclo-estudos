@@ -69,7 +69,20 @@ const Fechada = z.object({
 
 const Nota = z.object({ id: z.coerce.string(), titulo: txt, materia: txt, texto: txt, criado: num, atualizado: num })
 const ModeloSalvo = z.object({ id: z.coerce.string(), nome: txt, criado: num, config: Modelo })
-const Assunto = z.object({ id: z.coerce.string(), materia: txt, nome: txt })
+const Assunto = z.object({
+  id: z.coerce.string(),
+  materia: txt,
+  nome: txt,
+  // edital verticalizado (backups antigos não trazem: ganham o padrão)
+  ordem: num,
+  importancia: z.coerce.number().catch(3),
+  horasIdeais: num,
+  estudado: z.boolean().catch(false),
+  /** Escolhido para entrar no próximo ciclo gerado (vira anotação do passo). */
+  noCiclo: z.boolean().catch(false),
+})
+/** Peso e ordem de cada matéria no edital verticalizado. */
+const MateriaEdital = z.object({ id: z.coerce.string(), nome: txt, peso: z.coerce.number().catch(3), ordem: num })
 const Questao = z.object({
   id: z.coerce.string(),
   data: txt,
@@ -99,6 +112,7 @@ export const BackupLegado = z.object({
   notas: z.array(Nota).catch([]),
   modelos: z.array(ModeloSalvo).catch([]),
   assuntos: z.array(Assunto).catch([]),
+  materiasEdital: z.array(MateriaEdital).catch([]),
   questoes: z.array(Questao).catch([]),
   sessoes: z.array(Sessao).catch([]),
 })
@@ -122,6 +136,7 @@ export type SemanaFechada = Omit<z.infer<typeof Fechada>, 'id'> & Controle & { i
 export type ModeloSalvo = Omit<z.infer<typeof ModeloSalvo>, 'id'> & Controle & { id: string }
 export type NotaResumo = z.infer<typeof Nota> & Controle
 export type Assunto = z.infer<typeof Assunto> & Controle
+export type MateriaEdital = z.infer<typeof MateriaEdital> & Controle
 export type RegistroQuestoes = z.infer<typeof Questao> & Controle
 export type SessaoPomodoro = z.infer<typeof Sessao> & Controle
 
@@ -142,6 +157,7 @@ export interface Dados {
   modelos: ModeloSalvo[]
   notas: NotaResumo[]
   assuntos: Assunto[]
+  materiasEdital: MateriaEdital[]
   questoes: RegistroQuestoes[]
   sessoes: SessaoPomodoro[]
 }

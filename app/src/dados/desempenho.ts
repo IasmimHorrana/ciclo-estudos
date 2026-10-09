@@ -25,7 +25,7 @@ export async function adicionarAssuntos(db: BancoCiclo, materia: string, nomes: 
     let novos = 0
     for (const n of nomes.map((x) => x.trim()).filter(Boolean)) {
       if (atuais.some((a) => norm(a.nome) === norm(n))) continue
-      const a: Assunto = { id: novoIdFc('a', agora), materia, nome: n, atualizadoEm: agora, excluidoEm: null, sujo: 1 }
+      const a: Assunto = { id: novoIdFc('a', agora), materia, nome: n, ordem: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, atualizadoEm: agora, excluidoEm: null, sujo: 1 }
       await db.assuntos.put(a)
       atuais.push(a)
       novos++
@@ -71,7 +71,7 @@ export async function registrarQuestoes(db: BancoCiclo, d: DadosQuestoes, agora 
       const ex = vivos(await db.assuntos.toArray()).find((a) => a.materia === d.materia && norm(a.nome) === norm(d.novo))
       if (ex) assuntoId = ex.id
       else {
-        const a: Assunto = { id: novoIdFc('a', agora), materia: d.materia, nome: d.novo.trim(), atualizadoEm: agora, excluidoEm: null, sujo: 1 }
+        const a: Assunto = { id: novoIdFc('a', agora), materia: d.materia, nome: d.novo.trim(), ordem: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, atualizadoEm: agora, excluidoEm: null, sujo: 1 }
         await db.assuntos.put(a)
         assuntoId = a.id
       }

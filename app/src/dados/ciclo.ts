@@ -2,6 +2,7 @@ import type { BancoCiclo } from '@/dados/db'
 import type { ConfigCiclo, ModeloSalvo, Semana, SemanaFechada } from '@/dados/esquemas'
 import { novoIdFc } from '@/dados/ids'
 import { hoje } from '@/dominio/datas'
+import { distribuirAssuntos } from '@/dominio/edital'
 import {
   alterarPasso, alternarPasso, aplicarSnapshot, atribuirCores, configPadrao, construirSemana, limparMarcacoes, normalizarConfig, reagendarPendentes,
   resumoSemana, round2, snapshotConfig, temProgresso, validarGerar, type Passo,
@@ -88,11 +89,17 @@ export type ResultadoGerar = { ok: true; passosSemDia: number } | { ok: false; e
 
 /** Gera a semana a partir da montagem. A tela já perguntou se pode substituir a semana atual. */
 export async function gerarSemana(db: BancoCiclo, agora = Date.now()): Promise<ResultadoGerar> {
-  return db.transaction('rw', db.valores, async () => {
+  return db.transaction('rw', [db.valores, db.assuntos], async () => {
     const c = await carregarConfig(db)
     const v = validarGerar(c)
     if (!v.ok) return v
-    const semana = construirSemana(c, hoje(new Date(agora)), agora)
+    const base = construirSemana(c, hoje(new Date(agora)), agora)
+    // assuntos escolhidos no Edital viram a anotação dos passos; depois a marcação "no ciclo" é consumida
+    const escolhidos = (await db.assuntos.toArray()).filter((a) => a.excluidoEm === null && a.noCiclo).sort((a, b) => a.ordem - b.ordem)
+    const porMateria: Record<string, string[]> = {}
+    for (const a of escolhidos) (porMateria[a.materia] ??= []).push(a.nome)
+    const semana = { ...base, passos: distribuirAssuntos(base.passos, porMateria) }
+    for (const a of escolhidos) await db.assuntos.put({ ...a, noCiclo: false, atualizadoEm: agora, sujo: 1 })
     const cores = atribuirCores(((await db.valores.get('cores'))?.valor as Record<string, number> | undefined) ?? {}, [...new Set(semana.passos.map((p) => p.materia))])
     await gravar(db, 'semana', semana, agora)
     await gravar(db, 'cores', cores, agora)

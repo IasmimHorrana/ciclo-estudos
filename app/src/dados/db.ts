@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Baralho, CartaoFc, GrupoOpcoes, NotaFc, RegistroRevisao, TipoNota } from '@/dados/flashcards-tipos'
-import type { Assunto, ModeloSalvo, NotaResumo, RegistroQuestoes, SemanaFechada, SessaoPomodoro, Valor } from '@/dados/esquemas'
+import type { Assunto, MateriaEdital, ModeloSalvo, NotaResumo, RegistroQuestoes, SemanaFechada, SessaoPomodoro, Valor } from '@/dados/esquemas'
 
 /**
  * Banco local (IndexedDB, via Dexie). O app lê e grava sempre aqui; a nuvem (etapa 5) é só cópia.
@@ -14,6 +14,7 @@ export class BancoCiclo extends Dexie {
   modelos!: EntityTable<ModeloSalvo, 'id'>
   notas!: EntityTable<NotaResumo, 'id'>
   assuntos!: EntityTable<Assunto, 'id'>
+  materiasEdital!: EntityTable<MateriaEdital, 'id'>
   questoes!: EntityTable<RegistroQuestoes, 'id'>
   sessoes!: EntityTable<SessaoPomodoro, 'id'>
   /** Só deste aparelho (pasta de backup e afins). Nunca vai para a nuvem. */
@@ -47,6 +48,8 @@ export class BancoCiclo extends Dexie {
       cartoes: 'id, notaId, baralhoId, tipo, venceDia, venceMs, sujo, excluidoEm',
       revlog: 'id, cartaoId, baralhoId, dia, sujo',
     })
+    // v4: edital verticalizado. Só tabela nova; os campos novos de `assuntos` são lidos com padrão (nada a migrar).
+    this.version(4).stores({ materiasEdital: 'id, nome, sujo, excluidoEm' })
   }
 }
 

@@ -77,6 +77,32 @@ describe('lerArquivo (backup do app em HTML)', () => {
   })
 })
 
+describe('edital verticalizado no backup', () => {
+  it('backup antigo (sem campos de edital) ganha padrões nos assuntos e nenhuma matéria de edital', () => {
+    const d = lerArquivo(JSON.stringify(legado), AGORA)
+    expect(d.assuntos[0]).toMatchObject({ nome: 'Redes', ordem: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false })
+    expect(d.materiasEdital).toEqual([])
+  })
+
+  it('peso, ordem e campos do edital fazem a ida e volta (exportar → importar)', () => {
+    const b = {
+      ...legado,
+      assuntos: [{ id: 'a1', materia: 'Informática', nome: 'Redes', ordem: 2, importancia: 5, horasIdeais: 4, estudado: true, noCiclo: true }],
+      materiasEdital: [{ id: 'e1', nome: 'Informática', peso: 5, ordem: 1 }],
+    }
+    const d = lerArquivo(JSON.stringify(b), AGORA)
+    expect(d.materiasEdital[0]).toMatchObject({ nome: 'Informática', peso: 5, ordem: 1, sujo: 1 })
+    expect(lerArquivo(JSON.stringify(paraArquivo(d, AGORA)), AGORA)).toEqual(d)
+  })
+
+  it('o banco guarda e devolve as matérias do edital', async () => {
+    const db = novoBanco()
+    const d = lerArquivo(JSON.stringify({ ...legado, materiasEdital: [{ id: 'e1', nome: 'Informática', peso: 4, ordem: 0 }] }), AGORA)
+    await substituirDados(db, d, AGORA)
+    expect((await carregarDados(db))?.materiasEdital).toHaveLength(1)
+  })
+})
+
 describe('banco (Dexie)', () => {
   it('banco vazio devolve null', async () => {
     expect(await carregarDados(novoBanco())).toBeNull()

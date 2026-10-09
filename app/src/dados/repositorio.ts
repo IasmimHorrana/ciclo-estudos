@@ -9,11 +9,12 @@ const vivos = <T extends { excluidoEm: number | null }>(l: T[]) => l.filter((x) 
 export async function carregarDados(db: BancoCiclo): Promise<Dados | null> {
   const valores = new Map((await db.valores.toArray()).map((v) => [v.chave, v.valor]))
   if (!valores.has('config')) return null
-  const [fechadas, modelos, notas, assuntos, questoes, sessoes] = await Promise.all([
+  const [fechadas, modelos, notas, assuntos, materiasEdital, questoes, sessoes] = await Promise.all([
     db.semanasFechadas.toArray(),
     db.modelos.toArray(),
     db.notas.toArray(),
     db.assuntos.toArray(),
+    db.materiasEdital.toArray(),
     db.questoes.toArray(),
     db.sessoes.toArray(),
   ])
@@ -27,6 +28,7 @@ export async function carregarDados(db: BancoCiclo): Promise<Dados | null> {
     modelos: vivos(modelos),
     notas: vivos(notas),
     assuntos: vivos(assuntos),
+    materiasEdital: vivos(materiasEdital),
     questoes: vivos(questoes),
     sessoes: vivos(sessoes),
   }
@@ -48,8 +50,8 @@ export interface ResumoImportacao {
  * Tudo numa transação só: ou grava tudo ou não grava nada.
  */
 export async function substituirDados(db: BancoCiclo, d: Dados, agora = Date.now()): Promise<ResumoImportacao> {
-  const tabelas = [db.semanasFechadas, db.modelos, db.notas, db.assuntos, db.questoes, db.sessoes] as const
-  const novos = [d.fechadas, d.modelos, d.notas, d.assuntos, d.questoes, d.sessoes] as const
+  const tabelas = [db.semanasFechadas, db.modelos, db.notas, db.assuntos, db.materiasEdital, db.questoes, db.sessoes] as const
+  const novos = [d.fechadas, d.modelos, d.notas, d.assuntos, d.materiasEdital, d.questoes, d.sessoes] as const
 
   await db.transaction('rw', [db.valores, ...tabelas], async () => {
     for (const chave of CHAVES) {
