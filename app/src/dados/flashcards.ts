@@ -352,3 +352,14 @@ export async function definirBandeira(db: BancoCiclo, cartaoId: string, flag: nu
   const c = await db.cartoes.get(cartaoId)
   if (c) await db.cartoes.put({ ...c, flag: c.flag === flag ? 0 : flag, atualizadoEm: agora, sujo: 1 })
 }
+
+/** Cartões estudados e tempo gasto por dia (número do dia), para o calendário de calor. */
+export async function estudoPorDia(db: BancoCiclo): Promise<{ cartoes: Map<number, number>; tempoMs: Map<number, number> }> {
+  const cartoes = new Map<number, number>()
+  const tempoMs = new Map<number, number>()
+  await db.revlog.each((r) => {
+    cartoes.set(r.dia, (cartoes.get(r.dia) ?? 0) + 1)
+    tempoMs.set(r.dia, (tempoMs.get(r.dia) ?? 0) + r.tempoMs)
+  })
+  return { cartoes, tempoMs }
+}

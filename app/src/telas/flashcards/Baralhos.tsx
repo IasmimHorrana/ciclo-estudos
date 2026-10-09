@@ -6,6 +6,7 @@ import { Entrada } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
 import { carregarContexto, criarBaralho, excluirBaralho, filaDe } from '@/dados/flashcards'
 import { useFc } from '@/estado/flashcards'
+import { CalendarioCalor } from '@/telas/flashcards/CalendarioCalor'
 
 export function Baralhos() {
   const ir = useFc((s) => s.ir)
@@ -58,6 +59,8 @@ export function Baralhos() {
           </Button>
         </div>
       </div>
+
+      <CalendarioCalor />
 
       {novo !== null && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3">
