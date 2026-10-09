@@ -22,6 +22,8 @@ interface PomodoroState {
   reiniciar: () => void
   /** Encerra o foco antes da hora e soma só o que foi estudado (se passou de 1 minuto). */
   encerrar: () => void
+  /** Troca de fase à mão (só com o relógio parado). */
+  irParaFase: (fase: Fase) => void
   definirConfig: (c: ConfigPomodoro) => void
   limparFoco: () => void
   /** chamado por um relógio central, algumas vezes por segundo */
@@ -79,6 +81,12 @@ export const usePomodoro = create<PomodoroState>((set, get) => ({
     if (minutos < 1) return set({ rodando: false, restaSeg: duracaoSeg('foco', s.config) })
     const prox = proximaFase('foco', s.focosConcluidos, s.config)
     set({ rodando: false, fase: prox.fase, focosConcluidos: prox.focosConcluidos, restaSeg: duracaoSeg(prox.fase, s.config), foco: { minutos, completo: false } })
+  },
+
+  irParaFase: (fase) => {
+    const s = get()
+    if (s.rodando) return
+    set({ fase, restaSeg: duracaoSeg(fase, s.config) })
   },
 
   definirConfig: (config) => {

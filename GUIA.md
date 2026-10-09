@@ -44,7 +44,7 @@ Estrutura da base nova (etapas 1, 2 e 4 prontas; etapa 3 em andamento):
 - **Semana** (`telas/Semana.tsx`): checklist por dia, horas planejadas/feitas, anotação, mudar o dia, rosca do ciclo, por matéria, copiar lista, fechar semana (resumo com pizza), reagendar pendentes, limpar. O botão "Resumo" de cada passo abre (ou cria) o resumo da matéria.
 - **Desempenho** (`telas/Desempenho.tsx`, regras em `dominio/desempenho.ts`): visão Estudo (horas do Pomodoro, questões, nível por assunto, gráficos por dia) e visão Semanas (histórico, repetir ciclo, excluir). Registrar questões abre pelo botão ou pelo "+ Questões" da barra lateral.
 - **Resumos** (`telas/Resumos.tsx`, Markdown em `dominio/markdown.ts`): notas por matéria (grupos que recolhem), busca, editor com Tab/Shift+Tab e continuação de listas, `[[ligações]]` com sugestões, "Mencionada em", tópicos que recolhem, importar texto do NotebookLM/ChatGPT/arquivos, exportar `.md`.
-- **Barra lateral:** "Hoje e semana" com caixinhas, calendário marcado, Pomodoro com Encerrar e registro do tempo no passo; faixa de aviso quando a semana já terminou.
+- **Barra lateral:** "Hoje e semana" com caixinhas, calendário marcado, Pomodoro maior, no estilo do modelo de referência (abas Foco / Pausa curta / Pausa longa, anel de progresso com o tempo no centro, Iniciar/Pausar, Encerrar e reiniciar; as abas só trocam com o relógio parado) e registro do tempo no passo; faixa de aviso quando a semana já terminou.
 
 Ainda **não** estão na base nova: (do Flashcards, o editor rico, Navegar, Estatísticas e importar do Anki) e a sincronização.
 
