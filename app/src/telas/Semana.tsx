@@ -11,6 +11,8 @@ import { corDe, fmtH, horasFeitasDe, metaEf, resumoSemana, round2, soma, type Pa
 import { addDias, fmtData, idxDia, NOMES_DIA, NOMES_DIA_LONGO } from '@/dominio/datas'
 import { abrirDialogo } from '@/estado/dialogo'
 import { useUi } from '@/estado/ui'
+import { resumoDaMateria } from '@/dados/notas'
+import { abrirNota } from '@/lib/abrirNota'
 import { irParaDia } from '@/lib/rolagem'
 import { cn } from '@/lib/utils'
 
@@ -248,7 +250,7 @@ function Estat({ rotulo, valor, sub, barra }: { rotulo: string; valor: string; s
 function LinhaPasso({ p, s, cores }: { p: Passo; s: NonNullable<Ciclo['semana']>; cores: Record<string, number> }) {
   const pct = p.horasPlanejadas ? Math.min(100, Math.round((p.horasFeitas / p.horasPlanejadas) * 100)) : 0
   return (
-    <div className={cn('grid grid-cols-[auto_minmax(0,1fr)_72px_72px_minmax(0,1.3fr)_130px] items-end gap-2 border-b py-2 max-[1300px]:grid-cols-[auto_minmax(0,1fr)_72px_72px_130px] max-[1300px]:[&>.nota]:col-span-full', p.feito && 'opacity-60')}>
+    <div className={cn('grid grid-cols-[auto_minmax(0,1fr)_72px_72px_minmax(0,1.3fr)_130px_auto] items-end gap-2 border-b py-2 max-[1300px]:grid-cols-[auto_minmax(0,1fr)_72px_72px_130px_auto] max-[1300px]:[&>.nota]:col-span-full', p.feito && 'opacity-60')}>
       <input type="checkbox" className="mb-1.5 size-4 cursor-pointer accent-[var(--primary)]" checked={p.feito} onChange={(e) => void marcarPasso(db, p.id, e.target.checked)} aria-label={`Concluir passo ${p.id}`} />
       <div className="min-w-0 pb-1">
         <div className="flex items-center gap-1.5 text-sm font-semibold">
@@ -281,6 +283,9 @@ function LinhaPasso({ p, s, cores }: { p: Passo; s: NonNullable<Ciclo['semana']>
           return <option key={d} value={d}>{NOMES_DIA[i]} {fmtData(d)}</option>
         })}
       </Selecao>
+      <Button size="sm" variant="outline" title="Abrir ou criar o resumo desta matéria" onClick={async () => abrirNota((await resumoDaMateria(db, p.materia)).id)}>
+        📝 Resumo
+      </Button>
     </div>
   )
 }

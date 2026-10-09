@@ -1,11 +1,12 @@
-import { useEffect } from 'react'
+import { useEffect, type ReactNode } from 'react'
+import { AvisoSemana } from '@/componentes/AvisoSemana'
 import { Dialogos } from '@/componentes/Dialogos'
 import { BarraLateral } from '@/componentes/barra-lateral/BarraLateral'
 import { Dados } from '@/telas/Dados'
 import { Desempenho } from '@/telas/Desempenho'
 import { Montar } from '@/telas/Montar'
+import { Resumos } from '@/telas/Resumos'
 import { Semana } from '@/telas/Semana'
-import { EmBreve } from '@/telas/EmBreve'
 import { Flashcards } from '@/telas/flashcards/Flashcards'
 import { aoConcluirFoco } from '@/componentes/aoConcluirFoco'
 import { useCiclo } from '@/dados/useCiclo'
@@ -14,8 +15,13 @@ import { fmtMMSS, NOMES_FASE } from '@/dominio/pomodoro'
 import { usePomodoro } from '@/estado/pomodoro'
 import { temaEscuro, useUi, type AbaId } from '@/estado/ui'
 
-const TELAS: Record<Exclude<AbaId, 'dados' | 'flashcards' | 'montar' | 'semana' | 'desempenho'>, { titulo: string; etapa: string; descricao: string }> = {
-  resumos: { titulo: 'Resumos', etapa: 'Etapa 4: serão portados do app em HTML', descricao: 'Notas em Markdown por matéria.' },
+const TELAS: Record<AbaId, ReactNode> = {
+  montar: <Montar />,
+  semana: <Semana />,
+  desempenho: <Desempenho />,
+  resumos: <Resumos />,
+  flashcards: <Flashcards />,
+  dados: <Dados />,
 }
 
 export default function App() {
@@ -63,7 +69,8 @@ export default function App() {
     <div className="grid h-dvh grid-cols-[276px_minmax(0,1fr)] overflow-hidden max-[900px]:h-auto max-[900px]:min-h-dvh max-[900px]:grid-cols-1 max-[900px]:overflow-visible">
       <BarraLateral />
       <main className="flex min-h-0 min-w-0 flex-col overflow-hidden px-5 py-3.5 max-[900px]:overflow-visible max-[900px]:p-4">
-        {aba === 'dados' ? <Dados /> : aba === 'flashcards' ? <Flashcards /> : aba === 'montar' ? <Montar /> : aba === 'semana' ? <Semana /> : aba === 'desempenho' ? <Desempenho /> : <EmBreve {...TELAS[aba]} />}
+        <AvisoSemana />
+        {TELAS[aba]}
       </main>
       <Dialogos />
     </div>

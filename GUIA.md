@@ -26,7 +26,7 @@ npm run build      # versão de produção (gera também o service worker do PWA
 npm run icones     # regera os ícones do PWA a partir de public/favicon.svg
 ```
 
-Estrutura (etapas 1, 2 e parte da 3):
+Estrutura (etapas 1, 2, 4 e parte da 3):
 - `src/dominio/`: regras puras e testadas. Hoje: `datas.ts` (fuso local, semana de segunda a domingo, grade do calendário) e `pomodoro.ts`. Aqui entrarão `sm2.ts`, `fila.ts`, `cloze.ts` e `busca.ts`.
 - `src/dados/`: banco local (Dexie, `db.ts`; para mudar o formato crie `version(2)` com `upgrade`, nunca edite a v1), esquemas Zod do backup (`esquemas.ts`), conversão do backup do app em HTML e exportação (`converter.ts`), leitura/gravação (`repositorio.ts`), `.zip` sem dependências (`zip.ts`), `.md` dos resumos (`arquivos.ts`, `mesclar.ts`) e backup automático em pasta (`pasta.ts`, só Chrome/Edge; a pasta e o registro do que foi gravado ficam na tabela `local`, só deste aparelho). Nada é apagado de verdade: o que sai ganha `excluidoEm`.
 - `src/dominio/` (flashcards): `sm2.ts` (agendador SM-2 como o Anki: passos, Errei/Difícil/Bom/Fácil, atraso, variação, sanguessuga, rótulos dos botões, virada do dia às 4h), `fila.ts` (limites diários por baralho, o limite do pai vale para os filhos, ordem aprendizado → revisão → novos, antecipação, irmãos), `cloze.ts` e `modelo.ts` (tipos de nota, campos, `{{FrontSide}}`, `{{cloze:}}`, `{{type:}}`, seções), `passos.ts`.
@@ -39,7 +39,14 @@ Estrutura (etapas 1, 2 e parte da 3):
 
 **Flashcards (etapa 3, parcial):** aba Flashcards com baralhos e contagens (azul novos, vermelho aprender, verde revisar), estudo com 4 botões e intervalos, atalhos `Espaço/Enter`, `1-4`, `Ctrl+Z`, `*` marcar, `-` e `=` esconder cartão/nota até amanhã, `@` e `!` suspender cartão/nota, `Ctrl+1..4` bandeira; opções do baralho (limites, passos, intervalos, sanguessuga); adicionar cartões (Básico, invertido, invertido opcional, digitar resposta, omissão/cloze) em caixa de texto simples. Ainda faltam: editor rico com imagens, Navegar, Estatísticas, importar/exportar do Anki.
 
-Ainda **não** estão na base nova: Desempenho, Resumos (e, do Flashcards, o editor rico, Navegar, Estatísticas e importar do Anki) e a sincronização.
+**Abas portadas do app em HTML (etapa 4):**
+- **Montar ciclo** (`telas/Montar.tsx`): modelos salvos, meta em horas, duração do passo, modo Livre/Ponderado, dias de estudo, passos por dia, matérias do ciclo, gerenciar a lista de matérias, gerar a semana. Regras em `dominio/ciclo.ts` (distribuição, ciclo espaçado, agenda por dias), dados em `dados/ciclo.ts`.
+- **Semana** (`telas/Semana.tsx`): checklist por dia, horas planejadas/feitas, anotação, mudar o dia, rosca do ciclo, por matéria, copiar lista, fechar semana (resumo com pizza), reagendar pendentes, limpar. O botão "Resumo" de cada passo abre (ou cria) o resumo da matéria.
+- **Desempenho** (`telas/Desempenho.tsx`, regras em `dominio/desempenho.ts`): visão Estudo (horas do Pomodoro, questões, nível por assunto, gráficos por dia) e visão Semanas (histórico, repetir ciclo, excluir). Registrar questões abre pelo botão ou pelo "+ Questões" da barra lateral.
+- **Resumos** (`telas/Resumos.tsx`, Markdown em `dominio/markdown.ts`): notas por matéria (grupos que recolhem), busca, editor com Tab/Shift+Tab e continuação de listas, `[[ligações]]` com sugestões, "Mencionada em", tópicos que recolhem, importar texto do NotebookLM/ChatGPT/arquivos, exportar `.md`.
+- **Barra lateral:** "Hoje e semana" com caixinhas, calendário marcado, Pomodoro com Encerrar e registro do tempo no passo; faixa de aviso quando a semana já terminou.
+
+Ainda **não** estão na base nova: (do Flashcards, o editor rico, Navegar, Estatísticas e importar do Anki) e a sincronização.
 
 ## 1. Como o app funciona (visão rápida)
 
@@ -280,3 +287,4 @@ Dica: para testar sem perder seus dados reais, abra o arquivo em uma janela anô
 | 2026-10-09 | **Base nova, etapa 2 concluída**: exportar tudo em .zip (um .md por resumo + backup completo), backup automático em pasta com restaurar (junta .md editados fora do app), tabela `local` no Dexie (versão 2 do banco, sem perder dados) e indicador no rodapé da barra lateral. 29 testes. |
 | 2026-10-09 | **Flashcards, etapa 3 (sub-etapas 1 e 2)**: agendador SM-2, fila com limites diários, modelo de dados (Dexie v3), baralhos por matéria/assunto, estudo, baralhos, opções do baralho e adicionar cartões simples. 108 testes. Na branch `dev`. |
 | 2026-10-09 | **Base nova, etapa 4 (parcial)**: Montar ciclo (modelos, meta em horas, dias de estudo, matérias, gerenciar lista), Semana (checklist por dia, rosca, por matéria, fechar semana com resumo, reagendar, limpar), barra lateral com Hoje e semana e calendário marcado, Pomodoro com Encerrar, tempos salvos e registro do tempo no passo. Corrigido o esquema do backup (passos por dia era lido como lista). 148 testes. |
+| 2026-10-09 | **Base nova, etapa 4 concluída**: Desempenho (Estudo e Semanas), Resumos (Markdown, ligações, importar), registro de questões, aviso de semana encerrada. As quatro abas do HTML agora existem na base nova. 196 testes. |
