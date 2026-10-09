@@ -8,6 +8,15 @@ export interface FocoConcluido {
   completo: boolean
 }
 
+/** O que está sendo estudado neste foco (escolhido ao clicar em Iniciar). `passoId` 0 = estudar sem registrar. */
+export interface AlvoFoco {
+  passoId: number
+  tipo: string
+  assuntoId: string | null
+  /** Texto para mostrar no cartão, ex.: "3. Direito Civil · Teoria". */
+  rotulo: string
+}
+
 interface PomodoroState {
   config: ConfigPomodoro
   fase: Fase
@@ -18,6 +27,10 @@ interface PomodoroState {
   focosConcluidos: number
   /** Aviso para a tela perguntar a qual passo somar o tempo. */
   foco: FocoConcluido | null
+  alvo: AlvoFoco | null
+  /** Última escolha, para sugerir de novo no próximo foco. */
+  ultimoAlvo: AlvoFoco | null
+  definirAlvo: (a: AlvoFoco | null) => void
   alternar: () => void
   reiniciar: () => void
   /** Encerra o foco antes da hora e soma só o que foi estudado (se passou de 1 minuto). */
@@ -58,6 +71,9 @@ export const usePomodoro = create<PomodoroState>((set, get) => ({
   fimMs: 0,
   focosConcluidos: 0,
   foco: null,
+  alvo: null,
+  ultimoAlvo: null,
+  definirAlvo: (alvo) => set(alvo ? { alvo, ultimoAlvo: alvo } : { alvo: null }),
 
   alternar: () => {
     const s = get()

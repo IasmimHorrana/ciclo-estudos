@@ -292,3 +292,14 @@ export function montarEdital(e: EntradaMontagem) {
   }
   return { blocos, total }
 }
+
+/** Assunto sugerido a partir da anotação do passo ("Posse; Contratos" → o primeiro que existir entre os assuntos da matéria). */
+export function sugerirAssunto(nota: string, assuntos: readonly { id: string; nome: string }[]): string | null {
+  for (const parte of nota.split(';')) {
+    const k = normalizar(parte)
+    if (!k) continue
+    const a = assuntos.find((x) => normalizar(x.nome) === k)
+    if (a) return a.id
+  }
+  return null
+}

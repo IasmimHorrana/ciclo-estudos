@@ -1,5 +1,6 @@
 import { RotateCcw } from 'lucide-react'
 import { CampoNumero } from '@/componentes/CampoNumero'
+import { escolherAlvo, iniciarOuPausar } from '@/componentes/iniciar-foco-api'
 import { Button } from '@/componentes/ui/button'
 import { salvarPomo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
@@ -24,7 +25,7 @@ const RAIO = 62
 const CIRCUNFERENCIA = 2 * Math.PI * RAIO
 
 export function PomodoroCard() {
-  const { fase, restaSeg, rodando, alternar, reiniciar, encerrar, irParaFase, config, focosConcluidos, definirConfig } = usePomodoro()
+  const { fase, restaSeg, rodando, alvo, reiniciar, encerrar, irParaFase, config, focosConcluidos, definirConfig } = usePomodoro()
 
   function mudar(chave: keyof ConfigPomodoro, n: number | null) {
     if (!n || n < 1) return
@@ -80,7 +81,7 @@ export function PomodoroCard() {
       </div>
 
       <div className="flex items-center justify-center gap-2">
-        <Button className="min-w-24 rounded-full font-bold tracking-wider uppercase" onClick={alternar}>
+        <Button className="min-w-24 rounded-full font-bold tracking-wider uppercase" onClick={() => void iniciarOuPausar()}>
           {rodando ? 'Pausar' : 'Iniciar'}
         </Button>
         {fase === 'foco' && (
@@ -92,6 +93,16 @@ export function PomodoroCard() {
           <RotateCcw className="size-4" />
         </Button>
       </div>
+
+      {fase === 'foco' && alvo && (
+        <button
+          className="w-full cursor-pointer truncate rounded-lg bg-muted px-2 py-1 text-xs hover:bg-accent"
+          title="Estudando isto. Clique para trocar o passo, o tipo ou o assunto."
+          onClick={() => void escolherAlvo()}
+        >
+          📖 {alvo.rotulo}
+        </button>
+      )}
 
       <p className="m-0 text-xs text-muted-foreground">
         Focos concluídos nesta sessão: <b className="text-foreground">{focosConcluidos}</b>
