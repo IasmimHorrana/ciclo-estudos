@@ -311,3 +311,43 @@ export async function salvarOpcoes(db: BancoCiclo, grupoId: string, opcoes: Opco
   if (!g) throw new Error('Grupo de opções não encontrado.')
   await db.gruposOpcoes.put({ ...g, opcoes, atualizadoEm: agora, sujo: 1 })
 }
+
+// ---------------------------------------------------------------- ações rápidas do estudo
+
+/** Cartões vivos de uma nota (ou só o cartão, conforme o escopo). */
+async function alvos(db: BancoCiclo, cartaoId: string, escopo: 'cartao' | 'nota'): Promise<CartaoFc[]> {
+  const c = await db.cartoes.get(cartaoId)
+  if (!c || c.excluidoEm !== null) return []
+  if (escopo === 'cartao') return [c]
+  return (await db.cartoes.where('notaId').equals(c.notaId).toArray()).filter((x) => x.excluidoEm === null)
+}
+
+/** Suspende (ou volta a ativar) o cartão ou a nota inteira. */
+export async function suspender(db: BancoCiclo, cartaoId: string, escopo: 'cartao' | 'nota', suspenso = true, agora = Date.now()): Promise<void> {
+  await db.transaction('rw', db.cartoes, async () => {
+    for (const c of await alvos(db, cartaoId, escopo)) await db.cartoes.put({ ...c, suspenso, atualizadoEm: agora, sujo: 1 })
+  })
+}
+
+/** Esconde o cartão (ou a nota) até amanhã. */
+export async function enterrar(db: BancoCiclo, cartaoId: string, escopo: 'cartao' | 'nota', agora = Date.now(), virada = 4): Promise<void> {
+  const amanha = numeroDoDia(agora, virada) + 1
+  await db.transaction('rw', db.cartoes, async () => {
+    for (const c of await alvos(db, cartaoId, escopo)) await db.cartoes.put({ ...c, enterradoAte: amanha, atualizadoEm: agora, sujo: 1 })
+  })
+}
+
+/** Liga/desliga a marca (tag "marked") da nota do cartão. Devolve se ficou marcada. */
+export async function alternarMarca(db: BancoCiclo, notaId: string, agora = Date.now()): Promise<boolean> {
+  const n = await db.notasFc.get(notaId)
+  if (!n) return false
+  const marcada = n.tags.includes('marked')
+  await db.notasFc.put({ ...n, tags: marcada ? n.tags.filter((t) => t !== 'marked') : [...n.tags, 'marked'], atualizadoEm: agora, sujo: 1 })
+  return !marcada
+}
+
+/** Bandeira de 0 (nenhuma) a 7; repetir a mesma bandeira a remove, como no Anki. */
+export async function definirBandeira(db: BancoCiclo, cartaoId: string, flag: number, agora = Date.now()): Promise<void> {
+  const c = await db.cartoes.get(cartaoId)
+  if (c) await db.cartoes.put({ ...c, flag: c.flag === flag ? 0 : flag, atualizadoEm: agora, sujo: 1 })
+}

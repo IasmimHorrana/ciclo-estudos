@@ -17,6 +17,7 @@ const botao = cva(
       size: {
         default: 'h-9 px-4',
         sm: 'h-7 px-2.5 text-xs',
+        lg: 'h-11 px-6 text-base',
         icon: 'size-8',
       },
     },

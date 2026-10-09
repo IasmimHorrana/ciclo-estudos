@@ -4,8 +4,8 @@
 > |---|---|
 > | 0. Git (repositório local, tag `v0-html`) | feita |
 > | 1. Esqueleto da base nova (`app/`) | feita |
-> | 2. Dados (Dexie, importador do JSON antigo, backup) | feita na branch `dev` (falta só você testar o backup em pasta no Chrome/Edge) |
-> | 3. Flashcards no estilo Anki (SM-2) | a fazer |
+> | 2. Dados (Dexie, importador do JSON antigo, backup) | feita |
+> | 3. Flashcards no estilo Anki (SM-2) | em andamento na `dev`: sub-etapas 1 e 2 feitas (dados, SM-2, fila, estudo, baralhos, opções, adicionar simples); aguardando sua revisão ⏸. Faltam: editor rico (Tiptap, imagens), Navegar, Estatísticas, importar/exportar Anki |
 > | 4. Portar Montar, Semana, Desempenho e Resumos | a fazer |
 > | 5. Supabase (login e sincronização) | a fazer |
 > | 6. Publicar e instalar no celular | a fazer |

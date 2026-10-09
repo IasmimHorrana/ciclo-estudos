@@ -5,6 +5,7 @@ import { BancoCiclo } from '@/dados/db'
 import {
   adicionarNota, atualizarNota, carregarContexto, criarBaralho, desfazerResposta, excluirBaralho, excluirNota, filaDe,
   garantirPadroes, renomearBaralho, responderCartao, salvarOpcoes, sincronizarBaralhos, GRUPO_PADRAO,
+  suspender, enterrar, alternarMarca, definirBandeira,
 } from '@/dados/flashcards'
 import { substituirDados } from '@/dados/repositorio'
 import { OPCOES_BARALHO_PADRAO, proximoCartao } from '@/dominio/fila'
@@ -200,5 +201,34 @@ describe('estudar', () => {
     const { db, id } = await comUmCartao({ passos: [5, 20] })
     await responderCartao(db, id, 3, 1000, T0, null)
     expect((await db.cartoes.get(id))?.venceMs).toBe(T0 + 20 * MIN)
+  })
+})
+
+describe('ações rápidas', () => {
+  it('suspender cartão/nota, enterrar até amanhã, marcar e bandeira', async () => {
+    const db = await banco()
+    const b = await criarBaralho(db, 'Teste', T0)
+    const { cartoes, nota } = await adicionarNota(db, { tipoId: 'basico-invertido', baralhoId: b.id, campos: { Frente: 'Q', Verso: 'R' } }, T0)
+    const [a, c2] = [cartoes[0]!.id, cartoes[1]!.id]
+    const novos = async () => filaDe(await carregarContexto(db, T0 + 1), b.id).novos.map((c) => c.id)
+
+    await suspender(db, a, 'cartao', true, T0)
+    expect(await novos()).toEqual([c2])
+    await suspender(db, a, 'nota', true, T0)
+    expect(await novos()).toEqual([])
+    await suspender(db, a, 'nota', false, T0)
+    expect(await novos()).toHaveLength(2)
+
+    await enterrar(db, a, 'nota', T0)
+    expect(await novos()).toEqual([])
+    expect(filaDe(await carregarContexto(db, T0 + DIA), b.id).novos).toHaveLength(2)
+
+    expect(await alternarMarca(db, nota.id, T0)).toBe(true)
+    expect(await alternarMarca(db, nota.id, T0)).toBe(false)
+
+    await definirBandeira(db, a, 2, T0)
+    expect((await db.cartoes.get(a))?.flag).toBe(2)
+    await definirBandeira(db, a, 2, T0)
+    expect((await db.cartoes.get(a))?.flag).toBe(0)
   })
 })

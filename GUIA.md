@@ -26,14 +26,18 @@ npm run build      # versão de produção (gera também o service worker do PWA
 npm run icones     # regera os ícones do PWA a partir de public/favicon.svg
 ```
 
-Estrutura (etapas 1 e 2):
+Estrutura (etapas 1, 2 e parte da 3):
 - `src/dominio/`: regras puras e testadas. Hoje: `datas.ts` (fuso local, semana de segunda a domingo, grade do calendário) e `pomodoro.ts`. Aqui entrarão `sm2.ts`, `fila.ts`, `cloze.ts` e `busca.ts`.
 - `src/dados/`: banco local (Dexie, `db.ts`; para mudar o formato crie `version(2)` com `upgrade`, nunca edite a v1), esquemas Zod do backup (`esquemas.ts`), conversão do backup do app em HTML e exportação (`converter.ts`), leitura/gravação (`repositorio.ts`), `.zip` sem dependências (`zip.ts`), `.md` dos resumos (`arquivos.ts`, `mesclar.ts`) e backup automático em pasta (`pasta.ts`, só Chrome/Edge; a pasta e o registro do que foi gravado ficam na tabela `local`, só deste aparelho). Nada é apagado de verdade: o que sai ganha `excluidoEm`.
+- `src/dominio/` (flashcards): `sm2.ts` (agendador SM-2 como o Anki: passos, Errei/Difícil/Bom/Fácil, atraso, variação, sanguessuga, rótulos dos botões, virada do dia às 4h), `fila.ts` (limites diários por baralho, o limite do pai vale para os filhos, ordem aprendizado → revisão → novos, antecipação, irmãos), `cloze.ts` e `modelo.ts` (tipos de nota, campos, `{{FrontSide}}`, `{{cloze:}}`, `{{type:}}`, seções), `passos.ts`.
+- `src/dados/flashcards*.ts`: baralhos (um por matéria e um subbaralho por assunto, criados sozinhos; ou à mão com `::`), notas → cartões, responder/desfazer, suspender/enterrar/marcar/bandeira. Tabelas do Dexie v3: `baralhos`, `gruposOpcoes`, `tiposNota`, `notasFc`, `cartoes`, `revlog` (histórico só acrescenta).
 - `src/estado/`: Zustand (`ui.ts`: aba e tema, guardados no navegador; `pomodoro.ts`: cronômetro).
 - `src/componentes/`: `ui/` (padrão shadcn) e `barra-lateral/` (menu, mini calendário, Pomodoro).
-- `src/telas/`: `Dados.tsx` (importar/exportar JSON e .zip, backup em pasta e restaurar; botão no rodapé da barra lateral, que fica verde com o backup em pasta ativo); as demais abas têm só um aviso "em breve" por aba; as telas reais chegam nas etapas 3 e 4.
+- `src/telas/`: `Dados.tsx` (importar/exportar JSON e .zip, backup em pasta e restaurar; botão no rodapé da barra lateral, que fica verde com o backup em pasta ativo); `telas/flashcards/` (Baralhos, Estudo, Adicionar, Opções do baralho); as demais abas têm só um aviso "em breve" por aba; as telas reais chegam nas etapas 3 e 4.
 - `src/index.css`: paleta verde-menta (claro e escuro) com os nomes de variáveis do shadcn/ui; `.dark` na raiz ativa o tema escuro.
 - Layout de tela única no computador (a página não rola), e empilhado no celular.
+
+**Flashcards (etapa 3, parcial):** aba Flashcards com baralhos e contagens (azul novos, vermelho aprender, verde revisar), estudo com 4 botões e intervalos, atalhos `Espaço/Enter`, `1-4`, `Ctrl+Z`, `*` marcar, `-` e `=` esconder cartão/nota até amanhã, `@` e `!` suspender cartão/nota, `Ctrl+1..4` bandeira; opções do baralho (limites, passos, intervalos, sanguessuga); adicionar cartões (Básico, invertido, invertido opcional, digitar resposta, omissão/cloze) em caixa de texto simples. Ainda faltam: editor rico com imagens, Navegar, Estatísticas, importar/exportar do Anki.
 
 Ainda **não** estão na base nova: Montar, Semana, Desempenho, Resumos, Flashcards, backup e sincronização.
 
@@ -274,3 +278,4 @@ Dica: para testar sem perder seus dados reais, abra o arquivo em uma janela anô
 | 2026-10-09 | **Migração iniciada**: repositório Git criado (commit inicial e tag `v0-html` com o app em HTML único) e etapa 1 da base nova concluída em `app/`: esqueleto Vite + React + TypeScript + Tailwind/shadcn + Zustand, tema verde-menta claro/escuro, layout de tela única com barra lateral (menu, mini calendário, Pomodoro funcional), PWA instalável, Vitest (10 testes), ESLint e CI no GitHub Actions. Plano em `docs/PLANO.md`. O app em HTML não foi alterado. |
 | 2026-10-09 | **Base nova, etapa 2 (parcial)**: banco local Dexie, importador do "Exportar backup completo" do app em HTML (validado com Zod, tolerante a campos ausentes), exportar backup em JSON (mesmo formato do HTML + `formato`/`versao`) e tela "Dados e backup". 20 testes, incluindo ida e volta e teste com o backup real. Branch `dev`. |
 | 2026-10-09 | **Base nova, etapa 2 concluída**: exportar tudo em .zip (um .md por resumo + backup completo), backup automático em pasta com restaurar (junta .md editados fora do app), tabela `local` no Dexie (versão 2 do banco, sem perder dados) e indicador no rodapé da barra lateral. 29 testes. |
+| 2026-10-09 | **Flashcards, etapa 3 (sub-etapas 1 e 2)**: agendador SM-2, fila com limites diários, modelo de dados (Dexie v3), baralhos por matéria/assunto, estudo, baralhos, opções do baralho e adicionar cartões simples. 108 testes. Na branch `dev`. |
