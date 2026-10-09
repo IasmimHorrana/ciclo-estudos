@@ -9,8 +9,8 @@ import { cn } from '@/lib/utils'
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 const DIAS = ['seg', '', 'qua', '', 'sex', '', '']
 
-// verdes do mais fraco ao mais forte (pastéis no claro, vivos no escuro)
-const NIVEL = ['bg-muted', 'bg-[var(--calor-1)]', 'bg-[var(--calor-2)]', 'bg-[var(--calor-3)]', 'bg-[var(--calor-4)]']
+// verdes pastéis, do mais claro ao mais forte
+const NIVEL = ['bg-muted', 'bg-[#d4ebc9]', 'bg-[#b3dca4]', 'bg-[#8fca82]', 'bg-[#6bb36b]']
 
 const fmtTempo = (ms: number) => {
   const s = Math.round(ms / 1000)
@@ -29,7 +29,7 @@ export function CalendarioCalor() {
   const tHoje = dados.tempoMs.get(hoje) ?? 0
   const stat = (rotulo: string, valor: string) => (
     <span>
-      {rotulo}: <b className="text-ok">{valor}</b>
+      {rotulo}: <b className="text-[#5fa65f]">{valor}</b>
     </span>
   )
   return (

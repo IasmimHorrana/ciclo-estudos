@@ -38,7 +38,7 @@ export function Constancia({ s, diasDeEstudo, hojeISO }: { s: SemanaAtual; diasD
             title={`${fmtData(c.data)} · ${c.estado === 'feito' ? 'estudou' : c.estado === 'falhou' ? 'não estudou' : c.estado === 'folga' ? 'folga' : 'hoje'}`}
             className={cn(
               'flex h-6 items-center justify-center rounded-sm',
-              c.estado === 'feito' && 'bg-ok text-background',
+              c.estado === 'feito' && 'bg-ok text-white',
               c.estado === 'falhou' && 'bg-erro-bg text-erro',
               c.estado === 'folga' && 'bg-muted',
               c.estado === 'hoje' && 'border-2 border-primary',
