@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { distribuirAssuntos, lerEdital, normalizar, notaDosAssuntos, prioridade, resumoEdital, sugerirRepeticoes } from './edital'
+import { distribuirAssuntos, lerEdital, montarEdital, normalizar, notaDosAssuntos, prioridade, resumoEdital, sugerirRepeticoes } from './edital'
 
 describe('normalizar', () => {
   it('tira acento, caixa e espaços repetidos', () => {
@@ -148,5 +148,46 @@ describe('distribuirAssuntos', () => {
   it('mais passos que assuntos: os que sobram ficam sem anotação', () => {
     const r = distribuirAssuntos(passos, { Civil: ['Posse'] })
     expect(r.map((p) => p.nota)).toEqual(['Posse', '', '', 'minha nota'])
+  })
+})
+
+describe('montarEdital', () => {
+  const materias = [{ id: 'm1', nome: 'Civil', peso: 5, ordem: 0 }, { id: 'm2', nome: 'Penal', peso: 2, ordem: 1 }]
+  const ass = (id: string, materia: string, nome: string, ordem: number, extra = {}) => ({ id, materia, nome, ordem, importancia: 3, horasIdeais: 10, estudado: false, noCiclo: false, ...extra })
+  const assuntos = [
+    ass('a1', 'Civil', 'Posse', 0),
+    ass('a2', 'civil', 'Contratos', 1, { importancia: 5 }),
+    ass('a3', 'Penal', 'Penas', 0, { estudado: true }),
+  ]
+  const questoes = [{ assuntoId: 'a1', feitas: 10, acertos: 7 }, { assuntoId: 'a1', feitas: 5, acertos: 5 }, { assuntoId: null, feitas: 9, acertos: 9 }]
+  const sessoes = [{ assuntoId: 'a1', minutos: 90 }, { assuntoId: 'a1', minutos: 30 }]
+  const base = { materias, assuntos, questoes, sessoes, ordem: 'edital' as const, ocultarEstudados: false, filtroMateria: null }
+
+  it('soma certas, erradas, total e horas por assunto (casando matéria sem diferenciar caixa)', () => {
+    const { blocos } = montarEdital(base)
+    const posse = blocos[0]?.linhas[0]
+    expect(posse).toMatchObject({ nome: 'Posse', certas: 12, erradas: 3, total: 15, pctAcerto: 80, horasFeitas: 2, falta: 8 })
+    expect(blocos[0]?.linhas.map((l) => l.nome)).toEqual(['Posse', 'Contratos'])
+    expect(blocos[0]?.linhas[1]).toMatchObject({ total: 0, pctAcerto: null })
+  })
+
+  it('totais ignoram questões sem assunto e somam as matérias mostradas', () => {
+    const { total } = montarEdital(base)
+    expect(total).toMatchObject({ certas: 12, erradas: 3, questoes: 15 })
+    expect(total.resumo).toMatchObject({ assuntos: 3, estudados: 1, pctEstudados: 33 })
+  })
+
+  it('ordena por prioridade (assuntos e matérias) e esconde estudados sem mudar os totais', () => {
+    const r = montarEdital({ ...base, ordem: 'prioridade', ocultarEstudados: true })
+    expect(r.blocos.map((b) => b.materia.nome)).toEqual(['Civil', 'Penal'])
+    expect(r.blocos[0]?.linhas.map((l) => l.nome)).toEqual(['Contratos', 'Posse']) // importância 5 vence
+    expect(r.blocos[1]?.linhas).toEqual([])
+    expect(r.total.resumo.assuntos).toBe(3)
+  })
+
+  it('filtra por matéria', () => {
+    const r = montarEdital({ ...base, filtroMateria: 'm2' })
+    expect(r.blocos.map((b) => b.materia.nome)).toEqual(['Penal'])
+    expect(r.total.resumo.assuntos).toBe(1)
   })
 })

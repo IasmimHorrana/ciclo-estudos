@@ -181,3 +181,114 @@ export function resumoEdital(itens: readonly { estudado: boolean; horasIdeais: n
     pctHoras: horasIdeais > 0 ? Math.round((uteis / horasIdeais) * 100) : 0,
   }
 }
+
+export type OrdemEdital = 'edital' | 'prioridade' | 'falta'
+
+export interface EntradaMontagem {
+  materias: readonly { id: string; nome: string; peso: number; ordem: number }[]
+  assuntos: readonly { id: string; materia: string; nome: string; ordem: number; importancia: number; horasIdeais: number; estudado: boolean; noCiclo: boolean }[]
+  questoes: readonly { assuntoId: string | null; feitas: number; acertos: number }[]
+  sessoes: readonly { assuntoId: string | null; minutos: number }[]
+  ordem: OrdemEdital
+  ocultarEstudados: boolean
+  /** Só esta matéria (id), ou todas. */
+  filtroMateria: string | null
+}
+
+export interface LinhaEdital {
+  id: string
+  nome: string
+  importancia: number
+  horasIdeais: number
+  estudado: boolean
+  noCiclo: boolean
+  certas: number
+  erradas: number
+  total: number
+  /** % de acerto, ou null se ainda não há questões. */
+  pctAcerto: number | null
+  horasFeitas: number
+  /** Horas que faltam para as ideais (0 se não há ideal definido). */
+  falta: number
+  prioridade: number
+}
+
+export interface BlocoEdital {
+  materia: { id: string; nome: string; peso: number }
+  linhas: LinhaEdital[]
+  /** Resumo de todos os assuntos da matéria (inclusive os ocultos pelo filtro). */
+  resumo: ResumoEdital
+  /** Horas que faltam nos assuntos ainda não estudados. */
+  faltam: number
+  totais: { certas: number; erradas: number }
+  maiorPrioridade: number
+}
+
+const arred = (n: number) => Math.round(n * 100) / 100
+
+export function montarEdital(e: EntradaMontagem) {
+  const porAssunto = new Map<string, { feitas: number; acertos: number; minutos: number }>()
+  const ac = (id: string) => {
+    let x = porAssunto.get(id)
+    if (!x) porAssunto.set(id, (x = { feitas: 0, acertos: 0, minutos: 0 }))
+    return x
+  }
+  for (const q of e.questoes) if (q.assuntoId) { const x = ac(q.assuntoId); x.feitas += q.feitas; x.acertos += q.acertos }
+  for (const s of e.sessoes) if (s.assuntoId) ac(s.assuntoId).minutos += s.minutos
+
+  let blocos: BlocoEdital[] = e.materias
+    .filter((m) => !e.filtroMateria || m.id === e.filtroMateria)
+    .map((m) => {
+      const todas: LinhaEdital[] = e.assuntos
+        .filter((a) => normalizar(a.materia) === normalizar(m.nome))
+        .map((a) => {
+          const x = porAssunto.get(a.id) ?? { feitas: 0, acertos: 0, minutos: 0 }
+          const horasFeitas = arred(x.minutos / 60)
+          return {
+            id: a.id, nome: a.nome, importancia: a.importancia, horasIdeais: a.horasIdeais, estudado: a.estudado, noCiclo: a.noCiclo,
+            certas: x.acertos, erradas: Math.max(0, x.feitas - x.acertos), total: x.feitas,
+            pctAcerto: x.feitas ? Math.round((x.acertos / x.feitas) * 100) : null,
+            horasFeitas,
+            falta: a.horasIdeais > 0 ? arred(Math.max(0, a.horasIdeais - horasFeitas)) : 0,
+            prioridade: prioridade({ pesoMateria: m.peso, importancia: a.importancia, horasIdeais: a.horasIdeais, horasFeitas, estudado: a.estudado, questoes: x.feitas, acertos: x.acertos }),
+            ordem: a.ordem,
+          }
+        })
+        .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'))
+        .map(({ ordem: _o, ...l }) => l)
+      const linhas = todas
+        .filter((l) => !(e.ocultarEstudados && l.estudado))
+        .sort(e.ordem === 'prioridade' ? (a, b) => b.prioridade - a.prioridade : e.ordem === 'falta' ? (a, b) => b.falta - a.falta : () => 0)
+      return {
+        materia: { id: m.id, nome: m.nome, peso: m.peso },
+        linhas,
+        resumo: resumoEdital(todas),
+        totais: { certas: todas.reduce((t, l) => t + l.certas, 0), erradas: todas.reduce((t, l) => t + l.erradas, 0) },
+        faltam: arred(todas.filter((l) => !l.estudado).reduce((s, l) => s + l.falta, 0)),
+        maiorPrioridade: todas.filter((l) => !l.estudado).reduce((mx, l) => Math.max(mx, l.prioridade), 0),
+      }
+    })
+  if (e.ordem === 'prioridade') blocos = [...blocos].sort((a, b) => b.maiorPrioridade - a.maiorPrioridade)
+  if (e.ordem === 'falta') blocos = [...blocos].sort((a, b) => b.faltam - a.faltam)
+
+  const soma = (f: (b: BlocoEdital) => number) => blocos.reduce((t, b) => t + f(b), 0)
+  const horasIdeais = soma((b) => b.resumo.horasIdeais)
+  const horasFeitas = soma((b) => b.resumo.horasFeitas)
+  const uteis = soma((b) => (b.resumo.pctHoras / 100) * b.resumo.horasIdeais)
+  const assuntos = soma((b) => b.resumo.assuntos)
+  const estudados = soma((b) => b.resumo.estudados)
+  const total = {
+    certas: soma((b) => b.totais.certas),
+    erradas: soma((b) => b.totais.erradas),
+    questoes: soma((b) => b.totais.certas + b.totais.erradas),
+    resumo: {
+      assuntos,
+      estudados,
+      pctEstudados: assuntos ? Math.round((estudados / assuntos) * 100) : 0,
+      horasIdeais,
+      horasFeitas,
+      pctHoras: horasIdeais > 0 ? Math.round((uteis / horasIdeais) * 100) : 0,
+    } satisfies ResumoEdital,
+  }
+  return { blocos, total }
+}

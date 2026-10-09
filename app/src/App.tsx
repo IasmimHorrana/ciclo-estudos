@@ -4,6 +4,7 @@ import { Dialogos } from '@/componentes/Dialogos'
 import { BarraLateral } from '@/componentes/barra-lateral/BarraLateral'
 import { Dados } from '@/telas/Dados'
 import { Desempenho } from '@/telas/Desempenho'
+import { Edital } from '@/telas/Edital'
 import { Montar } from '@/telas/Montar'
 import { Resumos } from '@/telas/Resumos'
 import { Semana } from '@/telas/Semana'
@@ -20,6 +21,7 @@ const TELAS: Record<AbaId, ReactNode> = {
   semana: <Semana />,
   desempenho: <Desempenho />,
   resumos: <Resumos />,
+  edital: <Edital />,
   flashcards: <Flashcards />,
   dados: <Dados />,
 }

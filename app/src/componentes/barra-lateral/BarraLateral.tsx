@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Layers, CalendarDays, Moon, NotebookPen, Puzzle, Sun, TrendingUp, type LucideIcon } from 'lucide-react'
+import { Layers, CalendarDays, ListChecks, Moon, NotebookPen, Puzzle, Sun, TrendingUp, type LucideIcon } from 'lucide-react'
 import { Button } from '@/componentes/ui/button'
 import { MiniCalendario } from '@/componentes/barra-lateral/MiniCalendario'
 import { PomodoroCard } from '@/componentes/barra-lateral/PomodoroCard'
@@ -11,6 +11,7 @@ const ABAS: { id: AbaId; rotulo: string; Icone: LucideIcon }[] = [
   { id: 'montar', rotulo: 'Montar ciclo', Icone: Puzzle },
   { id: 'semana', rotulo: 'Semana', Icone: CalendarDays },
   { id: 'desempenho', rotulo: 'Desempenho', Icone: TrendingUp },
+  { id: 'edital', rotulo: 'Edital', Icone: ListChecks },
   { id: 'resumos', rotulo: 'Resumos', Icone: NotebookPen },
   { id: 'flashcards', rotulo: 'Flashcards', Icone: Layers },
 ]
