@@ -4,7 +4,7 @@
 > |---|---|
 > | 0. Git (repositório local, tag `v0-html`) | feita |
 > | 1. Esqueleto da base nova (`app/`) | feita |
-> | 2. Dados (Dexie, importador do JSON antigo, backup) | em andamento na branch `dev`: banco, importar e exportar JSON feitos; faltam exportar .zip e backup em pasta |
+> | 2. Dados (Dexie, importador do JSON antigo, backup) | feita na branch `dev` (falta só você testar o backup em pasta no Chrome/Edge) |
 > | 3. Flashcards no estilo Anki (SM-2) | a fazer |
 > | 4. Portar Montar, Semana, Desempenho e Resumos | a fazer |
 > | 5. Supabase (login e sincronização) | a fazer |

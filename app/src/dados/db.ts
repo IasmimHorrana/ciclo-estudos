@@ -15,6 +15,8 @@ export class BancoCiclo extends Dexie {
   assuntos!: EntityTable<Assunto, 'id'>
   questoes!: EntityTable<RegistroQuestoes, 'id'>
   sessoes!: EntityTable<SessaoPomodoro, 'id'>
+  /** Só deste aparelho (pasta de backup e afins). Nunca vai para a nuvem. */
+  local!: EntityTable<{ chave: string; valor: unknown }, 'chave'>
 
   constructor(nome = 'ciclo-estudos') {
     super(nome)
@@ -27,6 +29,8 @@ export class BancoCiclo extends Dexie {
       questoes: 'id, data, materia, sujo, excluidoEm',
       sessoes: 'id, data, materia, sujo, excluidoEm',
     })
+    // v2: tabela nova só com dados deste aparelho. As demais continuam como estavam (não precisa de upgrade).
+    this.version(2).stores({ local: 'chave' })
   }
 }
 

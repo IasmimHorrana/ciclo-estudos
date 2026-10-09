@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BarraLateral } from '@/componentes/barra-lateral/BarraLateral'
 import { Dados } from '@/telas/Dados'
 import { EmBreve } from '@/telas/EmBreve'
+import { carregarPasta, iniciarBackupAutomatico } from '@/dados/pasta'
 import { fmtMMSS, NOMES_FASE } from '@/dominio/pomodoro'
 import { usePomodoro } from '@/estado/pomodoro'
 import { temaEscuro, useUi, type AbaId } from '@/estado/ui'
@@ -16,6 +17,12 @@ const TELAS: Record<Exclude<AbaId, 'dados'>, { titulo: string; etapa: string; de
 
 export default function App() {
   const { aba, tema } = useUi()
+
+  // backup automático em pasta (se ela já escolheu uma)
+  useEffect(() => {
+    void carregarPasta()
+    return iniciarBackupAutomatico()
+  }, [])
 
   // tema claro/escuro (e acompanha o sistema no modo automático)
   useEffect(() => {
