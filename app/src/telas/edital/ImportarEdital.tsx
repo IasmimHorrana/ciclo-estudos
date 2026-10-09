@@ -47,7 +47,7 @@ export function ImportarEdital({ conhecidas, fechar }: { conhecidas: string[]; f
     if (!lidas) return
     setGravando(true)
     const r = await importarEdital(db, lidas.filter((m) => m.materia.trim()), conhecidas)
-    fechar(`${r.materiasNovas} matéria(s) e ${r.assuntosNovos} assunto(s) novos.${r.assuntosQueJaExistiam ? ` ${r.assuntosQueJaExistiam} já existiam e foram mantidos.` : ''}`)
+    fechar(`${r.materiasNovas} matéria(s) e ${r.assuntosNovos} assunto(s) novos.${r.assuntosQueJaExistiam ? ` ${r.assuntosQueJaExistiam} já existiam no app e foram ligados ao edital (sem duplicar).` : ''}`)
   }
 
   return (

@@ -9,8 +9,8 @@ import { cn } from '@/lib/utils'
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 const DIAS = ['seg', '', 'qua', '', 'sex', '', '']
 
-// verdes pastéis, do mais claro ao mais forte
-const NIVEL = ['bg-muted', 'bg-[#d4ebc9]', 'bg-[#b3dca4]', 'bg-[#8fca82]', 'bg-[#6bb36b]']
+// verdes do mais fraco ao mais forte (pastéis no claro, vivos no escuro)
+const NIVEL = ['bg-muted', 'bg-[var(--calor-1)]', 'bg-[var(--calor-2)]', 'bg-[var(--calor-3)]', 'bg-[var(--calor-4)]']
 
 const fmtTempo = (ms: number) => {
   const s = Math.round(ms / 1000)

@@ -20,24 +20,10 @@ export async function carregarEdital(db: BancoCiclo): Promise<DadosEdital> {
 const novaMateria = (nome: string, ordem: number, agora: number): MateriaEdital => ({
   id: novoIdFc('e', agora + ordem), nome, peso: 3, ordem, atualizadoEm: agora, excluidoEm: null, sujo: 1,
 })
-const novoAssunto = (materia: string, nome: string, ordem: number, agora: number): Assunto => ({
-  id: novoIdFc('a', agora + ordem), materia, nome, ordem, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false,
+const novoAssunto = (materia: string, nome: string, ordem: number, agora: number, noEdital: boolean): Assunto => ({
+  id: novoIdFc('a', agora + ordem), materia, nome, ordem, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, noEdital,
   atualizadoEm: agora, excluidoEm: null, sujo: 1,
 })
-
-/** Garante que toda matéria que já tem assuntos (de Questões, Flashcards ou importação) apareça no edital. Só acrescenta. */
-export async function sincronizarEdital(db: BancoCiclo, agora = Date.now()): Promise<void> {
-  await db.transaction('rw', [db.assuntos, db.materiasEdital], async () => {
-    const materias = vivos(await db.materiasEdital.toArray())
-    const tem = new Set(materias.map((m) => normalizar(m.nome)))
-    let ordem = materias.reduce((mx, m) => Math.max(mx, m.ordem), -1) + 1
-    for (const nome of [...new Set(vivos(await db.assuntos.toArray()).map((a) => a.materia))].sort((a, b) => a.localeCompare(b, 'pt-BR'))) {
-      if (!nome || tem.has(normalizar(nome))) continue
-      tem.add(normalizar(nome))
-      await db.materiasEdital.put(novaMateria(nome, ordem++, agora))
-    }
-  })
-}
 
 export interface ResultadoImportacao {
   materiasNovas: number
@@ -48,8 +34,12 @@ export interface ResultadoImportacao {
 /**
  * Grava o edital já conferido na pré-visualização. Não duplica: casa matéria e assunto pelo nome sem acento/caixa.
  * Se a matéria do edital for a mesma de uma que o app já conhece (ciclo, questões), usa o nome do app.
+ * Um assunto que já existia (criado em Desempenho, por exemplo) é ligado ao edital em vez de duplicado.
+ * Com `noEdital` falso só cria assuntos (sem aparecerem na aba Edital), como no Pomodoro.
  */
-export async function importarEdital(db: BancoCiclo, lidas: MateriaLida[], conhecidas: string[], agora = Date.now()): Promise<ResultadoImportacao> {
+export async function importarEdital(
+  db: BancoCiclo, lidas: MateriaLida[], conhecidas: string[], agora = Date.now(), noEdital = true,
+): Promise<ResultadoImportacao> {
   const r: ResultadoImportacao = { materiasNovas: 0, assuntosNovos: 0, assuntosQueJaExistiam: 0 }
   const nomesNovos: string[] = []
   await db.transaction('rw', [db.assuntos, db.materiasEdital], async () => {
@@ -59,7 +49,7 @@ export async function importarEdital(db: BancoCiclo, lidas: MateriaLida[], conhe
     for (const l of lidas) {
       const nome = conhecidas.find((c) => normalizar(c) === normalizar(l.materia)) ?? l.materia.trim()
       if (!nome) continue
-      if (!materias.some((m) => normalizar(m.nome) === normalizar(nome))) {
+      if (noEdital && !materias.some((m) => normalizar(m.nome) === normalizar(nome))) {
         const m = novaMateria(nome, ordemMat++, agora)
         await db.materiasEdital.put(m)
         materias.push(m)
@@ -69,11 +59,18 @@ export async function importarEdital(db: BancoCiclo, lidas: MateriaLida[], conhe
       const daMateria = assuntos.filter((a) => normalizar(a.materia) === normalizar(nome))
       let ordem = daMateria.reduce((mx, a) => Math.max(mx, a.ordem), -1) + 1
       for (const nomeAssunto of l.assuntos) {
-        if (daMateria.some((a) => normalizar(a.nome) === normalizar(nomeAssunto))) {
+        const ja = daMateria.find((a) => normalizar(a.nome) === normalizar(nomeAssunto))
+        if (ja) {
           r.assuntosQueJaExistiam++
+          if (noEdital && !ja.noEdital) {
+            const lig = { ...ja, noEdital: true, atualizadoEm: agora, sujo: 1 as const }
+            await db.assuntos.put(lig)
+            daMateria[daMateria.indexOf(ja)] = lig
+            assuntos[assuntos.indexOf(ja)] = lig
+          }
           continue
         }
-        const a = novoAssunto(daMateria[0]?.materia ?? nome, nomeAssunto, ordem++, agora)
+        const a = novoAssunto(daMateria[0]?.materia ?? nome, nomeAssunto, ordem++, agora, noEdital)
         await db.assuntos.put(a)
         daMateria.push(a)
         assuntos.push(a)
@@ -81,7 +78,7 @@ export async function importarEdital(db: BancoCiclo, lidas: MateriaLida[], conhe
       }
     }
   })
-  await registrarMaterias(db, nomesNovos, agora)
+  if (noEdital) await registrarMaterias(db, nomesNovos, agora)
   return r
 }
 
@@ -118,23 +115,24 @@ export async function mudarMateriaEdital(db: BancoCiclo, id: string, patch: Part
   if (m) await db.materiasEdital.put({ ...m, ...patch, atualizadoEm: agora, sujo: 1 })
 }
 
-export type AlteracaoAssunto = Partial<Pick<Assunto, 'importancia' | 'horasIdeais' | 'estudado' | 'noCiclo'>>
+export type AlteracaoAssunto = Partial<Pick<Assunto, 'importancia' | 'horasIdeais' | 'estudado' | 'noCiclo' | 'noEdital'>>
 
 export async function mudarAssunto(db: BancoCiclo, id: string, patch: AlteracaoAssunto, agora = Date.now()): Promise<void> {
   const a = await db.assuntos.get(id)
   if (a) await db.assuntos.put({ ...a, ...patch, atualizadoEm: agora, sujo: 1 })
 }
 
-/** Tira a matéria do edital e exclui os assuntos dela (questões e tempos registrados continuam, só ficam sem assunto). */
-export async function excluirMateriaEdital(db: BancoCiclo, id: string, agora = Date.now()): Promise<void> {
+/** Tira o assunto do edital. Ele continua no app (Desempenho, Pomodoro, flashcards) com as questões e os tempos. */
+export const tirarAssuntoDoEdital = (db: BancoCiclo, id: string, agora = Date.now()) => mudarAssunto(db, id, { noEdital: false, noCiclo: false }, agora)
+
+/** Tira a matéria do edital e solta os assuntos dela do edital. Nada é apagado: os assuntos seguem no resto do app. */
+export async function tirarMateriaDoEdital(db: BancoCiclo, id: string, agora = Date.now()): Promise<void> {
   const m = await db.materiasEdital.get(id)
   if (!m) return
-  await db.transaction('rw', [db.materiasEdital, db.assuntos, db.questoes, db.sessoes], async () => {
+  await db.transaction('rw', [db.materiasEdital, db.assuntos], async () => {
     await db.materiasEdital.put({ ...m, excluidoEm: agora, atualizadoEm: agora, sujo: 1 })
-    for (const a of vivos(await db.assuntos.toArray()).filter((x) => normalizar(x.materia) === normalizar(m.nome))) {
-      await db.assuntos.put({ ...a, excluidoEm: agora, atualizadoEm: agora, sujo: 1 })
-      for (const q of await db.questoes.filter((x) => x.assuntoId === a.id).toArray()) await db.questoes.put({ ...q, assuntoId: null, atualizadoEm: agora, sujo: 1 })
-      for (const s of await db.sessoes.filter((x) => x.assuntoId === a.id).toArray()) await db.sessoes.put({ ...s, assuntoId: null, atualizadoEm: agora, sujo: 1 })
+    for (const a of vivos(await db.assuntos.toArray()).filter((x) => x.noEdital && normalizar(x.materia) === normalizar(m.nome))) {
+      await db.assuntos.put({ ...a, noEdital: false, noCiclo: false, atualizadoEm: agora, sujo: 1 })
     }
   })
 }
@@ -186,7 +184,7 @@ export async function enviarAoCiclo(db: BancoCiclo, p: PedidoCiclo, agora = Date
 export async function criarAssunto(db: BancoCiclo, materia: string, nome: string, agora = Date.now()): Promise<string | null> {
   const n = nome.trim()
   if (!n) return null
-  await importarEdital(db, [{ materia, assuntos: [n] }], [materia], agora)
+  await importarEdital(db, [{ materia, assuntos: [n] }], [materia], agora, false)
   const a = vivos(await db.assuntos.toArray()).find((x) => normalizar(x.materia) === normalizar(materia) && normalizar(x.nome) === normalizar(n))
   return a?.id ?? null
 }

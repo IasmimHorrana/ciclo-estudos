@@ -1,18 +1,16 @@
-import { useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ChevronDown, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 import { CampoNumero } from '@/componentes/CampoNumero'
 import { avisar, confirmar, pedirTexto } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
 import { Selecao } from '@/componentes/ui/entrada'
-import { excluirAssunto } from '@/dados/desempenho'
 import { db } from '@/dados/db'
 import {
-  adicionarMateriaEdital, carregarEdital, enviarAoCiclo, excluirMateriaEdital, incluirAssuntos, mudarAssunto, mudarMateriaEdital, sincronizarEdital,
+  adicionarMateriaEdital, carregarEdital, enviarAoCiclo, incluirAssuntos, mudarAssunto, mudarMateriaEdital, tirarAssuntoDoEdital, tirarMateriaDoEdital,
 } from '@/dados/edital'
 import { useCiclo } from '@/dados/useCiclo'
 import { corDe, fmtH, todasMaterias } from '@/dominio/ciclo'
-import { montarEdital, type BlocoEdital, type LinhaEdital, type OrdemEdital } from '@/dominio/edital'
+import { materiasDoEdital, montarEdital, type BlocoEdital, type LinhaEdital, type OrdemEdital } from '@/dominio/edital'
 import { abrirDialogo } from '@/estado/dialogo'
 import { useEditalUi } from '@/estado/edital'
 import { useUi } from '@/estado/ui'
@@ -28,14 +26,10 @@ export function Edital() {
   const ui = useEditalUi()
   const irParaAba = useUi((s) => s.irParaAba)
 
-  // matérias que já têm assuntos (Questões, Flashcards) aparecem aqui sem digitar de novo
-  useEffect(() => {
-    void sincronizarEdital(db)
-  }, [])
-
   if (!ciclo || !dados) return <p className="text-sm text-muted-foreground">Carregando…</p>
 
-  const filtro = dados.materias.some((m) => m.id === ui.filtroMateria) ? ui.filtroMateria : null
+  const materias = materiasDoEdital(dados.materias, dados.assuntos)
+  const filtro = materias.some((m) => m.id === ui.filtroMateria) ? ui.filtroMateria : null
   const { blocos, total } = montarEdital({ ...dados, ordem: ui.ordem, ocultarEstudados: ui.ocultarEstudados, filtroMateria: filtro })
   const maxPrioridade = Math.max(1, ...blocos.flatMap((b) => b.linhas.filter((l) => !l.estudado).map((l) => l.prioridade)))
   const conhecidas = [...new Set([...todasMaterias(ciclo.config), ...dados.materias.map((m) => m.nome), ...dados.assuntos.map((a) => a.materia)])]
@@ -59,7 +53,7 @@ export function Edital() {
         <div className="flex flex-wrap items-center gap-2">
           <Selecao className="w-44" aria-label="Mostrar matéria" value={filtro ?? ''} onChange={(e) => ui.definir({ filtroMateria: e.target.value || null })}>
             <option value="">Todas as matérias</option>
-            {dados.materias.map((m) => (
+            {materias.map((m) => (
               <option key={m.id} value={m.id}>{m.nome}</option>
             ))}
           </Selecao>
@@ -78,10 +72,10 @@ export function Edital() {
         </div>
       </div>
 
-      {dados.materias.length === 0 ? (
+      {materias.length === 0 ? (
         <div className="m-auto max-w-md rounded-xl border bg-card p-8 text-center shadow-sm">
           <h2 className="mb-2 text-lg font-bold">Seu edital ainda está vazio</h2>
-          <p className="mb-4 text-sm text-muted-foreground">Cole o conteúdo programático do edital: o app separa as matérias e os assuntos, e você confere antes de salvar.</p>
+          <p className="mb-4 text-sm text-muted-foreground">Cole o conteúdo programático do edital: o app separa as matérias e os assuntos, e você confere antes de salvar. Os assuntos que você já criou em Desempenho não aparecem aqui; se o nome for igual ao do edital, eles são ligados a ele.</p>
           <Button onClick={() => void importar()}>Importar edital</Button>
         </div>
       ) : (
@@ -161,8 +155,8 @@ function BlocoMateria({ b, maxPrioridade, recolhida }: { b: BlocoEdital; maxPrio
   }
 
   async function excluir() {
-    if (await confirmar(`Tirar "${b.materia.nome}" do edital e excluir os ${b.resumo.assuntos} assunto(s) dela? As questões e os tempos já registrados continuam, só ficam sem assunto.`, 'Excluir', true)) {
-      await excluirMateriaEdital(db, b.materia.id)
+    if (await confirmar(`Tirar "${b.materia.nome}" do edital? Os assuntos continuam no app (Desempenho, Pomodoro e flashcards), com as questões e os tempos; só saem desta tela.`, 'Tirar do edital', true)) {
+      await tirarMateriaDoEdital(db, b.materia.id)
     }
   }
 
@@ -189,7 +183,7 @@ function BlocoMateria({ b, maxPrioridade, recolhida }: { b: BlocoEdital; maxPrio
               {mat && <span className="rounded-full bg-ok-bg px-2 py-0.5 text-xs font-semibold text-ok" title="Já está na montagem do ciclo">no ciclo · {mat.rep} passo(s)</span>}
               <Button size="sm" variant="outline" onClick={() => void adicionarAssuntos()}><Plus className="size-4" /> Assunto</Button>
               <Button size="sm" variant="outline" title="Põe a matéria no ciclo e leva os 3 assuntos de maior prioridade para a anotação dos passos" onClick={() => void paraOCiclo()}>＋ Ciclo</Button>
-              <Button size="icon" variant="ghost" title="Tirar matéria do edital" aria-label={`Tirar ${b.materia.nome} do edital`} onClick={() => void excluir()}>
+              <Button size="icon" variant="ghost" title="Tirar matéria do edital (não apaga nada)" aria-label={`Tirar ${b.materia.nome} do edital`} onClick={() => void excluir()}>
                 <Trash2 className="size-4" />
               </Button>
             </span>
@@ -267,9 +261,9 @@ function LinhaAssunto({ l, b, maxPrioridade }: { l: LinhaEdital; b: BlocoEdital;
           size="icon"
           variant="ghost"
           className="size-7"
-          title="Excluir assunto"
-          aria-label={`Excluir ${l.nome}`}
-          onClick={async () => (await confirmar(`Excluir o assunto "${l.nome}"? As questões dele continuam, só ficam sem assunto.`, 'Excluir', true)) && void excluirAssunto(db, l.id)}
+          title="Tirar do edital (continua no Desempenho)"
+          aria-label={`Tirar ${l.nome} do edital`}
+          onClick={async () => (await confirmar(`Tirar "${l.nome}" do edital? Ele continua no Desempenho, no Pomodoro e nos flashcards, com as questões e os tempos.`, 'Tirar do edital', true)) && void tirarAssuntoDoEdital(db, l.id)}
         >
           <Trash2 className="size-3.5" />
         </Button>

@@ -80,6 +80,8 @@ const Assunto = z.object({
   estudado: z.boolean().catch(false),
   /** Escolhido para entrar no próximo ciclo gerado (vira anotação do passo). */
   noCiclo: z.boolean().catch(false),
+  /** Veio de um edital importado (ou foi criado na aba Edital): só estes aparecem lá. */
+  noEdital: z.boolean().catch(false),
 })
 /** Peso e ordem de cada matéria no edital verticalizado. */
 const MateriaEdital = z.object({ id: z.coerce.string(), nome: txt, peso: z.coerce.number().catch(3), ordem: num })
