@@ -9,7 +9,7 @@
 > | 4. Portar Montar, Semana, Desempenho e Resumos | feita na `dev`: as quatro abas, a barra lateral e o Pomodoro já funcionam na base nova; aguardando o seu teste (a criar "cartão a partir dos Resumos" e o quadro de flashcards no Desempenho ficam para depois do Flashcards) |
 > | Extra: aba Edital verticalizado | feita na `dev`: importar com pré-visualização, prioridade, rodapé de progresso e "＋ Ciclo"; aguardando o seu teste com um edital real |
 > | 5. Supabase (login e sincronização) | a fazer |
-> | 6. Publicar e instalar no celular | em andamento: repositório público, GitHub Pages ativado e fluxo de publicação pronto (`.github/workflows/pages.yml`); falta juntar na `main` para o site ir ao ar, e depois instalar no celular e testar offline |
+> | 6. Publicar e instalar no celular | site no ar em https://iasmimhorrana.github.io/ciclo-estudos/ (GitHub Pages, a cada mudança na `main`); service worker registrado; faltam instalar no celular e testar abrir sem internet |
 # Plano: base nova (Git + Vite/React/TS + Dexie + PWA), Flashcards estilo Anki (SM-2) nela e Supabase depois
 
 ## Contexto
