@@ -31,34 +31,44 @@
   --aviso-bg: #fef3c7;
   --erro: #dc2626;
   --erro-bg: #fee2e2;
+  /* calendário de calor dos flashcards (do mais fraco ao mais forte) */
+  --calor-1: #d4ebc9;
+  --calor-2: #b3dca4;
+  --calor-3: #8fca82;
+  --calor-4: #6bb36b;
 }
 
 .dark {
-  --background: #131817;
-  --foreground: #e7efec;
-  --card: #1b2220;
-  --card-foreground: #e7efec;
-  --popover: #1b2220;
-  --popover-foreground: #e7efec;
+  /* carvão neutro (referência de painel escuro): fundo quase preto, cartões um degrau acima */
+  --background: #141414;
+  --foreground: #f2f2f2;
+  --card: #212121;
+  --card-foreground: #f2f2f2;
+  --popover: #262626;
+  --popover-foreground: #f2f2f2;
   --primary: #5fd3b3;
   --primary-foreground: #06281f;
-  --secondary: #1d3a33;
+  --secondary: #263431;
   --secondary-foreground: #bff0e1;
-  --muted: #171d1b;
-  --muted-foreground: #93a39e;
-  --accent: #1d3a33;
+  --muted: #2c2c2c;
+  --muted-foreground: #a3a3a3;
+  --accent: #2a3a36;
   --accent-foreground: #bff0e1;
-  --destructive: #f87171;
-  --border: #2a3330;
-  --input: #2a3330;
+  --destructive: #fb7185;
+  --border: #353535;
+  --input: #3a3a3a;
   --ring: #5fd3b3;
-  --lateral: #171d1b;
+  --lateral: #1a1a1a;
   --ok: #4ade80;
-  --ok-bg: #12331f;
+  --ok-bg: #173324;
   --aviso: #fbbf24;
-  --aviso-bg: #3a2e10;
-  --erro: #f87171;
-  --erro-bg: #3b1a1a;
+  --aviso-bg: #3a2f14;
+  --erro: #fb7185;
+  --erro-bg: #3d1f27;
+  --calor-1: #1f4a3a;
+  --calor-2: #2f7d5b;
+  --calor-3: #46ad7c;
+  --calor-4: #78dba5;
 }
 
 @theme inline {
