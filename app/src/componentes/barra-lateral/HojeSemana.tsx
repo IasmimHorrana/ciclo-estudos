@@ -1,11 +1,29 @@
+import { useLiveQuery } from 'dexie-react-hooks'
+import { abrirQuestoes } from '@/componentes/abrirQuestoes'
 import { Button } from '@/componentes/ui/button'
+import { carregarEstudo } from '@/dados/desempenho'
 import { marcarPasso } from '@/dados/ciclo'
 import { db } from '@/dados/db'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
 import { corDe, fmtH, horasFeitasDe, metaEf } from '@/dominio/ciclo'
 import { fmtData, idxDia, NOMES_DIA_LONGO } from '@/dominio/datas'
+import { pctDe } from '@/dominio/desempenho'
 import { useUi } from '@/estado/ui'
 import { cn } from '@/lib/utils'
+
+/** "Questões hoje: N · X%" com o atalho para registrar. */
+function QuestoesHoje({ hojeISO }: { hojeISO: string }) {
+  const estudo = useLiveQuery(() => carregarEstudo(db), [])
+  const q = (estudo?.questoes ?? []).filter((x) => x.data === hojeISO)
+  const f = q.reduce((a, x) => a + x.feitas, 0)
+  const a = q.reduce((t, x) => t + x.acertos, 0)
+  return (
+    <div className="mt-2 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+      <span>Questões hoje: <b className="text-foreground">{f}</b>{f ? ` · ${pctDe(a, f)}%` : ''}</span>
+      <Button size="sm" variant="outline" title="Registrar questões" aria-label="Registrar questões" onClick={() => void abrirQuestoes()}>＋ Questões</Button>
+    </div>
+  )
+}
 
 /** "Hoje e semana" da barra lateral: passos de hoje com caixinha e o progresso de horas. */
 export function HojeSemana() {
@@ -19,6 +37,7 @@ export function HojeSemana() {
       <>
         <p className="m-0 mb-2 text-sm text-muted-foreground">Nenhuma semana em andamento.</p>
         <Button size="sm" variant="outline" onClick={() => irParaAba('montar')}>Montar ciclo</Button>
+        <QuestoesHoje hojeISO={hojeISO} />
       </>
     )
   }
@@ -47,6 +66,7 @@ export function HojeSemana() {
         <i className="block h-full bg-primary" style={{ width: `${pct}%` }} />
       </div>
       <div className="mt-1 text-muted-foreground">{fmtH(horas)} de {fmtH(meta)} na semana</div>
+      <QuestoesHoje hojeISO={hojeISO} />
     </div>
   )
 }
