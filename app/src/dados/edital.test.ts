@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { lerArquivo } from '@/dados/converter'
 import { gerarSemana, carregarCiclo } from '@/dados/ciclo'
 import { BancoCiclo } from '@/dados/db'
-import { adicionarMateriaEdital, carregarEdital, criarAssunto, enviarAoCiclo, excluirMateriaEdital, importarEdital, mudarAssunto, sincronizarEdital } from '@/dados/edital'
+import { adicionarMateriaEdital, carregarEdital, criarAssunto, enviarAoCiclo, importarEdital, mudarAssunto, tirarAssuntoDoEdital, tirarMateriaDoEdital } from '@/dados/edital'
 import { substituirDados } from '@/dados/repositorio'
 
 const AGORA = new Date(2026, 9, 7, 10).getTime() // quarta
@@ -38,30 +38,55 @@ describe('importarEdital', () => {
   })
 })
 
-describe('sincronizarEdital e matérias', () => {
-  it('matérias que já têm assuntos (de questões/flashcards) entram no edital sem duplicar', async () => {
-    const db = await novoBanco()
-    await db.assuntos.put({ id: 'a1', materia: 'Informática', nome: 'Redes', ordem: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, atualizadoEm: 1, excluidoEm: null, sujo: 1 })
-    await sincronizarEdital(db, AGORA)
-    await sincronizarEdital(db, AGORA + 1)
-    expect((await carregarEdital(db)).materias.map((m) => m.nome)).toEqual(['Informática'])
+describe('o edital só mostra o que veio dele', () => {
+  const semEdital = (id: string, materia: string, nome: string) => ({
+    id, materia, nome, ordem: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, noEdital: false, atualizadoEm: 1, excluidoEm: null, sujo: 1 as const,
   })
 
-  it('recusa matéria repetida e vazia; excluir é lógico e solta as questões do assunto', async () => {
+  it('importar liga o assunto que já existia (sem duplicar) e os de fora continuam de fora', async () => {
+    const db = await novoBanco()
+    await db.assuntos.put(semEdital('a1', 'Informática', 'Redes'))
+    await db.assuntos.put(semEdital('a2', 'Informática', 'Segurança'))
+    const r = await importarEdital(db, [{ materia: 'informatica', assuntos: ['REDES', 'Hardware'] }], ['Informática'], AGORA)
+    expect(r).toMatchObject({ assuntosNovos: 1, assuntosQueJaExistiam: 1 })
+    const todos = (await carregarEdital(db)).assuntos
+    expect(todos).toHaveLength(3)
+    expect(todos.filter((a) => a.noEdital).map((a) => a.nome).sort()).toEqual(['Hardware', 'Redes'])
+    expect(todos.find((a) => a.nome === 'Segurança')?.noEdital).toBe(false)
+  })
+
+  it('assunto criado no Pomodoro não vira matéria nem assunto do edital', async () => {
+    const db = await novoBanco()
+    const id = await criarAssunto(db, 'Informática', 'Redes', AGORA)
+    const e = await carregarEdital(db)
+    expect(e.assuntos.find((a) => a.id === id)?.noEdital).toBe(false)
+    expect(e.materias).toEqual([])
+  })
+
+  it('recusa matéria repetida e vazia', async () => {
     const db = await novoBanco()
     expect(await adicionarMateriaEdital(db, 'Penal', AGORA)).toBe('ok')
     expect(await adicionarMateriaEdital(db, ' penal ', AGORA)).toBe('duplicada')
     expect(await adicionarMateriaEdital(db, '  ', AGORA)).toBe('vazia')
-    await importarEdital(db, [{ materia: 'Penal', assuntos: ['Penas'] }], [], AGORA)
+  })
+
+  it('tirar do edital não apaga nada: o assunto, as questões e os tempos seguem no app', async () => {
+    const db = await novoBanco()
+    await importarEdital(db, [{ materia: 'Penal', assuntos: ['Penas', 'Crimes'] }], [], AGORA)
     const e = await carregarEdital(db)
-    const a = e.assuntos[0]
-    await db.questoes.put({ id: 'q1', data: '2026-10-07', materia: 'Penal', assuntoId: a?.id ?? null, feitas: 5, acertos: 3, atualizadoEm: 1, excluidoEm: null, sujo: 1 })
-    await excluirMateriaEdital(db, e.materias[0]?.id ?? '', AGORA)
+    const penas = e.assuntos.find((a) => a.nome === 'Penas')
+    await db.questoes.put({ id: 'q1', data: '2026-10-07', materia: 'Penal', assuntoId: penas?.id ?? null, feitas: 5, acertos: 3, atualizadoEm: 1, excluidoEm: null, sujo: 1 })
+
+    await tirarAssuntoDoEdital(db, penas?.id ?? '', AGORA)
+    expect((await carregarEdital(db)).assuntos.find((a) => a.nome === 'Penas')).toMatchObject({ noEdital: false, excluidoEm: null })
+
+    await tirarMateriaDoEdital(db, e.materias[0]?.id ?? '', AGORA)
     const depois = await carregarEdital(db)
     expect(depois.materias).toEqual([])
-    expect(depois.assuntos).toEqual([])
-    expect(depois.questoes[0]?.assuntoId).toBeNull() // a questão continua, só sem assunto
-    expect(await db.materiasEdital.count()).toBe(1) // continua guardada, marcada como excluída
+    expect(depois.assuntos).toHaveLength(2)
+    expect(depois.assuntos.every((a) => !a.noEdital)).toBe(true)
+    expect(depois.questoes[0]?.assuntoId).toBe(penas?.id) // continua ligada ao assunto
+    expect(await db.materiasEdital.count()).toBe(1) // guardada, marcada como excluída
   })
 })
 

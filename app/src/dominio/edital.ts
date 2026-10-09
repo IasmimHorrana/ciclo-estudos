@@ -186,7 +186,7 @@ export type OrdemEdital = 'edital' | 'prioridade' | 'falta'
 
 export interface EntradaMontagem {
   materias: readonly { id: string; nome: string; peso: number; ordem: number }[]
-  assuntos: readonly { id: string; materia: string; nome: string; ordem: number; importancia: number; horasIdeais: number; estudado: boolean; noCiclo: boolean }[]
+  assuntos: readonly { id: string; materia: string; nome: string; ordem: number; importancia: number; horasIdeais: number; estudado: boolean; noCiclo: boolean; noEdital: boolean }[]
   questoes: readonly { assuntoId: string | null; feitas: number; acertos: number }[]
   sessoes: readonly { assuntoId: string | null; minutos: number }[]
   ordem: OrdemEdital
@@ -226,7 +226,19 @@ export interface BlocoEdital {
 
 const arred = (n: number) => Math.round(n * 100) / 100
 
+/**
+ * Matérias que aparecem no Edital: as que têm assunto do edital e as que ainda estão vazias (recém-criadas).
+ * Uma matéria que só tem assuntos de fora do edital (criados em Desempenho, por exemplo) fica de fora.
+ */
+export function materiasDoEdital<M extends { nome: string }>(materias: readonly M[], assuntos: readonly { materia: string; noEdital: boolean }[]): M[] {
+  return materias.filter((m) => {
+    const dela = assuntos.filter((a) => normalizar(a.materia) === normalizar(m.nome))
+    return dela.length === 0 || dela.some((a) => a.noEdital)
+  })
+}
+
 export function montarEdital(e: EntradaMontagem) {
+  const assuntosDoEdital = e.assuntos.filter((a) => a.noEdital)
   const porAssunto = new Map<string, { feitas: number; acertos: number; minutos: number }>()
   const ac = (id: string) => {
     let x = porAssunto.get(id)
@@ -236,10 +248,10 @@ export function montarEdital(e: EntradaMontagem) {
   for (const q of e.questoes) if (q.assuntoId) { const x = ac(q.assuntoId); x.feitas += q.feitas; x.acertos += q.acertos }
   for (const s of e.sessoes) if (s.assuntoId) ac(s.assuntoId).minutos += s.minutos
 
-  let blocos: BlocoEdital[] = e.materias
+  let blocos: BlocoEdital[] = materiasDoEdital(e.materias, e.assuntos)
     .filter((m) => !e.filtroMateria || m.id === e.filtroMateria)
     .map((m) => {
-      const todas: LinhaEdital[] = e.assuntos
+      const todas: LinhaEdital[] = assuntosDoEdital
         .filter((a) => normalizar(a.materia) === normalizar(m.nome))
         .map((a) => {
           const x = porAssunto.get(a.id) ?? { feitas: 0, acertos: 0, minutos: 0 }

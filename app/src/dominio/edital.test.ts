@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { distribuirAssuntos, lerEdital, montarEdital, sugerirAssunto, normalizar, notaDosAssuntos, prioridade, resumoEdital, sugerirRepeticoes } from './edital'
+import { distribuirAssuntos, lerEdital, materiasDoEdital, montarEdital, sugerirAssunto, normalizar, notaDosAssuntos, prioridade, resumoEdital, sugerirRepeticoes } from './edital'
 
 describe('normalizar', () => {
   it('tira acento, caixa e espaços repetidos', () => {
@@ -153,7 +153,7 @@ describe('distribuirAssuntos', () => {
 
 describe('montarEdital', () => {
   const materias = [{ id: 'm1', nome: 'Civil', peso: 5, ordem: 0 }, { id: 'm2', nome: 'Penal', peso: 2, ordem: 1 }]
-  const ass = (id: string, materia: string, nome: string, ordem: number, extra = {}) => ({ id, materia, nome, ordem, importancia: 3, horasIdeais: 10, estudado: false, noCiclo: false, ...extra })
+  const ass = (id: string, materia: string, nome: string, ordem: number, extra = {}) => ({ id, materia, nome, ordem, importancia: 3, horasIdeais: 10, estudado: false, noCiclo: false, noEdital: true, ...extra })
   const assuntos = [
     ass('a1', 'Civil', 'Posse', 0),
     ass('a2', 'civil', 'Contratos', 1, { importancia: 5 }),
@@ -201,5 +201,23 @@ describe('sugerirAssunto', () => {
   it('sem correspondência ou sem anotação, não sugere nada', () => {
     expect(sugerirAssunto('revisar tudo', assuntos)).toBeNull()
     expect(sugerirAssunto('', assuntos)).toBeNull()
+  })
+})
+
+describe('só o que é do edital aparece', () => {
+  const materias = [{ id: 'm1', nome: 'Raciocínio Lógico', peso: 3, ordem: 0 }, { id: 'm2', nome: 'Civil', peso: 3, ordem: 1 }, { id: 'm3', nome: 'Vazia', peso: 3, ordem: 2 }]
+  const a = (id: string, materia: string, nome: string, noEdital: boolean) => ({ id, materia, nome, ordem: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, noEdital })
+  const assuntos = [a('a1', 'Raciocínio Lógico', 'Proposições', false), a('a2', 'Civil', 'Posse', true), a('a3', 'Civil', 'Contratos', false)]
+
+  it('matéria que só tem assuntos de fora do edital some; as vazias e as com assunto do edital ficam', () => {
+    expect(materiasDoEdital(materias, assuntos).map((m) => m.nome)).toEqual(['Civil', 'Vazia'])
+  })
+
+  it('assunto criado fora do edital não entra na tabela nem nos totais', () => {
+    const r = montarEdital({ materias, assuntos, questoes: [{ assuntoId: 'a3', feitas: 9, acertos: 9 }], sessoes: [], ordem: 'edital', ocultarEstudados: false, filtroMateria: null })
+    expect(r.blocos.map((b) => b.materia.nome)).toEqual(['Civil', 'Vazia'])
+    expect(r.blocos[0]?.linhas.map((l) => l.nome)).toEqual(['Posse'])
+    expect(r.total).toMatchObject({ questoes: 0 })
+    expect(r.total.resumo.assuntos).toBe(1)
   })
 })
