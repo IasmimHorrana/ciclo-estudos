@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { distribuirAssuntos, lerEdital, montarEdital, normalizar, notaDosAssuntos, prioridade, resumoEdital, sugerirRepeticoes } from './edital'
+import { distribuirAssuntos, lerEdital, montarEdital, sugerirAssunto, normalizar, notaDosAssuntos, prioridade, resumoEdital, sugerirRepeticoes } from './edital'
 
 describe('normalizar', () => {
   it('tira acento, caixa e espaços repetidos', () => {
@@ -189,5 +189,17 @@ describe('montarEdital', () => {
     const r = montarEdital({ ...base, filtroMateria: 'm2' })
     expect(r.blocos.map((b) => b.materia.nome)).toEqual(['Penal'])
     expect(r.total.resumo.assuntos).toBe(1)
+  })
+})
+
+describe('sugerirAssunto', () => {
+  const assuntos = [{ id: 'a1', nome: 'Posse' }, { id: 'a2', nome: 'Contratos' }]
+  it('acha o primeiro assunto citado na anotação (sem acento e caixa)', () => {
+    expect(sugerirAssunto('contratos; Posse', assuntos)).toBe('a2')
+    expect(sugerirAssunto('POSSE', assuntos)).toBe('a1')
+  })
+  it('sem correspondência ou sem anotação, não sugere nada', () => {
+    expect(sugerirAssunto('revisar tudo', assuntos)).toBeNull()
+    expect(sugerirAssunto('', assuntos)).toBeNull()
   })
 })

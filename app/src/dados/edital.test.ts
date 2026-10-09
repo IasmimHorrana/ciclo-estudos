@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { lerArquivo } from '@/dados/converter'
 import { gerarSemana, carregarCiclo } from '@/dados/ciclo'
 import { BancoCiclo } from '@/dados/db'
-import { adicionarMateriaEdital, carregarEdital, enviarAoCiclo, excluirMateriaEdital, importarEdital, mudarAssunto, sincronizarEdital } from '@/dados/edital'
+import { adicionarMateriaEdital, carregarEdital, criarAssunto, enviarAoCiclo, excluirMateriaEdital, importarEdital, mudarAssunto, sincronizarEdital } from '@/dados/edital'
 import { substituirDados } from '@/dados/repositorio'
 
 const AGORA = new Date(2026, 9, 7, 10).getTime() // quarta
@@ -90,5 +90,16 @@ describe('enviarAoCiclo + gerarSemana', () => {
     const a = (await carregarEdital(db)).assuntos[0]
     await mudarAssunto(db, a?.id ?? '', { importancia: 5, horasIdeais: 6, estudado: true }, AGORA)
     expect((await carregarEdital(db)).assuntos.find((x) => x.id === a?.id)).toMatchObject({ importancia: 5, horasIdeais: 6, estudado: true, sujo: 1 })
+  })
+})
+
+describe('criarAssunto', () => {
+  it('cria o assunto, devolve o id e reaproveita se já existe', async () => {
+    const db = await novoBanco()
+    const id = await criarAssunto(db, 'Informática', '  Redes ', AGORA)
+    expect(id).toBeTruthy()
+    expect(await criarAssunto(db, 'Informática', 'redes', AGORA + 1)).toBe(id)
+    expect(await criarAssunto(db, 'Informática', '   ', AGORA)).toBeNull()
+    expect((await carregarEdital(db)).assuntos).toHaveLength(1)
   })
 })

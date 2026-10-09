@@ -181,3 +181,12 @@ export async function enviarAoCiclo(db: BancoCiclo, p: PedidoCiclo, agora = Date
   }
   return r
 }
+
+/** Cria o assunto (ou reaproveita o que já existe com o mesmo nome) e devolve o id. Usado ao iniciar o foco. */
+export async function criarAssunto(db: BancoCiclo, materia: string, nome: string, agora = Date.now()): Promise<string | null> {
+  const n = nome.trim()
+  if (!n) return null
+  await importarEdital(db, [{ materia, assuntos: [n] }], [materia], agora)
+  const a = vivos(await db.assuntos.toArray()).find((x) => normalizar(x.materia) === normalizar(materia) && normalizar(x.nome) === normalizar(n))
+  return a?.id ?? null
+}
