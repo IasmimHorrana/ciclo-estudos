@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
-import { Layers, CalendarDays, Moon, NotebookPen, Puzzle, Sun, TrendingUp, type LucideIcon } from 'lucide-react'
+import { Layers, CalendarDays, ListChecks, Moon, NotebookPen, Puzzle, Sun, TrendingUp, type LucideIcon } from 'lucide-react'
 import { Button } from '@/componentes/ui/button'
 import { MiniCalendario } from '@/componentes/barra-lateral/MiniCalendario'
 import { PomodoroCard } from '@/componentes/barra-lateral/PomodoroCard'
+import { useBackup } from '@/estado/backup'
 import { useUi, temaEscuro, type AbaId } from '@/estado/ui'
 import { cn } from '@/lib/utils'
 
@@ -10,6 +11,7 @@ const ABAS: { id: AbaId; rotulo: string; Icone: LucideIcon }[] = [
   { id: 'montar', rotulo: 'Montar ciclo', Icone: Puzzle },
   { id: 'semana', rotulo: 'Semana', Icone: CalendarDays },
   { id: 'desempenho', rotulo: 'Desempenho', Icone: TrendingUp },
+  { id: 'edital', rotulo: 'Edital', Icone: ListChecks },
   { id: 'resumos', rotulo: 'Resumos', Icone: NotebookPen },
   { id: 'flashcards', rotulo: 'Flashcards', Icone: Layers },
 ]
@@ -28,6 +30,8 @@ function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
 export function BarraLateral() {
   const { aba, irParaAba, tema, alternarTema } = useUi()
   const escuro = temaEscuro(tema)
+  const bk = useBackup((s) => s.estado)
+  const backupOk = bk === 'ok' || bk === 'gravando'
   return (
     <aside className="flex h-full flex-col gap-1.5 overflow-x-hidden overflow-y-auto border-r bg-lateral p-2.5 max-[900px]:h-auto max-[900px]:border-r-0 max-[900px]:border-b">
       <div className="flex items-center justify-between gap-2 px-1 py-0.5">
@@ -61,22 +65,19 @@ export function BarraLateral() {
         <MiniCalendario />
       </Secao>
 
-      <Secao titulo="Hoje e semana">
-        <p className="m-0 mb-2 text-sm text-muted-foreground">Nenhuma semana em andamento.</p>
-        <Button size="sm" variant="outline" onClick={() => irParaAba('montar')}>
-          Montar ciclo
-        </Button>
-      </Secao>
-
       <Secao titulo="Pomodoro">
         <PomodoroCard />
       </Secao>
 
       <button
-        className="mt-auto w-full rounded-lg bg-aviso-bg px-2.5 py-1.5 text-left text-[0.8rem] font-semibold text-aviso"
-        title="O backup em pasta e a sincronização chegam nas próximas etapas"
+        onClick={() => irParaAba('dados')}
+        className={cn(
+          'mt-auto w-full rounded-lg px-2.5 py-1.5 text-left text-[0.8rem] font-semibold',
+          backupOk ? 'bg-ok-bg text-ok' : 'bg-aviso-bg text-aviso',
+        )}
+        title="Importar, exportar e backup em pasta"
       >
-        ⚠ Sem backup automático
+        {backupOk ? '✅ Backup em pasta ativo' : '⚠ Sem backup automático'} · Dados
       </button>
     </aside>
   )

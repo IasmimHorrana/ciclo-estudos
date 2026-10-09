@@ -3,10 +3,11 @@
 > | Etapa | Estado |
 > |---|---|
 > | 0. Git (repositório local, tag `v0-html`) | feita |
-> | 1. Esqueleto da base nova (`app/`) | feita: aguardando sua revisão |
-> | 2. Dados (Dexie, importador do JSON antigo, backup) | próxima |
-> | 3. Flashcards no estilo Anki (SM-2) | a fazer |
-> | 4. Portar Montar, Semana, Desempenho e Resumos | a fazer |
+> | 1. Esqueleto da base nova (`app/`) | feita |
+> | 2. Dados (Dexie, importador do JSON antigo, backup) | feita |
+> | 3. Flashcards no estilo Anki (SM-2) | em andamento na `dev`: sub-etapas 1 e 2 feitas (dados, SM-2, fila, estudo, baralhos, opções, adicionar simples); aguardando sua revisão ⏸. Faltam: editor rico (Tiptap, imagens), Navegar, Estatísticas, importar/exportar Anki |
+> | 4. Portar Montar, Semana, Desempenho e Resumos | feita na `dev`: as quatro abas, a barra lateral e o Pomodoro já funcionam na base nova; aguardando o seu teste (a criar "cartão a partir dos Resumos" e o quadro de flashcards no Desempenho ficam para depois do Flashcards) |
+> | Extra: aba Edital verticalizado | feita na `dev`: importar com pré-visualização, prioridade, rodapé de progresso e "＋ Ciclo"; aguardando o seu teste com um edital real |
 > | 5. Supabase (login e sincronização) | a fazer |
 > | 6. Publicar e instalar no celular | a fazer |
 # Plano: base nova (Git + Vite/React/TS + Dexie + PWA), Flashcards estilo Anki (SM-2) nela e Supabase depois
