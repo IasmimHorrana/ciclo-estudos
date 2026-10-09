@@ -1,4 +1,5 @@
 import type { BancoCiclo } from '@/dados/db'
+import { novoIdFc } from '@/dados/ids'
 import { carregarDados } from '@/dados/repositorio'
 import type { Controle } from '@/dados/esquemas'
 import type { Baralho, CartaoFc, GrupoOpcoes, NotaFc, RegistroRevisao, TipoNota } from '@/dados/flashcards-tipos'
@@ -13,7 +14,7 @@ export const GRUPO_PADRAO = 'padrao'
 
 const novo = (agora: number): Controle => ({ atualizadoEm: agora, excluidoEm: null, sujo: 1 })
 const alea = () => Math.random().toString(36).slice(2, 8)
-export const novoIdFc = (prefixo: string, agora = Date.now()) => `${prefixo}${agora.toString(36)}${alea()}`
+export { novoIdFc }
 
 /** Um nível do nome não pode ter ":" (o separador de níveis é "::"). */
 const limparNivel = (n: string) => n.replace(/:+/g, ' ').replace(/\s+/g, ' ').trim()

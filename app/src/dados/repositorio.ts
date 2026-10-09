@@ -18,10 +18,10 @@ export async function carregarDados(db: BancoCiclo): Promise<Dados | null> {
     db.sessoes.toArray(),
   ])
   return {
-    tema: valores.get('tema') as Dados['tema'],
+    tema: (valores.get('tema') ?? 'auto') as Dados['tema'],
     config: valores.get('config') as Dados['config'],
     semana: (valores.get('semana') ?? null) as Dados['semana'],
-    pomo: valores.get('pomo') as Dados['pomo'],
+    pomo: (valores.get('pomo') ?? { foco: 25, pausa: 5, longa: 15, ate: 4 }) as Dados['pomo'],
     cores: (valores.get('cores') ?? {}) as Dados['cores'],
     fechadas: vivos(fechadas),
     modelos: vivos(modelos),

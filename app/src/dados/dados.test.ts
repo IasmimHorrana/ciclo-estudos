@@ -51,6 +51,13 @@ describe('lerArquivo (backup do app em HTML)', () => {
     expect(d).not.toHaveProperty('backup') // o estado da pasta de backup do HTML não é dado de estudo
   })
 
+  it('preserva "passos por dia" (número) na configuração e no modelo da semana', () => {
+    const b = { ...legado, config: { ...legado.config, porDia: 2 }, modelos: [{ id: 'm1', nome: 'x', criado: 1, config: { modo: 'Livre', horas: 6, duracao: 1, mats: [], dias: [], porDia: 3 } }] }
+    const d = lerArquivo(JSON.stringify(b), AGORA)
+    expect(d.config.porDia).toBe(2)
+    expect(d.modelos[0]?.config.porDia).toBe(3)
+  })
+
   it('aceita backup vazio, sem semana e com campos ausentes', () => {
     const d = lerArquivo(JSON.stringify({ config: {}, fechadas: [] }), AGORA)
     expect(d.semana).toBeNull()

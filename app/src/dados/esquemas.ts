@@ -18,7 +18,7 @@ export const ConfigLegado = z.object({
   custom: z.array(z.string()).catch([]),
   ocultas: z.array(z.string()).catch([]),
   dias: z.array(z.boolean()).catch([true, true, true, true, true, true, false]),
-  porDia: z.array(z.coerce.number()).nullable().catch(null),
+  porDia: z.number().nullable().catch(null),
 })
 
 const Passo = z.object({
@@ -37,7 +37,7 @@ const Modelo = z.object({
   duracao: z.coerce.number().catch(1),
   mats: z.array(MateriaCfg).catch([]),
   dias: z.array(z.boolean()).catch([]),
-  porDia: z.array(z.coerce.number()).nullable().catch(null),
+  porDia: z.number().nullable().catch(null),
 })
 
 export const SemanaLegado = z.object({
