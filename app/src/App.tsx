@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
 import { BarraLateral } from '@/componentes/barra-lateral/BarraLateral'
+import { Dados } from '@/telas/Dados'
 import { EmBreve } from '@/telas/EmBreve'
 import { fmtMMSS, NOMES_FASE } from '@/dominio/pomodoro'
 import { usePomodoro } from '@/estado/pomodoro'
 import { temaEscuro, useUi, type AbaId } from '@/estado/ui'
 
-const TELAS: Record<AbaId, { titulo: string; etapa: string; descricao: string }> = {
+const TELAS: Record<Exclude<AbaId, 'dados'>, { titulo: string; etapa: string; descricao: string }> = {
   montar: { titulo: 'Montar ciclo', etapa: 'Etapa 4: será portada do app em HTML', descricao: 'Meta em horas, matérias, modelos e dias de estudo.' },
   semana: { titulo: 'Semana', etapa: 'Etapa 4: será portada do app em HTML', descricao: 'Checklist do ciclo, por dia, com rosca e progresso.' },
   desempenho: { titulo: 'Desempenho', etapa: 'Etapa 4: será portado do app em HTML', descricao: 'Assuntos, questões, horas e semanas fechadas.' },
@@ -38,12 +39,11 @@ export default function App() {
     }
   }, [])
 
-  const t = TELAS[aba]
   return (
     <div className="grid h-dvh grid-cols-[276px_minmax(0,1fr)] overflow-hidden max-[900px]:h-auto max-[900px]:min-h-dvh max-[900px]:grid-cols-1 max-[900px]:overflow-visible">
       <BarraLateral />
       <main className="flex min-h-0 min-w-0 flex-col overflow-hidden px-5 py-3.5 max-[900px]:overflow-visible max-[900px]:p-4">
-        <EmBreve {...t} />
+        {aba === 'dados' ? <Dados /> : <EmBreve {...TELAS[aba]} />}
       </main>
     </div>
   )

@@ -73,10 +73,11 @@ export function BarraLateral() {
       </Secao>
 
       <button
+        onClick={() => irParaAba('dados')}
         className="mt-auto w-full rounded-lg bg-aviso-bg px-2.5 py-1.5 text-left text-[0.8rem] font-semibold text-aviso"
-        title="O backup em pasta e a sincronização chegam nas próximas etapas"
+        title="Importar e exportar backup. O backup em pasta e a sincronização chegam nas próximas etapas"
       >
-        ⚠ Sem backup automático
+        ⚠ Sem backup automático · Dados e backup
       </button>
     </aside>
   )

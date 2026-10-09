@@ -26,15 +26,16 @@ npm run build      # versão de produção (gera também o service worker do PWA
 npm run icones     # regera os ícones do PWA a partir de public/favicon.svg
 ```
 
-Estrutura (etapa 1 concluída):
+Estrutura (etapas 1 e parte da 2):
 - `src/dominio/`: regras puras e testadas. Hoje: `datas.ts` (fuso local, semana de segunda a domingo, grade do calendário) e `pomodoro.ts`. Aqui entrarão `sm2.ts`, `fila.ts`, `cloze.ts` e `busca.ts`.
+- `src/dados/`: banco local (Dexie, `db.ts`; para mudar o formato crie `version(2)` com `upgrade`, nunca edite a v1), esquemas Zod do backup (`esquemas.ts`), conversão do backup do app em HTML e exportação (`converter.ts`) e leitura/gravação (`repositorio.ts`). Nada é apagado de verdade: o que sai ganha `excluidoEm`.
 - `src/estado/`: Zustand (`ui.ts`: aba e tema, guardados no navegador; `pomodoro.ts`: cronômetro).
 - `src/componentes/`: `ui/` (padrão shadcn) e `barra-lateral/` (menu, mini calendário, Pomodoro).
-- `src/telas/`: hoje só um aviso "em breve" por aba; as telas reais chegam nas etapas 3 e 4.
+- `src/telas/`: `Dados.tsx` (importar e exportar backup, botão no rodapé da barra lateral); as demais abas têm só um aviso "em breve" por aba; as telas reais chegam nas etapas 3 e 4.
 - `src/index.css`: paleta verde-menta (claro e escuro) com os nomes de variáveis do shadcn/ui; `.dark` na raiz ativa o tema escuro.
 - Layout de tela única no computador (a página não rola), e empilhado no celular.
 
-Ainda **não** estão na base nova: dados, Montar, Semana, Desempenho, Resumos, Flashcards, backup e sincronização.
+Ainda **não** estão na base nova: exportar .zip, backup em pasta, Montar, Semana, Desempenho, Resumos, Flashcards, backup e sincronização.
 
 ## 1. Como o app funciona (visão rápida)
 
@@ -271,3 +272,4 @@ Dica: para testar sem perder seus dados reais, abra o arquivo em uma janela anô
 | 2026-10-09 | Nova aba **Desempenho**: matérias abertas em **assuntos**, registro de **questões** (feitas e acertos por dia, matéria e assunto), nível automático de cada assunto pelos acertos, indicadores e gráficos (rosca de horas por matéria, horas por dia, questões por dia, acerto por matéria). O foco do Pomodoro agora registra tipo (Teoria/Questões/Revisão) e assunto. A aba Semana ganhou a rosca do ciclo e a barra de progresso em cada passo. Visual trocado para verde-menta com cores pastel por matéria (inspirado no Estudei). Novos campos no estado: `assuntos`, `questoes`, `sessoes` (+ `normalizarEstado()` para dados antigos). |
 | 2026-10-09 | Correção na barra lateral: os campos de tempo do Pomodoro ("Ajustar tempos") passavam da largura e cortavam a lateral; agora encolhem para caber e a lateral não rola na horizontal. |
 | 2026-10-09 | **Migração iniciada**: repositório Git criado (commit inicial e tag `v0-html` com o app em HTML único) e etapa 1 da base nova concluída em `app/`: esqueleto Vite + React + TypeScript + Tailwind/shadcn + Zustand, tema verde-menta claro/escuro, layout de tela única com barra lateral (menu, mini calendário, Pomodoro funcional), PWA instalável, Vitest (10 testes), ESLint e CI no GitHub Actions. Plano em `docs/PLANO.md`. O app em HTML não foi alterado. |
+| 2026-10-09 | **Base nova, etapa 2 (parcial)**: banco local Dexie, importador do "Exportar backup completo" do app em HTML (validado com Zod, tolerante a campos ausentes), exportar backup em JSON (mesmo formato do HTML + `formato`/`versao`) e tela "Dados e backup". 20 testes, incluindo ida e volta e teste com o backup real. Branch `dev`. |

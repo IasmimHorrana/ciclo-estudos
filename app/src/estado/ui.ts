@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type AbaId = 'montar' | 'semana' | 'desempenho' | 'resumos' | 'flashcards'
+export type AbaId = 'montar' | 'semana' | 'desempenho' | 'resumos' | 'flashcards' | 'dados'
 export type Tema = 'auto' | 'light' | 'dark'
 
 interface UiState {
