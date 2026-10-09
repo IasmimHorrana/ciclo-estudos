@@ -3,74 +3,75 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Paleta "Dark Mode Color Palette" (Ayushi Verma): limão #DDDE68, glicínia #A5B2EB, laranja #DA935D,
- * roxo #676386, azul-camurça #494C65, pedra-negra #2B2D3B. Nomes de variáveis do shadcn/ui.
+ * Paleta neutra com coral (Whiteout #FBFBFB, Nebulous White #DDDFDD, Astroscopus Grey #AEB4B7,
+ * Indian Dance #F69175, Hypnotic #677782, Tricorn Black #2F2F2F). Nomes de variáveis do shadcn/ui.
+ * Versões anteriores do tema (verde-menta, carvão, roxo/lilás) ficam no histórico do Git.
  */
 :root {
   --radius: 0.75rem;
-  --background: #f3f4f9;
-  --foreground: #2b2d3b;
+  --background: #fbfbfb;
+  --foreground: #2f2f2f;
   --card: #ffffff;
-  --card-foreground: #2b2d3b;
+  --card-foreground: #2f2f2f;
   --popover: #ffffff;
-  --popover-foreground: #2b2d3b;
-  --primary: #676386;
+  --popover-foreground: #2f2f2f;
+  --primary: #677782;
   --primary-foreground: #ffffff;
-  --secondary: #e6e9f8;
-  --secondary-foreground: #494c65;
-  --muted: #eceef6;
-  --muted-foreground: #6b6f8a;
-  --accent: #e4e8f8;
-  --accent-foreground: #494c65;
-  --destructive: #c0394f;
-  --border: #dcdfec;
-  --input: #dcdfec;
-  --ring: #a5b2eb;
+  --secondary: #e8ecee;
+  --secondary-foreground: #3e4a52;
+  --muted: #eff0ef;
+  --muted-foreground: #66727a;
+  --accent: #e6ebed;
+  --accent-foreground: #3e4a52;
+  --destructive: #c93c3c;
+  --border: #dddfdd;
+  --input: #dddfdd;
+  --ring: #f69175;
   /* extras do app */
-  --lateral: #eaecf5;
-  --ok: #5f7a12;
-  --ok-bg: #f1f2c4;
-  --aviso: #b5651d;
-  --aviso-bg: #fbe6d3;
-  --erro: #c0394f;
-  --erro-bg: #fbe1e6;
+  --lateral: #f0f1f0;
+  --ok: #4a7c5f;
+  --ok-bg: #e2eee7;
+  --aviso: #a8691f;
+  --aviso-bg: #f7e9d0;
+  --erro: #c93c3c;
+  --erro-bg: #fbe1de;
   /* calendário de calor dos flashcards (do mais fraco ao mais forte) */
-  --calor-1: #eef0b9;
-  --calor-2: #e3e585;
-  --calor-3: #d0d251;
-  --calor-4: #b4b62f;
+  --calor-1: #fbdcd2;
+  --calor-2: #f9c3b2;
+  --calor-3: #f6a38b;
+  --calor-4: #ee7f5f;
 }
 
 .dark {
-  --background: #20222d;
-  --foreground: #eef0fa;
-  --card: #2b2d3b;
-  --card-foreground: #eef0fa;
-  --popover: #323547;
-  --popover-foreground: #eef0fa;
-  --primary: #a5b2eb;
-  --primary-foreground: #1f2233;
-  --secondary: #3a3d55;
-  --secondary-foreground: #d5dbf7;
-  --muted: #353849;
-  --muted-foreground: #a3a7c2;
-  --accent: #3b3f5e;
-  --accent-foreground: #d5dbf7;
-  --destructive: #f08a9c;
-  --border: #44475c;
-  --input: #4a4d63;
-  --ring: #a5b2eb;
-  --lateral: #252733;
-  --ok: #ddde68;
-  --ok-bg: #3a3b1c;
-  --aviso: #da935d;
-  --aviso-bg: #3d2e22;
-  --erro: #f08a9c;
-  --erro-bg: #43252f;
-  --calor-1: #4b4f2e;
-  --calor-2: #7a7e3a;
-  --calor-3: #aeb050;
-  --calor-4: #ddde68;
+  --background: #1e1e1e;
+  --foreground: #fbfbfb;
+  --card: #2f2f2f;
+  --card-foreground: #fbfbfb;
+  --popover: #363636;
+  --popover-foreground: #fbfbfb;
+  --primary: #f69175;
+  --primary-foreground: #2f2f2f;
+  --secondary: #3a3f42;
+  --secondary-foreground: #dddfdd;
+  --muted: #3a3a3a;
+  --muted-foreground: #aeb4b7;
+  --accent: #404b52;
+  --accent-foreground: #fbfbfb;
+  --destructive: #ff6b6b;
+  --border: #454545;
+  --input: #4a4a4a;
+  --ring: #f69175;
+  --lateral: #262626;
+  --ok: #8fc7a6;
+  --ok-bg: #2c3a33;
+  --aviso: #e3b25a;
+  --aviso-bg: #3d3420;
+  --erro: #ff6b6b;
+  --erro-bg: #432a2a;
+  --calor-1: #4a3b36;
+  --calor-2: #8a5a4b;
+  --calor-3: #c27560;
+  --calor-4: #f69175;
 }
 
 @theme inline {
