@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 import { Layers, CalendarDays, Moon, NotebookPen, Puzzle, Sun, TrendingUp, type LucideIcon } from 'lucide-react'
 import { Button } from '@/componentes/ui/button'
 import { MiniCalendario } from '@/componentes/barra-lateral/MiniCalendario'
-import { HojeSemana } from '@/componentes/barra-lateral/HojeSemana'
 import { PomodoroCard } from '@/componentes/barra-lateral/PomodoroCard'
 import { useBackup } from '@/estado/backup'
 import { useUi, temaEscuro, type AbaId } from '@/estado/ui'
@@ -63,10 +62,6 @@ export function BarraLateral() {
 
       <Secao titulo="Calendário">
         <MiniCalendario />
-      </Secao>
-
-      <Secao titulo="Hoje e semana">
-        <HojeSemana />
       </Secao>
 
       <Secao titulo="Pomodoro">
