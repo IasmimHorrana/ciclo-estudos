@@ -12,6 +12,7 @@ import { abrirDialogo } from '@/estado/dialogo'
 import { useUi } from '@/estado/ui'
 import { Constancia } from '@/telas/PainelSemana'
 import { QuadroSemana } from '@/telas/QuadroSemana'
+import { RegistroManual } from '@/telas/RegistroManual'
 import { cn } from '@/lib/utils'
 
 const card = 'rounded-xl border bg-card p-3.5 shadow-sm'
@@ -177,6 +178,7 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
               )
             })}
           </section>
+          <RegistroManual s={s} config={config} hojeISO={hojeISO} />
         </div>
       </div>
     </div>

@@ -181,3 +181,33 @@ export function validarQuestoes(d: DadosQuestoes, hojeISO: DataISO): string | nu
   if (!(d.acertos >= 0) || d.acertos > d.feitas) return 'Os acertos precisam estar entre 0 e o número de questões feitas.'
   return null
 }
+
+export const TIPOS_ESTUDO = ['Teoria', 'Revisão', 'Questões'] as const
+export type TipoEstudo = (typeof TIPOS_ESTUDO)[number]
+
+export interface EstudoManual {
+  data: DataISO
+  materia: string
+  tipo: string
+  /** Minutos estudados (0 se só quer registrar questões). */
+  minutos: number
+  /** Só para o tipo Questões. */
+  feitas: number
+  acertos: number
+}
+
+/** Valida o registro manual de estudo (feito fora do app). Devolve a mensagem de erro ou `null`. */
+export function validarEstudoManual(d: EstudoManual, hojeISO: DataISO): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d.data)) return 'Informe a data.'
+  if (d.data > hojeISO) return 'A data não pode ser no futuro.'
+  if (!d.materia) return 'Escolha a matéria.'
+  if (!(TIPOS_ESTUDO as readonly string[]).includes(d.tipo)) return 'Escolha o tipo de estudo.'
+  if (!(d.minutos >= 0) || d.minutos > 24 * 60) return 'O tempo precisa estar entre 0 e 24 horas.'
+  if (d.tipo === 'Questões') {
+    if (!(d.feitas >= 0) || !(d.acertos >= 0) || d.acertos > d.feitas) return 'Os acertos precisam estar entre 0 e o número de questões feitas.'
+    if (d.feitas < 1 && d.minutos < 1) return 'Informe as questões feitas ou o tempo estudado.'
+    return null
+  }
+  if (d.minutos < 1) return 'Informe o tempo estudado (mínimo 1 minuto).'
+  return null
+}
