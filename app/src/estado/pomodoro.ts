@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { CONFIG_PADRAO, duracaoSeg, minutosDecorridos, proximaFase, type ConfigPomodoro, type Fase } from '@/dominio/pomodoro'
+import { CONFIG_PADRAO, duracaoSeg, minutosDecorridos, proximaFase, type AlvoFoco, type ConfigPomodoro, type EstadoRestaurado, type Fase } from '@/dominio/pomodoro'
 
 /** Um foco terminou (ou foi encerrado) e há minutos para somar a um passo. */
 export interface FocoConcluido {
@@ -8,14 +8,7 @@ export interface FocoConcluido {
   completo: boolean
 }
 
-/** O que está sendo estudado neste foco (escolhido ao clicar em Iniciar). `passoId` 0 = estudar sem registrar. */
-export interface AlvoFoco {
-  passoId: number
-  tipo: string
-  assuntoId: string | null
-  /** Texto para mostrar no cartão, ex.: "3. Direito Civil · Teoria". */
-  rotulo: string
-}
+export type { AlvoFoco }
 
 interface PomodoroState {
   config: ConfigPomodoro
@@ -31,6 +24,10 @@ interface PomodoroState {
   /** Última escolha, para sugerir de novo no próximo foco. */
   ultimoAlvo: AlvoFoco | null
   definirAlvo: (a: AlvoFoco | null) => void
+  /** Põe o cronômetro de volta num estado guardado (ao abrir o app). */
+  restaurar: (e: EstadoRestaurado) => void
+  /** Avisa a tela de que um foco terminou e há minutos para somar (usado ao recuperar um foco interrompido). */
+  concluirFoco: (f: FocoConcluido) => void
   alternar: () => void
   reiniciar: () => void
   /** Encerra o foco antes da hora e soma só o que foi estudado (se passou de 1 minuto). */
@@ -74,6 +71,8 @@ export const usePomodoro = create<PomodoroState>((set, get) => ({
   alvo: null,
   ultimoAlvo: null,
   definirAlvo: (alvo) => set(alvo ? { alvo, ultimoAlvo: alvo } : { alvo: null }),
+  restaurar: (e) => set({ fase: e.fase, rodando: e.rodando, fimMs: e.fimMs, restaSeg: e.restaSeg, focosConcluidos: e.focosConcluidos, alvo: e.alvo }),
+  concluirFoco: (foco) => set({ foco }),
 
   alternar: () => {
     const s = get()
