@@ -210,6 +210,8 @@ export interface RegistroTempo {
   tipo: string
   assuntoId: string | null
   feito: boolean
+  /** Dia do estudo (padrão: hoje). Usado no registro manual de um dia anterior. */
+  data?: string
 }
 
 /** Soma o tempo de um foco a um passo da semana e guarda a sessão (para o Desempenho). */
@@ -224,7 +226,7 @@ export async function registrarTempo(db: BancoCiclo, r: RegistroTempo, agora = D
     }
     await gravar(db, 'semana', novo, agora)
     await db.sessoes.put({
-      id: novoIdFc('s', agora), data: hoje(new Date(agora)), materia: p.materia, assuntoId: r.assuntoId, minutos: r.minutos, tipo: r.tipo,
+      id: novoIdFc('s', agora), data: r.data ?? hoje(new Date(agora)), materia: p.materia, assuntoId: r.assuntoId, minutos: r.minutos, tipo: r.tipo,
       atualizadoEm: agora, excluidoEm: null, sujo: 1,
     })
   })

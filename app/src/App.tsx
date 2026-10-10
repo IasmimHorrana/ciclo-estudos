@@ -10,6 +10,7 @@ import { Resumos } from '@/telas/Resumos'
 import { Semana } from '@/telas/Semana'
 import { Flashcards } from '@/telas/flashcards/Flashcards'
 import { aoConcluirFoco } from '@/componentes/aoConcluirFoco'
+import { iniciarPersistenciaPomodoro } from '@/componentes/restaurar-pomodoro-api'
 import { useCiclo } from '@/dados/useCiclo'
 import { carregarPasta, iniciarBackupAutomatico } from '@/dados/pasta'
 import { fmtMMSS, NOMES_FASE } from '@/dominio/pomodoro'
@@ -33,7 +34,9 @@ export default function App() {
 
   // tempos do Pomodoro guardados no banco (valem em qualquer aparelho depois da sincronização)
   useEffect(() => {
-    if (pomoSalvo) usePomodoro.getState().definirConfig(pomoSalvo)
+    if (!pomoSalvo) return
+    usePomodoro.getState().definirConfig(pomoSalvo)
+    void iniciarPersistenciaPomodoro() // com os tempos já carregados: devolve o cronômetro ao ponto em que estava
   }, [pomoSalvo?.foco, pomoSalvo?.pausa, pomoSalvo?.longa, pomoSalvo?.ate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // foco concluído: soma o tempo a um passo
