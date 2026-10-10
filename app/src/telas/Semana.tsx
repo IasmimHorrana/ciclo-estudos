@@ -132,10 +132,11 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
         <Estat rotulo="Faltam" valor={fmtH(falta)} />
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_300px] gap-3 max-[1100px]:grid-cols-1 max-[1100px]:overflow-visible">
-        <div className="flex min-h-0 flex-col gap-2">
+      {/* a coluna da direita ocupa as duas primeiras linhas: do topo até onde termina o quadro "Ciclo da semana" */}
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_300px] grid-rows-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-2 max-[1100px]:grid-cols-1 max-[1100px]:grid-rows-none max-[1100px]:overflow-visible">
+        <div className="contents">
           <Constancia s={s} diasDeEstudo={config.dias} hojeISO={hojeISO} />
-          <div className={cn(card, 'flex min-h-0 flex-1 flex-col')}>
+          <div className={cn(card, 'flex min-h-0 flex-col')}>
             <div className="mb-2 flex items-center justify-between gap-2">
               <h2 className="m-0 text-sm font-bold">
                 Ciclo da semana <span className="font-normal text-muted-foreground">· início {fmtData(s.inicio)}</span>
@@ -154,10 +155,12 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-col gap-3 overflow-auto max-[1100px]:overflow-visible">
-          <section className={card}>
+        <div className="col-start-2 row-span-2 row-start-1 flex min-h-0 flex-col gap-3 overflow-auto max-[1100px]:col-start-1 max-[1100px]:row-span-1 max-[1100px]:row-start-auto max-[1100px]:overflow-visible">
+          <section className={cn(card, 'flex flex-1 flex-col')}>
             <h2 className="m-0 mb-2 text-sm font-bold">Ciclo</h2>
-            <RoscaCiclo passos={s.passos} cores={cores} />
+            <div className="my-auto">
+              <RoscaCiclo passos={s.passos} cores={cores} />
+            </div>
           </section>
           <RegistroManual s={s} config={config} hojeISO={hojeISO} />
         </div>
