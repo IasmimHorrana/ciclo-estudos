@@ -2,7 +2,7 @@
 // agenda pelos dias da semana, resumo e fechamento. Tudo puro: recebe os dados e devolve cópias novas.
 
 import type { ConfigCiclo, ModeloConfig, Semana } from '@/dados/esquemas'
-import { addDias, hoje as hojeDe, segundaDe, type DataISO } from '@/dominio/datas'
+import { addDias, fmtData, hoje as hojeDe, idxDia, NOMES_DIA, segundaDe, type DataISO } from '@/dominio/datas'
 
 export type Passo = Semana['passos'][number]
 export type MateriaCfg = ConfigCiclo['mats'][number]
@@ -294,6 +294,31 @@ export function atribuirCores(cores: Record<string, number>, nomes: string[]): R
     novo[nome] = i % PALETA.length
   }
   return novo
+}
+
+export interface GrupoDePassos<P> {
+  rotulo: string
+  passos: P[]
+}
+
+/**
+ * Passos organizados para escolher o que estudar: primeiro os de hoje que faltam, depois os pendentes de outros dias
+ * (do mais próximo ao mais distante, "sem dia" por último) e, no fim, os já concluídos. Dentro de cada grupo, pela ordem do ciclo.
+ */
+export function agruparPassosParaEstudo<P extends { id: number; dia: string | null; feito: boolean }>(passos: readonly P[], hojeISO: DataISO): GrupoDePassos<P>[] {
+  const porDia = (a: P, b: P) => (a.dia ?? '9999-99-99').localeCompare(b.dia ?? '9999-99-99') || a.id - b.id
+  const grupos: GrupoDePassos<P>[] = [
+    { rotulo: 'Hoje', passos: passos.filter((p) => !p.feito && p.dia === hojeISO).sort((a, b) => a.id - b.id) },
+    { rotulo: 'Outros dias (pendentes)', passos: passos.filter((p) => !p.feito && p.dia !== hojeISO).sort(porDia) },
+    { rotulo: 'Já concluídos', passos: passos.filter((p) => p.feito).sort((a, b) => a.id - b.id) },
+  ]
+  return grupos.filter((g) => g.passos.length > 0)
+}
+
+/** "4. Gestão Organizacional · Sáb 10 — anotação": o número e a matéria, o dia (quando não é hoje) e a anotação. */
+export function rotuloDoPasso(p: { id: number; materia: string; dia: string | null; nota: string }, hojeISO: DataISO): string {
+  const dia = !p.dia ? ' · sem dia' : p.dia === hojeISO ? '' : ` · ${NOMES_DIA[idxDia(p.dia)]} ${fmtData(p.dia).slice(0, 2)}`
+  return `${p.id}. ${p.materia}${dia}${p.nota ? ` — ${p.nota}` : ''}`
 }
 
 export { hojeDe }

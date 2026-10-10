@@ -5,6 +5,7 @@ import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import { criarAssunto } from '@/dados/edital'
 import { db } from '@/dados/db'
 import type { Semana } from '@/dados/esquemas'
+import { agruparPassosParaEstudo, rotuloDoPasso } from '@/dominio/ciclo'
 import { hoje } from '@/dominio/datas'
 import { sugerirAssunto } from '@/dominio/edital'
 import type { AlvoFoco } from '@/estado/pomodoro'
@@ -15,9 +16,10 @@ const NOVO = '__novo'
 /** "O que você vai estudar?": escolhe passo, tipo e assunto antes de começar o foco. */
 export function IniciarFoco({ semana, inicial, fechar }: { semana: Semana; inicial: AlvoFoco | null; fechar: (a: AlvoFoco | null) => void }) {
   const h = hoje()
-  const pendentes = semana.passos.filter((p) => !p.feito).sort((a, b) => Number(b.dia === h) - Number(a.dia === h))
-  const opcoes = [...pendentes, ...semana.passos.filter((p) => p.feito)]
-  const anterior = inicial && opcoes.some((p) => p.id === inicial.passoId) ? inicial : null
+  const grupos = agruparPassosParaEstudo(semana.passos, h)
+  const opcoes = grupos.flatMap((g) => g.passos)
+  // a última escolha só volta sugerida se o passo ainda falta fazer
+  const anterior = inicial && opcoes.some((p) => p.id === inicial.passoId && !p.feito) ? inicial : null
   const [passoId, setPassoId] = useState(anterior?.passoId ?? opcoes[0]?.id ?? 0)
   const [tipo, setTipo] = useState(anterior?.tipo ?? 'Teoria')
   // null = ainda não mexeu: vale a sugestão (assunto citado na anotação do passo, ou o da última vez)
@@ -56,8 +58,12 @@ export function IniciarFoco({ semana, inicial, fechar }: { semana: Semana; inici
             setEscolhido(null)
           }}
         >
-          {opcoes.map((p) => (
-            <option key={p.id} value={p.id}>{p.id}. {p.materia}{p.nota ? ` — ${p.nota}` : ''}{p.feito ? ' (feito)' : ''}</option>
+          {grupos.map((g) => (
+            <optgroup key={g.rotulo} label={g.rotulo}>
+              {g.passos.map((p) => (
+                <option key={p.id} value={p.id}>{rotuloDoPasso(p, h)}</option>
+              ))}
+            </optgroup>
           ))}
           <option value={0}>Estudar sem registrar</option>
         </Selecao>

@@ -5,13 +5,14 @@ import { Selecao } from '@/componentes/ui/entrada'
 import { registrarTempo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
 import type { Semana } from '@/dados/esquemas'
+import { agruparPassosParaEstudo, rotuloDoPasso } from '@/dominio/ciclo'
 import { hoje } from '@/dominio/datas'
 
 /** "Foco concluído: a qual passo somar esse tempo?" */
 export function RegistrarTempo({ semana, minutos, fechar }: { semana: Semana; minutos: number; fechar: () => void }) {
   const h = hoje()
-  const pendentes = semana.passos.filter((p) => !p.feito).sort((a, b) => Number(b.dia === h) - Number(a.dia === h))
-  const opcoes = [...pendentes, ...semana.passos.filter((p) => p.feito)]
+  const grupos = agruparPassosParaEstudo(semana.passos, h)
+  const opcoes = grupos.flatMap((g) => g.passos)
   const [passoId, setPassoId] = useState(opcoes[0]?.id ?? 0)
   const [tipo, setTipo] = useState('Teoria')
   const [assuntoId, setAssuntoId] = useState('')
@@ -38,8 +39,12 @@ export function RegistrarTempo({ semana, minutos, fechar }: { semana: Semana; mi
           setAssuntoId('')
         }}
       >
-        {opcoes.map((p) => (
-          <option key={p.id} value={p.id}>{p.id}. {p.materia}{p.feito ? ' (feito)' : ''}</option>
+        {grupos.map((g) => (
+          <optgroup key={g.rotulo} label={g.rotulo}>
+            {g.passos.map((p) => (
+              <option key={p.id} value={p.id}>{rotuloDoPasso(p, h)}</option>
+            ))}
+          </optgroup>
         ))}
         <option value={0}>Não somar a nenhum passo</option>
       </Selecao>

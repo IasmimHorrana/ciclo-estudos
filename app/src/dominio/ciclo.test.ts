@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  agendar, alternarPasso, aplicarSnapshot, atribuirCores, calcularDistribuicao, configPadrao, construirSemana, corDe, diasDisponiveis, fmtH,
+  agendar, agruparPassosParaEstudo, alternarPasso, aplicarSnapshot, atribuirCores, calcularDistribuicao, configPadrao, construirSemana, corDe, diasDisponiveis, fmtH,
   gerarCicloEspacado, limparMarcacoes, normalizarConfig, passosDe, previaAgenda, previaPassos, PALETA, reagendarPendentes, resumoSemana,
-  semanaAlvo, snapshotConfig, validarGerar, todasMaterias, type MateriaCfg,
+  rotuloDoPasso, semanaAlvo, snapshotConfig, validarGerar, todasMaterias, type MateriaCfg,
 } from '@/dominio/ciclo'
 import type { ConfigCiclo } from '@/dados/esquemas'
 
@@ -173,5 +173,39 @@ describe('cores', () => {
   it('corDe usa a guardada, ou uma estável pelo nome', () => {
     expect(corDe({ A: 2 }, 'A')).toBe(PALETA[2])
     expect(corDe({}, 'Qualquer')).toBe(corDe({}, 'Qualquer'))
+  })
+})
+
+describe('agruparPassosParaEstudo e rotuloDoPasso', () => {
+  const HOJE = '2026-10-09' // sexta
+  const p = (id: number, materia: string, dia: string | null, feito = false, nota = '') => ({ id, materia, dia, feito, nota, horasPlanejadas: 1, horasFeitas: 0 })
+  const passos = [
+    p(1, 'Raciocínio Lógico', HOJE, true),
+    p(2, 'Informática', HOJE, true),
+    p(3, 'Raciocínio Lógico', '2026-10-10'),
+    p(4, 'Gestão Organizacional', HOJE),
+    p(5, 'Língua Portuguesa', null),
+    p(6, 'Informática', HOJE, false, 'Redes'),
+    p(7, 'Direito', '2026-10-11'),
+  ]
+
+  it('hoje primeiro, depois outros dias do mais próximo ao mais distante (sem dia por último), e os concluídos no fim', () => {
+    const g = agruparPassosParaEstudo(passos, HOJE)
+    expect(g.map((x) => x.rotulo)).toEqual(['Hoje', 'Outros dias (pendentes)', 'Já concluídos'])
+    expect(g[0]?.passos.map((x) => x.id)).toEqual([4, 6])
+    expect(g[1]?.passos.map((x) => x.id)).toEqual([3, 7, 5])
+    expect(g[2]?.passos.map((x) => x.id)).toEqual([1, 2])
+  })
+
+  it('não mostra grupo vazio', () => {
+    expect(agruparPassosParaEstudo([p(1, 'A', HOJE, true)], HOJE).map((x) => x.rotulo)).toEqual(['Já concluídos'])
+    expect(agruparPassosParaEstudo([], HOJE)).toEqual([])
+  })
+
+  it('rótulo: número e matéria; dia só quando não é hoje; anotação no fim', () => {
+    expect(rotuloDoPasso(p(4, 'Gestão Organizacional', HOJE), HOJE)).toBe('4. Gestão Organizacional')
+    expect(rotuloDoPasso(p(3, 'Raciocínio Lógico', '2026-10-10'), HOJE)).toBe('3. Raciocínio Lógico · Sáb 10')
+    expect(rotuloDoPasso(p(5, 'Língua Portuguesa', null), HOJE)).toBe('5. Língua Portuguesa · sem dia')
+    expect(rotuloDoPasso(p(6, 'Informática', HOJE, false, 'Redes'), HOJE)).toBe('6. Informática — Redes')
   })
 })
