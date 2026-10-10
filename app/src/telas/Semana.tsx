@@ -6,7 +6,7 @@ import { Button } from '@/componentes/ui/button'
 import { definirMeta, fecharSemana, limparSemana, reagendar, type Ciclo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
-import { corDe, fmtH, horasFeitasDe, metaEf, resumoSemana, round2, soma, type ResumoSemana } from '@/dominio/ciclo'
+import { fmtH, horasFeitasDe, metaEf, resumoSemana, round2, type ResumoSemana } from '@/dominio/ciclo'
 import { fmtData, idxDia, NOMES_DIA_LONGO } from '@/dominio/datas'
 import { abrirDialogo } from '@/estado/dialogo'
 import { useUi } from '@/estado/ui'
@@ -72,7 +72,6 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
   const pctH = meta ? Math.min(100, Math.round((horas / meta) * 100)) : 0
   const passosHoje = s.passos.filter((p) => p.dia === hojeISO)
   const hojeFeitos = passosHoje.filter((p) => p.feito).length
-  const materias = [...new Set(s.passos.map((p) => p.materia))]
   const fora = hojeISO > s.dom ? ' · ⚠️ semana encerrada' : hojeISO < s.seg ? ' · semana futura' : ''
 
   async function copiar() {
@@ -159,24 +158,6 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
           <section className={card}>
             <h2 className="m-0 mb-2 text-sm font-bold">Ciclo</h2>
             <RoscaCiclo passos={s.passos} cores={cores} />
-          </section>
-          <section className={card}>
-            <h2 className="m-0 mb-2 text-sm font-bold">Por matéria</h2>
-            {materias.map((m) => {
-              const itens = s.passos.filter((p) => p.materia === m)
-              const pl = soma(itens, (p) => p.horasPlanejadas)
-              const fe = soma(itens, (p) => p.horasFeitas)
-              return (
-                <div key={m} className="mb-2.5 last:mb-0">
-                  <div className="flex items-center gap-2 text-sm">
-                    <i className="size-2.5 shrink-0 rounded-full" style={{ background: corDe(cores, m) }} />
-                    <span className="min-w-0 flex-1 truncate" title={m}>{m}</span>
-                    <span className={mudo}>{fmtH(fe)}/{fmtH(pl)}</span>
-                  </div>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded bg-muted"><i className="block h-full" style={{ width: `${pl ? Math.min(100, (fe / pl) * 100) : 0}%`, background: corDe(cores, m) }} /></div>
-                </div>
-              )
-            })}
           </section>
           <RegistroManual s={s} config={config} hojeISO={hojeISO} />
         </div>
