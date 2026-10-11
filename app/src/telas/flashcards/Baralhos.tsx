@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Plus, Settings, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Settings, Trash2 } from 'lucide-react'
 import { Button } from '@/componentes/ui/button'
 import { Entrada } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
 import { carregarContexto, criarBaralho, excluirBaralho, filaDe } from '@/dados/flashcards'
-import { useFc } from '@/estado/flashcards'
+import { linhasDaArvore, nomesComFilhos } from '@/dominio/arvore'
+import { useFc, useFcArvore } from '@/estado/flashcards'
 import { CalendarioCalor } from '@/telas/flashcards/CalendarioCalor'
 
 export function Baralhos() {
@@ -19,14 +20,19 @@ export function Baralhos() {
     return () => clearInterval(id)
   }, [])
   const ctx = useLiveQuery(() => carregarContexto(db), [tick])
+  const recolhidos = useFcArvore((s) => s.recolhidos)
+  const alternarRecolhido = useFcArvore((s) => s.alternar)
+  const definirRecolhidos = useFcArvore((s) => s.definir)
 
   if (!ctx) return <p className="text-sm text-muted-foreground">Carregando…</p>
-  const linhas = [...ctx.baralhos].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((b) => ({
-    b,
-    nivel: b.nome.split('::').length - 1,
-    rotulo: b.nome.split('::').pop() ?? b.nome,
-    c: filaDe(ctx, b.id).contagem,
+  const linhas = linhasDaArvore(ctx.baralhos, new Set(recolhidos)).map((l) => ({
+    b: l.item,
+    nivel: l.nivel,
+    rotulo: l.rotulo,
+    temFilhos: l.temFilhos,
+    c: filaDe(ctx, l.item.id).contagem,
   }))
+  const comFilhos = nomesComFilhos(ctx.baralhos.map((b) => b.nome))
 
   async function criar() {
     try {
@@ -51,6 +57,11 @@ export function Baralhos() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="m-0 text-xl font-bold">Flashcards</h1>
         <div className="flex gap-2">
+          {comFilhos.length > 0 && (
+            <Button variant="outline" size="sm" onClick={() => definirRecolhidos(recolhidos.length >= comFilhos.length ? [] : comFilhos)} title="Fechar ou abrir todos os baralhos que têm subbaralhos">
+              {recolhidos.length >= comFilhos.length ? 'Abrir tudo' : 'Recolher tudo'}
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={() => setNovo(novo === null ? '' : null)}>
             <Plus className="size-4" /> Baralho
           </Button>
@@ -94,12 +105,27 @@ export function Baralhos() {
               </tr>
             </thead>
             <tbody>
-              {linhas.map(({ b, nivel, rotulo, c }) => (
+              {linhas.map(({ b, nivel, rotulo, temFilhos, c }) => (
                 <tr key={b.id} className="border-b last:border-b-0 hover:bg-accent/40">
                   <td className="px-3 py-1.5" style={{ paddingLeft: `${0.75 + nivel * 1.5}rem` }}>
-                    <button className="cursor-pointer text-left font-semibold hover:underline" onClick={() => ir('estudo', b.id)}>
-                      {rotulo}
-                    </button>
+                    <span className="flex items-center gap-1">
+                      {temFilhos ? (
+                        <button
+                          className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-accent"
+                          onClick={() => alternarRecolhido(b.nome)}
+                          aria-expanded={!recolhidos.includes(b.nome)}
+                          aria-label={recolhidos.includes(b.nome) ? `Abrir ${rotulo}` : `Recolher ${rotulo}`}
+                          title={recolhidos.includes(b.nome) ? 'Mostrar os subbaralhos' : 'Esconder os subbaralhos'}
+                        >
+                          {recolhidos.includes(b.nome) ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+                        </button>
+                      ) : (
+                        <span className="inline-block size-5 shrink-0" />
+                      )}
+                      <button className="cursor-pointer text-left font-semibold hover:underline" onClick={() => ir('estudo', b.id)}>
+                        {rotulo}
+                      </button>
+                    </span>
                   </td>
                   <td className="px-2 text-right font-bold tabular-nums">{num(c.novos, 'text-blue-500')}</td>
                   <td className="px-2 text-right font-bold tabular-nums">{num(c.aprendendo, 'text-red-500')}</td>
