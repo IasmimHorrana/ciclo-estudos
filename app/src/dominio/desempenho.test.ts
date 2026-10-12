@@ -26,6 +26,7 @@ describe('níveis', () => {
 
 describe('período', () => {
   it('7 dias inclui hoje e os 6 anteriores', () => {
+    expect(inicioDoPeriodo('hoje', HOJE)).toBe('2026-10-09')
     expect(inicioDoPeriodo('7', HOJE)).toBe('2026-10-03')
     expect(inicioDoPeriodo('30', HOJE)).toBe('2026-09-10')
     expect(inicioDoPeriodo('tudo', HOJE) < '2000-01-01').toBe(true)
@@ -113,5 +114,26 @@ describe('validar registro de questões', () => {
     expect(validarQuestoes({ ...ok, feitas: Number.NaN }, HOJE)).toContain('mínimo 1')
     expect(validarQuestoes({ ...ok, acertos: 11 }, HOJE)).toContain('entre 0 e o número')
     expect(validarQuestoes({ ...ok, acertos: -1 }, HOJE)).toContain('entre 0 e o número')
+  })
+})
+
+describe('período "Hoje"', () => {
+  const dados = {
+    questoes: [q('1', '2026-10-09', 'A', 10, 8), q('2', '2026-10-08', 'A', 20, 5), q('3', '2026-10-01', 'A', 30, 30)],
+    sessoes: [s('1', '2026-10-09', 'A', 90), s('2', '2026-10-08', 'A', 60)],
+  }
+
+  it('conta só o dia de hoje nos números, e sem estudo hoje tudo zera', () => {
+    const d = calcularDesempenho(base({ ...dados, periodo: 'hoje' }))
+    expect(d).toMatchObject({ feitas: 10, acertos: 8, horas: 1.5, dias: 1 })
+    const vazio = calcularDesempenho(base({ ...dados, periodo: 'hoje', hojeISO: '2026-10-10' }))
+    expect(vazio).toMatchObject({ feitas: 0, acertos: 0, horas: 0, dias: 0 })
+  })
+
+  it('os gráficos por dia mostram os últimos 7 dias (e 30 nos períodos longos)', () => {
+    expect(calcularDesempenho(base({ ...dados, periodo: 'hoje' })).colsHoras).toHaveLength(7)
+    expect(calcularDesempenho(base({ ...dados, periodo: '7' })).colsHoras).toHaveLength(7)
+    expect(calcularDesempenho(base({ ...dados, periodo: '30' })).colsHoras).toHaveLength(30)
+    expect(calcularDesempenho(base({ ...dados, periodo: 'hoje' })).colsHoras.at(-1)?.label).toBe('09/10')
   })
 })
