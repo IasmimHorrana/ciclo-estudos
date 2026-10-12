@@ -315,6 +315,30 @@ export function agruparPassosParaEstudo<P extends { id: number; dia: string | nu
   return grupos.filter((g) => g.passos.length > 0)
 }
 
+export interface GrupoDeMaterias {
+  rotulo: string
+  materias: string[]
+}
+
+/**
+ * As matérias para escolher o que estudar, cada uma uma vez só, no grupo mais urgente em que aparece:
+ * "Hoje" (tem passo pendente hoje), "Outros dias (pendentes)" ou "Já concluídos" (só tem passos feitos).
+ */
+export function materiasParaEstudo<P extends { id: number; materia: string; dia: string | null; feito: boolean }>(passos: readonly P[], hojeISO: DataISO): GrupoDeMaterias[] {
+  const vistas = new Set<string>()
+  return agruparPassosParaEstudo(passos, hojeISO)
+    .map((g) => ({
+      rotulo: g.rotulo,
+      materias: g.passos.map((p) => p.materia).filter((m) => (vistas.has(m) ? false : (vistas.add(m), true))),
+    }))
+    .filter((g) => g.materias.length > 0)
+}
+
+/** O passo em que somar o tempo de uma matéria: o primeiro pendente de hoje, senão o pendente mais próximo, senão um já concluído. */
+export function passoAutomatico<P extends { id: number; materia: string; dia: string | null; feito: boolean }>(passos: readonly P[], materia: string, hojeISO: DataISO): P | undefined {
+  return agruparPassosParaEstudo(passos, hojeISO).flatMap((g) => g.passos).find((p) => p.materia === materia)
+}
+
 /** "4. Gestão Organizacional — anotação": o número e a matéria, e a anotação do passo quando houver. O dia vem dos grupos da lista. */
 export function rotuloDoPasso(p: { id: number; materia: string; nota: string }): string {
   return `${p.id}. ${p.materia}${p.nota ? ` — ${p.nota}` : ''}`

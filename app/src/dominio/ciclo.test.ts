@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  agendar, agruparPassosParaEstudo, alternarPasso, aplicarSnapshot, atribuirCores, calcularDistribuicao, configPadrao, construirSemana, corDe, diasDisponiveis, fmtH,
+  agendar, agruparPassosParaEstudo, alternarPasso, materiasParaEstudo, passoAutomatico, aplicarSnapshot, atribuirCores, calcularDistribuicao, configPadrao, construirSemana, corDe, diasDisponiveis, fmtH,
   gerarCicloEspacado, limparMarcacoes, normalizarConfig, passosDe, previaAgenda, previaPassos, PALETA, reagendarPendentes, resumoSemana,
   rotuloDoPasso, semanaAlvo, snapshotConfig, validarGerar, todasMaterias, type MateriaCfg,
 } from '@/dominio/ciclo'
@@ -207,5 +207,33 @@ describe('agruparPassosParaEstudo e rotuloDoPasso', () => {
     expect(rotuloDoPasso(p(3, 'Raciocínio Lógico', '2026-10-10'))).toBe('3. Raciocínio Lógico')
     expect(rotuloDoPasso(p(5, 'Língua Portuguesa', null))).toBe('5. Língua Portuguesa')
     expect(rotuloDoPasso(p(6, 'Informática', HOJE, false, 'Redes'))).toBe('6. Informática — Redes')
+  })
+})
+
+describe('materiasParaEstudo e passoAutomatico', () => {
+  const HOJE = '2026-10-09'
+  const p = (id: number, materia: string, dia: string | null, feito = false) => ({ id, materia, dia, feito, nota: '' })
+  const passos = [
+    p(1, 'Raciocínio Lógico', HOJE, true),
+    p(2, 'Informática', HOJE),
+    p(3, 'Raciocínio Lógico', '2026-10-10'),
+    p(4, 'Gestão Organizacional', '2026-10-10'),
+    p(5, 'Língua Portuguesa', HOJE, true),
+    p(6, 'Informática', '2026-10-11'),
+  ]
+
+  it('cada matéria aparece uma vez só, no grupo mais urgente', () => {
+    const g = materiasParaEstudo(passos, HOJE)
+    expect(g.map((x) => x.rotulo)).toEqual(['Hoje', 'Outros dias (pendentes)', 'Já concluídos'])
+    expect(g[0]?.materias).toEqual(['Informática'])
+    expect(g[1]?.materias).toEqual(['Raciocínio Lógico', 'Gestão Organizacional'])
+    expect(g[2]?.materias).toEqual(['Língua Portuguesa'])
+  })
+
+  it('o passo automático é o primeiro pendente de hoje, senão o pendente mais próximo, senão um concluído', () => {
+    expect(passoAutomatico(passos, 'Informática', HOJE)?.id).toBe(2)
+    expect(passoAutomatico(passos, 'Raciocínio Lógico', HOJE)?.id).toBe(3) // o 1 já está feito
+    expect(passoAutomatico(passos, 'Língua Portuguesa', HOJE)?.id).toBe(5)
+    expect(passoAutomatico(passos, 'Direito', HOJE)).toBeUndefined()
   })
 })
