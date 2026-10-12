@@ -202,10 +202,10 @@ describe('agruparPassosParaEstudo e rotuloDoPasso', () => {
     expect(agruparPassosParaEstudo([], HOJE)).toEqual([])
   })
 
-  it('rótulo: número e matéria; dia só quando não é hoje; anotação no fim', () => {
-    expect(rotuloDoPasso(p(4, 'Gestão Organizacional', HOJE), HOJE)).toBe('4. Gestão Organizacional')
-    expect(rotuloDoPasso(p(3, 'Raciocínio Lógico', '2026-10-10'), HOJE)).toBe('3. Raciocínio Lógico · Sáb 10')
-    expect(rotuloDoPasso(p(5, 'Língua Portuguesa', null), HOJE)).toBe('5. Língua Portuguesa · sem dia')
-    expect(rotuloDoPasso(p(6, 'Informática', HOJE, false, 'Redes'), HOJE)).toBe('6. Informática — Redes')
+  it('rótulo: só o número e a matéria (sem dia da semana), com a anotação no fim quando houver', () => {
+    expect(rotuloDoPasso(p(4, 'Gestão Organizacional', HOJE))).toBe('4. Gestão Organizacional')
+    expect(rotuloDoPasso(p(3, 'Raciocínio Lógico', '2026-10-10'))).toBe('3. Raciocínio Lógico')
+    expect(rotuloDoPasso(p(5, 'Língua Portuguesa', null))).toBe('5. Língua Portuguesa')
+    expect(rotuloDoPasso(p(6, 'Informática', HOJE, false, 'Redes'))).toBe('6. Informática — Redes')
   })
 })

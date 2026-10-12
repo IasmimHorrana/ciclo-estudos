@@ -2,7 +2,7 @@
 // agenda pelos dias da semana, resumo e fechamento. Tudo puro: recebe os dados e devolve cópias novas.
 
 import type { ConfigCiclo, ModeloConfig, Semana } from '@/dados/esquemas'
-import { addDias, fmtData, hoje as hojeDe, idxDia, NOMES_DIA, segundaDe, type DataISO } from '@/dominio/datas'
+import { addDias, hoje as hojeDe, segundaDe, type DataISO } from '@/dominio/datas'
 
 export type Passo = Semana['passos'][number]
 export type MateriaCfg = ConfigCiclo['mats'][number]
@@ -315,10 +315,9 @@ export function agruparPassosParaEstudo<P extends { id: number; dia: string | nu
   return grupos.filter((g) => g.passos.length > 0)
 }
 
-/** "4. Gestão Organizacional · Sáb 10 — anotação": o número e a matéria, o dia (quando não é hoje) e a anotação. */
-export function rotuloDoPasso(p: { id: number; materia: string; dia: string | null; nota: string }, hojeISO: DataISO): string {
-  const dia = !p.dia ? ' · sem dia' : p.dia === hojeISO ? '' : ` · ${NOMES_DIA[idxDia(p.dia)]} ${fmtData(p.dia).slice(0, 2)}`
-  return `${p.id}. ${p.materia}${dia}${p.nota ? ` — ${p.nota}` : ''}`
+/** "4. Gestão Organizacional — anotação": o número e a matéria, e a anotação do passo quando houver. O dia vem dos grupos da lista. */
+export function rotuloDoPasso(p: { id: number; materia: string; nota: string }): string {
+  return `${p.id}. ${p.materia}${p.nota ? ` — ${p.nota}` : ''}`
 }
 
 export { hojeDe }

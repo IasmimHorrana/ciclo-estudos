@@ -42,7 +42,7 @@ export function RegistrarTempo({ semana, minutos, fechar }: { semana: Semana; mi
         {grupos.map((g) => (
           <optgroup key={g.rotulo} label={g.rotulo}>
             {g.passos.map((p) => (
-              <option key={p.id} value={p.id}>{rotuloDoPasso(p, h)}</option>
+              <option key={p.id} value={p.id}>{rotuloDoPasso(p)}</option>
             ))}
           </optgroup>
         ))}

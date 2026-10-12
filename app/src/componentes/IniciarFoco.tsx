@@ -61,7 +61,7 @@ export function IniciarFoco({ semana, inicial, fechar }: { semana: Semana; inici
           {grupos.map((g) => (
             <optgroup key={g.rotulo} label={g.rotulo}>
               {g.passos.map((p) => (
-                <option key={p.id} value={p.id}>{rotuloDoPasso(p, h)}</option>
+                <option key={p.id} value={p.id}>{rotuloDoPasso(p)}</option>
               ))}
             </optgroup>
           ))}
