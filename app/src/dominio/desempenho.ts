@@ -9,7 +9,7 @@ export const MIN_QUESTOES = 5
 export type Nivel = 'na' | 'fraco' | 'medio' | 'bom' | 'dom'
 export const NOMES_NIVEL: Record<Nivel, string> = { na: 'Poucos dados', fraco: 'Fraco', medio: 'Médio', bom: 'Bom', dom: 'Dominado' }
 
-export type Periodo = '7' | '30' | 'tudo'
+export type Periodo = 'hoje' | '7' | '30' | 'tudo'
 
 export interface Questoes {
   id: string
@@ -44,7 +44,8 @@ export const pctDe = (acertos: number, feitas: number) => (feitas ? Math.round((
 export const horasDe = (ss: Sessao[]) => round2(soma(ss, (x) => x.minutos) / 60)
 
 /** Primeiro dia do período (inclusive). */
-export const inicioDoPeriodo = (p: Periodo, hojeISO: DataISO): DataISO => (p === '7' ? addDias(hojeISO, -6) : p === '30' ? addDias(hojeISO, -29) : '0000-00-00')
+export const inicioDoPeriodo = (p: Periodo, hojeISO: DataISO): DataISO =>
+  p === 'hoje' ? hojeISO : p === '7' ? addDias(hojeISO, -6) : p === '30' ? addDias(hojeISO, -29) : '0000-00-00'
 
 export interface LinhaAssunto {
   /** `null` = "(sem assunto)" */
@@ -127,7 +128,8 @@ export function calcularDesempenho(e: EntradaDesempenho) {
   const horas = horasDe(ss)
   const tipos = (['Teoria', 'Questões', 'Revisão'] as const).map((t) => ({ tipo: t, horas: horasDe(ss.filter((x) => (x.tipo || 'Teoria') === t)) }))
 
-  const N = e.periodo === '7' ? 7 : 30
+  // os gráficos por dia mostram 7 dias em "Hoje" e em "7 dias" (uma barra só seria pouco), e 30 nos outros
+  const N = e.periodo === 'hoje' || e.periodo === '7' ? 7 : 30
   const fmtDia = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
   const colsHoras: Coluna[] = Array.from({ length: N }, (_, i) => {
     const iso = addDias(e.hojeISO, -(N - 1 - i))

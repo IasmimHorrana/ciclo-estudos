@@ -63,7 +63,7 @@ export function Desempenho() {
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="m-0 mr-1 text-xl font-bold">Desempenho</h1>
         {botoes<'estudo' | 'semanas'>([['estudo', 'Estudo'], ['semanas', 'Semanas']], visao, (k) => definir({ visao: k }))}
-        {visao === 'estudo' && botoes<Periodo>([['7', '7 dias'], ['30', '30 dias'], ['tudo', 'Tudo']], periodo, (k) => definir({ periodo: k }))}
+        {visao === 'estudo' && botoes<Periodo>([['hoje', 'Hoje'], ['7', '7 dias'], ['30', '30 dias'], ['tudo', 'Tudo']], periodo, (k) => definir({ periodo: k }))}
         <span className="flex-1" />
         {visao === 'estudo' && <Button onClick={() => void abrirQuestoes()}>＋ Registrar questões</Button>}
       </div>

@@ -81,6 +81,14 @@ export async function criarBaralho(db: BancoCiclo, nome: string, agora = Date.no
     if ((await db.baralhos.toArray()).some((x) => x.excluidoEm === null && x.nome.toLowerCase() === n.toLowerCase())) {
       throw new Error('Já existe um baralho com esse nome.')
     }
+    // "A::B::C" cria também "A" e "A::B" se ainda não existirem (como no Anki), para a lista ter sempre o pai
+    const existentes = new Set((await db.baralhos.toArray()).filter((x) => x.excluidoEm === null).map((x) => x.nome.toLowerCase()))
+    const caminho = n.split('::')
+    for (let k = 1; k < caminho.length; k++) {
+      const pai = caminho.slice(0, k).join('::')
+      if (existentes.has(pai.toLowerCase())) continue
+      await db.baralhos.put({ id: novoIdFc('b', agora + k), nome: pai, grupoId: GRUPO_PADRAO, origem: 'manual', criadoEm: agora, ...novo(agora) })
+    }
     await db.baralhos.put(b)
   })
   return b

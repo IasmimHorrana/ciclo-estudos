@@ -66,9 +66,19 @@ describe('padrões e baralhos', () => {
     const a = await criarBaralho(db, 'Direito::Penal', T0)
     expect(a.nome).toBe('Direito::Penal')
     await expect(criarBaralho(db, 'direito::penal')).rejects.toThrow('Já existe')
-    const pai = await criarBaralho(db, 'Direito', T0)
-    await renomearBaralho(db, pai.id, 'Leis', T0 + 1)
+    const pai = (await db.baralhos.toArray()).find((b) => b.nome === 'Direito') // criado junto com o filho
+    expect(pai).toBeTruthy()
+    await expect(criarBaralho(db, 'Direito', T0)).rejects.toThrow('Já existe')
+    await renomearBaralho(db, pai?.id ?? '', 'Leis', T0 + 1)
     expect((await db.baralhos.toArray()).map((b) => b.nome).sort()).toEqual(['Leis', 'Leis::Penal'])
+  })
+
+  it('criar "A::B::C" cria os pais que faltam, sem duplicar os que já existem', async () => {
+    const db = await banco()
+    await criarBaralho(db, 'Direito', T0)
+    await criarBaralho(db, 'Direito::Civil::Posse', T0 + 1)
+    await criarBaralho(db, 'Direito::Civil::Contratos', T0 + 2)
+    expect((await db.baralhos.toArray()).map((b) => b.nome).sort()).toEqual(['Direito', 'Direito::Civil', 'Direito::Civil::Contratos', 'Direito::Civil::Posse'])
   })
 })
 

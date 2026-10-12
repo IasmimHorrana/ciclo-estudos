@@ -296,4 +296,52 @@ export function atribuirCores(cores: Record<string, number>, nomes: string[]): R
   return novo
 }
 
+export interface GrupoDePassos<P> {
+  rotulo: string
+  passos: P[]
+}
+
+/**
+ * Passos organizados para escolher o que estudar: primeiro os de hoje que faltam, depois os pendentes de outros dias
+ * (do mais próximo ao mais distante, "sem dia" por último) e, no fim, os já concluídos. Dentro de cada grupo, pela ordem do ciclo.
+ */
+export function agruparPassosParaEstudo<P extends { id: number; dia: string | null; feito: boolean }>(passos: readonly P[], hojeISO: DataISO): GrupoDePassos<P>[] {
+  const porDia = (a: P, b: P) => (a.dia ?? '9999-99-99').localeCompare(b.dia ?? '9999-99-99') || a.id - b.id
+  const grupos: GrupoDePassos<P>[] = [
+    { rotulo: 'Hoje', passos: passos.filter((p) => !p.feito && p.dia === hojeISO).sort((a, b) => a.id - b.id) },
+    { rotulo: 'Outros dias (pendentes)', passos: passos.filter((p) => !p.feito && p.dia !== hojeISO).sort(porDia) },
+    { rotulo: 'Já concluídos', passos: passos.filter((p) => p.feito).sort((a, b) => a.id - b.id) },
+  ]
+  return grupos.filter((g) => g.passos.length > 0)
+}
+
+export interface GrupoDeMaterias {
+  rotulo: string
+  materias: string[]
+}
+
+/**
+ * As matérias para escolher o que estudar, cada uma uma vez só, no grupo mais urgente em que aparece:
+ * "Hoje" (tem passo pendente hoje), "Outros dias (pendentes)" ou "Já concluídos" (só tem passos feitos).
+ */
+export function materiasParaEstudo<P extends { id: number; materia: string; dia: string | null; feito: boolean }>(passos: readonly P[], hojeISO: DataISO): GrupoDeMaterias[] {
+  const vistas = new Set<string>()
+  return agruparPassosParaEstudo(passos, hojeISO)
+    .map((g) => ({
+      rotulo: g.rotulo,
+      materias: g.passos.map((p) => p.materia).filter((m) => (vistas.has(m) ? false : (vistas.add(m), true))),
+    }))
+    .filter((g) => g.materias.length > 0)
+}
+
+/** O passo em que somar o tempo de uma matéria: o primeiro pendente de hoje, senão o pendente mais próximo, senão um já concluído. */
+export function passoAutomatico<P extends { id: number; materia: string; dia: string | null; feito: boolean }>(passos: readonly P[], materia: string, hojeISO: DataISO): P | undefined {
+  return agruparPassosParaEstudo(passos, hojeISO).flatMap((g) => g.passos).find((p) => p.materia === materia)
+}
+
+/** "4. Gestão Organizacional — anotação": o número e a matéria, e a anotação do passo quando houver. O dia vem dos grupos da lista. */
+export function rotuloDoPasso(p: { id: number; materia: string; nota: string }): string {
+  return `${p.id}. ${p.materia}${p.nota ? ` — ${p.nota}` : ''}`
+}
+
 export { hojeDe }
