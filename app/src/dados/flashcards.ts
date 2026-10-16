@@ -131,7 +131,7 @@ export async function excluirBaralho(db: BancoCiclo, id: string, agora = Date.no
 
 // ---------------------------------------------------------------- notas e cartões
 
-function cartoesNovos(nota: NotaFc, tipo: TipoNota, jaTem: Set<number>, agora: number): CartaoFc[] {
+export function cartoesNovos(nota: NotaFc, tipo: TipoNota, jaTem: Set<number>, agora: number): CartaoFc[] {
   const opcoes = OPCOES_BARALHO_PADRAO
   return indicesDeCartoes(tipo, nota.campos)
     .filter((i) => !jaTem.has(i))

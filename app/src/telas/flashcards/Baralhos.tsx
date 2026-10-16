@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronDown, ChevronRight, Plus, Settings, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus, Settings, Trash2, Upload } from 'lucide-react'
+import { avisar } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
 import { Entrada } from '@/componentes/ui/entrada'
+import { importarArquivoApkg } from '@/dados/apkg-navegador'
 import { db } from '@/dados/db'
 import { carregarContexto, criarBaralho, excluirBaralho, filaDe } from '@/dados/flashcards'
 import { linhasDaArvore, nomesComFilhos } from '@/dominio/arvore'
@@ -14,6 +16,8 @@ export function Baralhos() {
   const [tick, setTick] = useState(0)
   const [novo, setNovo] = useState<string | null>(null)
   const [erro, setErro] = useState('')
+  const [importando, setImportando] = useState(false)
+  const entradaApkg = useRef<HTMLInputElement>(null)
   // recalcula de vez em quando: cartões em aprendizado vencem com o passar dos minutos
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 30_000)
@@ -45,6 +49,26 @@ export function Baralhos() {
     }
   }
 
+  async function importarApkg(arquivo: File) {
+    setImportando(true)
+    try {
+      const r = await importarArquivoApkg(db, arquivo)
+      setImportando(false)
+      const extras = [
+        r.puladas ? `${r.puladas} nota(s) sem frente foram puladas.` : '',
+        r.imagensFaltando ? `${r.imagensFaltando} imagem(ns) não vieram no pacote.` : '',
+        r.sonsIgnorados ? `${r.sonsIgnorados} som(ns) foram ignorados (o app ainda não toca áudio).` : '',
+      ].filter(Boolean)
+      await avisar(
+        'Importar do Anki',
+        `${r.cartoes} cartões em ${r.notas} notas (${r.baralhos} baralhos novos, ${r.imagens} imagens). Todos entram como novos, sem o histórico do Anki. ${extras.join(' ')}`.trim(),
+      )
+    } catch (e) {
+      setImportando(false)
+      await avisar('Importar do Anki', e instanceof Error ? e.message : 'Não foi possível importar.')
+    }
+  }
+
   async function excluir(id: string, nome: string) {
     if (!window.confirm(`Excluir o baralho "${nome}", os subbaralhos e TODOS os cartões dentro dele?`)) return
     await excluirBaralho(db, id)
@@ -62,6 +86,20 @@ export function Baralhos() {
               {recolhidos.length >= comFilhos.length ? 'Abrir tudo' : 'Recolher tudo'}
             </Button>
           )}
+          <Button variant="outline" size="sm" disabled={importando} onClick={() => entradaApkg.current?.click()} title="Importa um baralho pronto do Anki (.apkg)">
+            <Upload className="size-4" /> {importando ? 'Importando…' : 'Importar do Anki'}
+          </Button>
+          <input
+            ref={entradaApkg}
+            type="file"
+            accept=".apkg"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              e.target.value = ''
+              if (f) void importarApkg(f)
+            }}
+          />
           <Button variant="outline" size="sm" onClick={() => setNovo(novo === null ? '' : null)}>
             <Plus className="size-4" /> Baralho
           </Button>

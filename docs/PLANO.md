@@ -5,7 +5,7 @@
 > | 0. Git (repositório local, tag `v0-html`) | feita |
 > | 1. Esqueleto da base nova (`app/`) | feita |
 > | 2. Dados (Dexie, importador do JSON antigo, backup) | feita |
-> | 3. Flashcards no estilo Anki (SM-2) | em andamento na `dev`: sub-etapas 1 e 2 feitas (dados, SM-2, fila, estudo, baralhos, opções, adicionar simples); aguardando sua revisão ⏸. Faltam: editor rico (Tiptap, imagens), Navegar, Estatísticas, importar/exportar Anki |
+> | 3. Flashcards no estilo Anki (SM-2) | em andamento na `dev`: sub-etapas 1 e 2 feitas (dados, SM-2, fila, estudo, baralhos, opções, adicionar simples); aguardando sua revisão ⏸. Feito: importar `.apkg`. Faltam: editor rico (Tiptap, imagens), Navegar, Estatísticas, exportar Anki e importar `.txt` |
 > | 4. Portar Montar, Semana, Desempenho e Resumos | feita na `dev`: as quatro abas, a barra lateral e o Pomodoro já funcionam na base nova; aguardando o seu teste (a criar "cartão a partir dos Resumos" e o quadro de flashcards no Desempenho ficam para depois do Flashcards) |
 > | Extra: aba Edital verticalizado | feita na `dev`: importar com pré-visualização, prioridade, rodapé de progresso e "＋ Ciclo"; aguardando o seu teste com um edital real |
 > | 5. Supabase (login e sincronização) | a fazer |
@@ -71,7 +71,7 @@ ciclo-estudos/            (repo Git)
    2. **Agendador SM-2** (`sm2.ts`, puro e testado) + fila e limites do dia + **estudo** (4 botões com intervalos, atalhos do Anki, desfazer) + **Baralhos** + opções do deck.
    3. **Adicionar/Editar** (Tiptap, cloze, digitar resposta, imagens, tags, sanitização).
    4. **Navegar** (busca estilo Anki, ações em massa) e **Estatísticas**.
-   5. Importar/exportar `.txt` do Anki; backup e restauração dos flashcards.
+   5. Importar `.apkg` do Anki ✅ (cartões novos, imagens embutidas, sem áudio); exportar e importar `.txt`; backup e restauração dos flashcards.
 4. **Portar as outras abas** (Montar, Semana, Desempenho, Resumos), com "criar cartão a partir de Resumos" e o quadro de flashcards no Desempenho. Durante 3→4 a pessoa usa o HTML antigo para o ciclo e a base nova para os flashcards (transição assumida; os dados vêm por exportar/importar).
 5. **Supabase:** projeto, SQL com RLS, login por link, sincronização, Storage de imagens, tela de status. Teste com dois perfis do navegador.
 6. **Publicar** (GitHub Pages/Cloudflare), instalar no celular, testar offline; aposentar o HTML (mantendo a tag `v0-html`).
