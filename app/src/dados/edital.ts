@@ -4,7 +4,7 @@ import type { BancoCiclo } from '@/dados/db'
 import type { Assunto, MateriaEdital } from '@/dados/esquemas'
 import { novoIdFc } from '@/dados/ids'
 import { MATERIAS_PADRAO, passosDe } from '@/dominio/ciclo'
-import { normalizar, sugerirRepeticoes, type MateriaLida } from '@/dominio/edital'
+import { normalizar, repartirHoras, sugerirRepeticoes, type MateriaLida } from '@/dominio/edital'
 
 const vivos = <T extends { excluidoEm: number | null }>(l: T[]) => l.filter((x) => x.excluidoEm === null)
 
@@ -63,8 +63,10 @@ export async function importarEdital(
         const ja = daMateria.find((a) => normalizar(a.nome) === normalizar(nomeAssunto))
         if (ja) {
           r.assuntosQueJaExistiam++
-          if (noEdital && (!ja.noEdital || (ja.paiId ?? null) !== paiId)) {
-            const lig = { ...ja, noEdital: true, paiId, atualizadoEm: agora, sujo: 1 as const }
+          // se o nome só difere pela primeira letra (minúscula antes, maiúscula agora), passa a usar a maiúscula
+          const nomeNovo = ja.nome !== nomeAssunto && ja.nome.charAt(0) === ja.nome.charAt(0).toLocaleLowerCase('pt-BR') && ja.nome.slice(1) === nomeAssunto.slice(1) ? nomeAssunto : ja.nome
+          if (noEdital && (!ja.noEdital || (ja.paiId ?? null) !== paiId || nomeNovo !== ja.nome)) {
+            const lig = { ...ja, nome: nomeNovo, noEdital: true, paiId, atualizadoEm: agora, sujo: 1 as const }
             await db.assuntos.put(lig)
             daMateria[daMateria.indexOf(ja)] = lig
             assuntos[assuntos.indexOf(ja)] = lig
@@ -142,6 +144,24 @@ export async function mudarComSubtopicos(db: BancoCiclo, id: string, patch: Alte
   await db.transaction('rw', db.assuntos, async () => {
     const todos = vivos(await db.assuntos.toArray())
     for (const alvo of [id, ...idsDosDescendentes(todos, id)]) await mudarAssunto(db, alvo, patch, agora)
+  })
+}
+
+/**
+ * Define as horas ideais de um tópico: o total é dividido em partes iguais entre os subtópicos (os assuntos de verdade),
+ * que depois podem ser ajustados um a um. Num assunto sem subtópicos, é só o valor dele.
+ */
+export async function definirHorasDoTopico(db: BancoCiclo, id: string, total: number, agora = Date.now()): Promise<void> {
+  await db.transaction('rw', db.assuntos, async () => {
+    const todos = vivos(await db.assuntos.toArray()).filter((a) => a.noEdital)
+    const folhas = idsDosDescendentes(todos, id)
+      .filter((d) => !todos.some((a) => a.paiId === d))
+      .map((d) => todos.find((a) => a.id === d))
+      .filter((a): a is Assunto => !!a)
+      .sort((a, b) => a.ordem - b.ordem)
+    if (!folhas.length) return void (await mudarAssunto(db, id, { horasIdeais: Math.max(0, total) }, agora))
+    const partes = repartirHoras(total, folhas.length)
+    for (let i = 0; i < folhas.length; i++) await mudarAssunto(db, (folhas[i] as Assunto).id, { horasIdeais: partes[i] as number }, agora)
   })
 }
 

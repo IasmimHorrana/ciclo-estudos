@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { lerArquivo } from '@/dados/converter'
 import { gerarSemana, carregarCiclo } from '@/dados/ciclo'
 import { BancoCiclo } from '@/dados/db'
-import { adicionarMateriaEdital, carregarEdital, criarAssunto, enviarAoCiclo, importarEdital, mudarAssunto, mudarComSubtopicos, tirarAssuntoDoEdital, tirarMateriaDoEdital } from '@/dados/edital'
+import { adicionarMateriaEdital, carregarEdital, criarAssunto, enviarAoCiclo, importarEdital, mudarAssunto, definirHorasDoTopico, mudarComSubtopicos, tirarAssuntoDoEdital, tirarMateriaDoEdital } from '@/dados/edital'
 import { substituirDados } from '@/dados/repositorio'
 
 const AGORA = new Date(2026, 9, 7, 10).getTime() // quarta
@@ -179,5 +179,38 @@ describe('hierarquia no banco', () => {
     const { assuntos } = await carregarEdital(db)
     expect(assuntos.map((a) => a.nome).sort()).toEqual(['NAT', 'Redes'])
     expect(assuntos.find((a) => a.nome === 'Redes')?.paiId).toBeNull()
+  })
+})
+
+describe('horas no tópico e nomes', () => {
+  const redes = [{ materia: 'Informática', assuntos: [{ nome: 'Redes', filhos: ['NAT', 'VLAN', 'VPN'] }, { nome: 'Segurança', filhos: [] }] }]
+
+  it('as horas do tópico são divididas entre os subtópicos e a soma fecha', async () => {
+    const db = await novoBanco()
+    await importarEdital(db, redes, [], AGORA)
+    const pai = (await carregarEdital(db)).assuntos.find((a) => a.nome === 'Redes')
+    await definirHorasDoTopico(db, pai?.id ?? '', 10, AGORA)
+    const { assuntos } = await carregarEdital(db)
+    const horas = assuntos.filter((a) => a.paiId === pai?.id).sort((a, b) => a.ordem - b.ordem).map((a) => a.horasIdeais)
+    expect(horas).toEqual([3.34, 3.33, 3.33])
+    expect(assuntos.find((a) => a.nome === 'Segurança')?.horasIdeais).toBe(0)
+    await definirHorasDoTopico(db, pai?.id ?? '', 0, AGORA)
+    expect((await carregarEdital(db)).assuntos.filter((a) => a.paiId === pai?.id).every((a) => a.horasIdeais === 0)).toBe(true)
+  })
+
+  it('horas num assunto sem subtópicos valem para ele mesmo', async () => {
+    const db = await novoBanco()
+    await importarEdital(db, redes, [], AGORA)
+    const seg = (await carregarEdital(db)).assuntos.find((a) => a.nome === 'Segurança')
+    await definirHorasDoTopico(db, seg?.id ?? '', 4, AGORA)
+    expect((await carregarEdital(db)).assuntos.find((a) => a.nome === 'Segurança')?.horasIdeais).toBe(4)
+  })
+
+  it('reimportar com a primeira letra em maiúscula corrige o nome, sem duplicar', async () => {
+    const db = await novoBanco()
+    await importarEdital(db, [{ materia: 'Informática', assuntos: [{ nome: 'hardware e software', filhos: [] }] }], [], AGORA)
+    await importarEdital(db, [{ materia: 'Informática', assuntos: [{ nome: 'Hardware e software', filhos: [] }] }], [], AGORA + 1)
+    const { assuntos } = await carregarEdital(db)
+    expect(assuntos.map((a) => a.nome)).toEqual(['Hardware e software'])
   })
 })

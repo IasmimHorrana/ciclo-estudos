@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { achatarItens, agruparLinhas, distribuirAssuntos, lerEdital, materiasDoEdital, montarEdital, sugerirAssunto, normalizar, notaDosAssuntos, prioridade, resumoEdital, sugerirRepeticoes } from './edital'
+import { achatarItens, agruparLinhas, distribuirAssuntos, lerEdital, maiuscula, partirNome, repartirHoras, materiasDoEdital, montarEdital, sugerirAssunto, normalizar, notaDosAssuntos, prioridade, resumoEdital, sugerirRepeticoes } from './edital'
 
 const t = (...nomes: string[]) => nomes.map((nome) => ({ nome, filhos: [] as string[] }))
 
@@ -43,8 +43,8 @@ Matemática:
 2. Controle de constitucionalidade. Poder Legislativo. Direitos do art. 5º. Remédios`)
     expect(r[0]?.assuntos).toEqual(t(
       'Princípios fundamentais',
-      'direitos e garantias fundamentais',
-      'organização do Estado',
+      'Direitos e garantias fundamentais',
+      'Organização do Estado',
       'Controle de constitucionalidade',
       'Poder Legislativo',
       'Direitos do art. 5º',
@@ -231,8 +231,8 @@ describe('hierarquia: tópico › subtópico', () => {
 2. Segurança da informação: criptografia; certificação digital; ataques
 3. Banco de dados`)
     expect(r[0]?.assuntos).toEqual([
-      { nome: 'Redes de computadores: conceitos básicos e avançados', filhos: ['arquiteturas de redes', 'modelo OSI e TCP/IP', 'NAT'] },
-      { nome: 'Segurança da informação: criptografia', filhos: ['certificação digital', 'ataques'] },
+      { nome: 'Redes de computadores: conceitos básicos e avançados', filhos: ['Arquiteturas de redes', 'Modelo OSI e TCP/IP', 'NAT'] },
+      { nome: 'Segurança da informação: criptografia', filhos: ['Certificação digital', 'Ataques'] },
       { nome: 'Banco de dados', filhos: [] },
     ])
   })
@@ -330,5 +330,53 @@ describe('montarEdital com tópicos', () => {
     const solto = assuntos.map((x) => (x.id === 't1' ? { ...x, noEdital: false } : x))
     const l = montarEdital({ ...base, assuntos: solto }).blocos[0]?.linhas ?? []
     expect(l.map((x) => `${x.nivel}:${x.nome}`)).toEqual(['0:NAT', '0:VLAN', '0:Segurança'])
+  })
+})
+
+describe('apresentação dos nomes', () => {
+  it('maiúscula na primeira letra, sem mexer no resto', () => {
+    expect(maiuscula('hardware e software')).toBe('Hardware e software')
+    expect(maiuscula('NAT')).toBe('NAT')
+    expect(maiuscula('óleo')).toBe('Óleo')
+    expect(maiuscula('')).toBe('')
+  })
+
+  it('partir o nome do tópico no primeiro dois-pontos (só para mostrar)', () => {
+    expect(partirNome('Redes de computadores: conceitos básicos e avançados')).toEqual({ titulo: 'Redes de computadores', resto: 'conceitos básicos e avançados' })
+    expect(partirNome('Banco de dados')).toEqual({ titulo: 'Banco de dados', resto: '' })
+    expect(partirNome('Lei 8.112: art. 5º: tal')).toEqual({ titulo: 'Lei 8.112', resto: 'art. 5º: tal' })
+    expect(partirNome('X: y')).toEqual({ titulo: 'X: y', resto: '' }) // título curto demais
+    expect(partirNome('Algo:')).toEqual({ titulo: 'Algo:', resto: '' })
+  })
+})
+
+describe('repartirHoras', () => {
+  it('divide em partes iguais e a soma fecha com o total', () => {
+    expect(repartirHoras(12, 4)).toEqual([3, 3, 3, 3])
+    expect(repartirHoras(10, 3)).toEqual([3.34, 3.33, 3.33])
+    const partes = repartirHoras(7.5, 8)
+    expect(Math.round(partes.reduce((s, x) => s + x, 0) * 100) / 100).toBe(7.5)
+  })
+  it('zero, negativo e sem partes', () => {
+    expect(repartirHoras(0, 3)).toEqual([0, 0, 0])
+    expect(repartirHoras(-2, 2)).toEqual([0, 0])
+    expect(repartirHoras(5, 0)).toEqual([])
+  })
+})
+
+describe('prioridade sem dados', () => {
+  const materias = [{ id: 'm1', nome: 'Info', peso: 3, ordem: 0 }]
+  const a = (id: string, paiId: string | null, extra = {}) => ({ id, materia: 'Info', nome: id, ordem: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, noEdital: true, paiId, ...extra })
+  const base = { materias, questoes: [], sessoes: [], ordem: 'edital' as const, ocultarEstudados: false, filtroMateria: null }
+  it('sem importância, horas nem questões a linha está "sem dados"; basta definir uma coisa para sair disso', () => {
+    const vazio = montarEdital({ ...base, assuntos: [a('x', null)] }).blocos[0]?.linhas[0]
+    expect(vazio?.semDados).toBe(true)
+    expect(montarEdital({ ...base, assuntos: [a('x', null, { importancia: 5 })] }).blocos[0]?.linhas[0]?.semDados).toBe(false)
+    expect(montarEdital({ ...base, assuntos: [a('x', null, { horasIdeais: 2 })] }).blocos[0]?.linhas[0]?.semDados).toBe(false)
+  })
+  it('o tópico só fica "sem dados" se todos os subtópicos estiverem', () => {
+    const l = (extra: object) => montarEdital({ ...base, assuntos: [a('t', null), a('f1', 't'), a('f2', 't', extra)] }).blocos[0]?.linhas[0]
+    expect(l({})?.semDados).toBe(true)
+    expect(l({ horasIdeais: 3 })?.semDados).toBe(false)
   })
 })

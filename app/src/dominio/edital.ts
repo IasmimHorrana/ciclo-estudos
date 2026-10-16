@@ -45,6 +45,28 @@ const temMinuscula = (s: string) => /[a-zà-ÿ]/.test(s)
 const temLetra = (s: string) => /[A-Za-zÀ-ÿ]/.test(s)
 const limpar = (s: string) => s.replace(/\s+/g, ' ').trim()
 
+/** Primeira letra em maiúscula ("hardware e software" → "Hardware e software"). */
+export const maiuscula = (s: string): string => s.charAt(0).toLocaleUpperCase('pt-BR') + s.slice(1)
+
+/**
+ * Separa o nome de um tópico em título e descrição, no primeiro ":" ("Redes: conceitos básicos" → "Redes" e "conceitos básicos").
+ * Só para mostrar na tela; o nome guardado não muda.
+ */
+export function partirNome(nome: string): { titulo: string; resto: string } {
+  const i = nome.indexOf(':')
+  if (i < 3 || i > nome.length - 2) return { titulo: nome, resto: '' }
+  return { titulo: nome.slice(0, i).trim(), resto: nome.slice(i + 1).trim() }
+}
+
+/** Divide `total` horas em `n` partes iguais com centésimos que fecham a conta (10 em 3 → 3,34 + 3,33 + 3,33). */
+export function repartirHoras(total: number, n: number): number[] {
+  if (n <= 0) return []
+  const t = Math.max(0, total)
+  const base = Math.floor((t / n) * 100) / 100
+  const sobra = Math.round((t - base * n) * 100)
+  return Array.from({ length: n }, (_, i) => Math.round((base + (i < sobra ? 0.01 : 0)) * 100) / 100)
+}
+
 /** Divide "A; B" e "A. B" (frase nova com maiúscula), sem quebrar "art. 5º" nem "nº 8.112". */
 function dividir(item: string): string[] {
   const partes: string[] = []
@@ -80,7 +102,7 @@ export function lerEdital(texto: string): MateriaLida[] {
 
   const fechar = () => {
     if (!atual || !ultimo) return
-    const partes = dividir(ultimo)
+    const partes = dividir(ultimo).map(maiuscula)
     const donoDosFilhos = atual.assuntos[atual.assuntos.length - 1]
     if (ultimoEhFilho && donoDosFilhos) donoDosFilhos.filhos.push(...partes)
     else if (ultimo.includes(';') && partes.length >= 2 && (partes[0] as string).includes(':')) atual.assuntos.push({ nome: partes[0] as string, filhos: partes.slice(1) })
@@ -278,6 +300,8 @@ export interface LinhaEdital {
   /** Horas que faltam para as ideais (0 se não há ideal definido). */
   falta: number
   prioridade: number
+  /** Nada definido ainda (importância 3, sem horas ideais, poucas questões): a prioridade não diz nada. */
+  semDados: boolean
 }
 
 export interface BlocoEdital {
@@ -348,6 +372,7 @@ export function montarEdital(e: EntradaMontagem) {
           horasFeitas,
           falta: a.horasIdeais > 0 ? arred(Math.max(0, a.horasIdeais - horasFeitas)) : 0,
           prioridade: prioridade({ pesoMateria: m.peso, importancia: a.importancia, horasIdeais: a.horasIdeais, horasFeitas, estudado: a.estudado, questoes: x.feitas, acertos: x.acertos }),
+          semDados: a.importancia === 3 && a.horasIdeais === 0 && x.feitas < 3,
         }
       }
 
@@ -376,6 +401,7 @@ export function montarEdital(e: EntradaMontagem) {
           horasFeitas: arred(eu.horasFeitas + soma((l) => l.horasFeitas)),
           falta: arred(pendentes.reduce((t, f) => t + f.falta, 0)),
           prioridade: pendentes.reduce((mx, f) => Math.max(mx, f.prioridade), 0),
+          semDados: folhas.every((f) => f.semDados),
         }
         return { linha, filhos, folhas }
       }
