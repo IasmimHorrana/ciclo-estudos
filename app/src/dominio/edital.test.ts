@@ -366,7 +366,7 @@ describe('repartirHoras', () => {
 
 describe('prioridade sem dados', () => {
   const materias = [{ id: 'm1', nome: 'Info', peso: 3, ordem: 0 }]
-  const a = (id: string, paiId: string | null, extra = {}) => ({ id, materia: 'Info', nome: id, ordem: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, noEdital: true, paiId, ...extra })
+  const a = (id: string, paiId: string | null, extra = {}) => ({ id, materia: 'Info', nome: id, ordem: 0, importancia: 0, horasIdeais: 0, estudado: false, noCiclo: false, noEdital: true, paiId, ...extra })
   const base = { materias, questoes: [], sessoes: [], ordem: 'edital' as const, ocultarEstudados: false, filtroMateria: null }
   it('sem importância, horas nem questões a linha está "sem dados"; basta definir uma coisa para sair disso', () => {
     const vazio = montarEdital({ ...base, assuntos: [a('x', null)] }).blocos[0]?.linhas[0]
@@ -378,5 +378,20 @@ describe('prioridade sem dados', () => {
     const l = (extra: object) => montarEdital({ ...base, assuntos: [a('t', null), a('f1', 't'), a('f2', 't', extra)] }).blocos[0]?.linhas[0]
     expect(l({})?.semDados).toBe(true)
     expect(l({ horasIdeais: 3 })?.semDados).toBe(false)
+  })
+})
+
+describe('importância "não definida" (0)', () => {
+  it('conta como média na prioridade, mas escolher 3 de propósito tira a linha de "sem dados"', () => {
+    const entrada = { pesoMateria: 4, horasIdeais: 10, horasFeitas: 0, estudado: false, questoes: 0, acertos: 0 }
+    expect(prioridade({ ...entrada, importancia: 0 })).toBe(prioridade({ ...entrada, importancia: 3 }))
+    const materias = [{ id: 'm1', nome: 'Info', peso: 3, ordem: 0 }]
+    const linha = (importancia: number) =>
+      montarEdital({
+        materias, questoes: [], sessoes: [], ordem: 'edital', ocultarEstudados: false, filtroMateria: null,
+        assuntos: [{ id: 'x', materia: 'Info', nome: 'X', ordem: 0, importancia, horasIdeais: 0, estudado: false, noCiclo: false, noEdital: true, paiId: null }],
+      }).blocos[0]?.linhas[0]
+    expect(linha(0)?.semDados).toBe(true)
+    expect(linha(3)?.semDados).toBe(false)
   })
 })

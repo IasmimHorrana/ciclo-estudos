@@ -21,7 +21,7 @@ const novaMateria = (nome: string, ordem: number, agora: number): MateriaEdital 
   id: novoIdFc('e', agora + ordem), nome, peso: 3, ordem, atualizadoEm: agora, excluidoEm: null, sujo: 1,
 })
 const novoAssunto = (materia: string, nome: string, ordem: number, agora: number, noEdital: boolean, paiId: string | null): Assunto => ({
-  id: novoIdFc('a', agora + ordem), materia, nome, ordem, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, noEdital, paiId,
+  id: novoIdFc('a', agora + ordem), materia, nome, ordem, importancia: 0, horasIdeais: 0, estudado: false, noCiclo: false, noEdital, paiId,
   atualizadoEm: agora, excluidoEm: null, sujo: 1,
 })
 

@@ -194,7 +194,8 @@ export interface EntradaPrioridade {
  * e quanto pior o acerto (a partir de 3 questões). Assunto já estudado cai bastante; só volta um pouco se o acerto está baixo.
  */
 export function prioridade(e: EntradaPrioridade): number {
-  const base = Math.max(0, e.pesoMateria) * Math.max(0, e.importancia)
+  // importância 0 = não definida: conta como média (3) para a ordem, mas a tela mostra a barra cinza (ver `semDados`)
+  const base = Math.max(0, e.pesoMateria) * (e.importancia > 0 ? e.importancia : 3)
   const falta = e.horasIdeais > 0 ? Math.max(0, e.horasIdeais - e.horasFeitas) / e.horasIdeais : e.estudado ? 0 : 1
   const taxa = e.questoes >= 3 ? e.acertos / e.questoes : null
   const fatorAcerto = taxa === null ? 1 : 1 + (1 - taxa)
@@ -285,7 +286,7 @@ export interface LinhaEdital {
   /** Assuntos de verdade (sem subtópicos) dentro desta linha e quantos já estão estudados. */
   folhas: number
   folhasEstudadas: number
-  /** Importância (1 a 5); num tópico, o valor comum dos subtópicos, ou `null` se forem diferentes. */
+  /** Importância (1 a 5, ou 0 = não definida); num tópico, o valor comum dos subtópicos, ou `null` se forem diferentes. */
   importancia: number | null
   horasIdeais: number
   /** Num tópico, todos os subtópicos estudados. */
@@ -300,7 +301,7 @@ export interface LinhaEdital {
   /** Horas que faltam para as ideais (0 se não há ideal definido). */
   falta: number
   prioridade: number
-  /** Nada definido ainda (importância 3, sem horas ideais, poucas questões): a prioridade não diz nada. */
+  /** Nada definido ainda (sem importância, sem horas ideais, poucas questões): a prioridade não diz nada. */
   semDados: boolean
 }
 
@@ -372,7 +373,7 @@ export function montarEdital(e: EntradaMontagem) {
           horasFeitas,
           falta: a.horasIdeais > 0 ? arred(Math.max(0, a.horasIdeais - horasFeitas)) : 0,
           prioridade: prioridade({ pesoMateria: m.peso, importancia: a.importancia, horasIdeais: a.horasIdeais, horasFeitas, estudado: a.estudado, questoes: x.feitas, acertos: x.acertos }),
-          semDados: a.importancia === 3 && a.horasIdeais === 0 && x.feitas < 3,
+          semDados: !(a.importancia > 0) && a.horasIdeais === 0 && x.feitas < 3,
         }
       }
 

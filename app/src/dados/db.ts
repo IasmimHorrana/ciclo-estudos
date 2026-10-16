@@ -50,6 +50,18 @@ export class BancoCiclo extends Dexie {
     })
     // v4: edital verticalizado. Só tabela nova; os campos novos de `assuntos` são lidos com padrão (nada a migrar).
     this.version(4).stores({ materiasEdital: 'id, nome, sujo, excluidoEm' })
+    // v5: a importância dos assuntos ganhou o valor 0 = "não definida". Antes o padrão era 3 (indistinguível de uma escolha),
+    // então os 3 viram 0; quem escolheu 3 de propósito escolhe de novo.
+    this.version(5)
+      .stores({})
+      .upgrade((tx) =>
+        tx.table('assuntos').toCollection().modify((a: { importancia?: number; sujo?: number }) => {
+          if (a.importancia === 3) {
+            a.importancia = 0
+            a.sujo = 1
+          }
+        }),
+      )
   }
 }
 

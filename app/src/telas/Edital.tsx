@@ -91,6 +91,14 @@ export function Edital() {
         </div>
       ) : (
         <>
+          <p className="m-0 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+            Prioridade:
+            <span className="flex items-center gap-1"><i className="inline-block h-2 w-5 rounded-full bg-ok" /> baixa</span>
+            <span className="flex items-center gap-1"><i className="inline-block h-2 w-5 rounded-full bg-aviso" /> média</span>
+            <span className="flex items-center gap-1"><i className="inline-block h-2 w-5 rounded-full bg-erro" /> alta</span>
+            <span className="flex items-center gap-1"><i className="inline-block h-2 w-5 rounded-full bg-muted" /> cinza: defina a importância ou as horas ideais</span>
+            <span>· a barra é relativa: a mais cheia é o assunto mais urgente da lista</span>
+          </p>
           <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-card shadow-sm">
             <table className="w-full min-w-[56rem] border-collapse text-sm">
               <thead className="sticky top-0 z-10 bg-card text-[0.68rem] text-muted-foreground uppercase shadow-[0_1px_0_var(--border)]">
@@ -319,9 +327,10 @@ function LinhaAssunto({ l, b, maxPrioridade }: { l: LinhaEdital; b: BlocoEdital;
           value={l.importancia ?? ''}
           aria-label={`Importância de ${l.nome}`}
           title={l.temFilhos ? 'Vale para o tópico e todos os subtópicos' : undefined}
-          onChange={(e) => e.target.value && void mudarComSubtopicos(db, l.id, { importancia: Number(e.target.value) })}
+          onChange={(e) => e.target.value !== '' && void mudarComSubtopicos(db, l.id, { importancia: Number(e.target.value) })}
         >
-          {l.importancia === null && <option value="">—</option>}
+          {l.importancia === null && <option value="">vários</option>}
+          <option value={0}>—</option>
           {[1, 2, 3, 4, 5].map((p) => <option key={p}>{p}</option>)}
         </Selecao>
       </td>

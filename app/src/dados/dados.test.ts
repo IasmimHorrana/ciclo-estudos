@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto'
 import { readFileSync } from 'node:fs'
+import Dexie from 'dexie'
 import { describe, expect, it } from 'vitest'
 import { lerArquivo, paraArquivo } from '@/dados/converter'
 import { BancoCiclo } from '@/dados/db'
@@ -80,7 +81,7 @@ describe('lerArquivo (backup do app em HTML)', () => {
 describe('edital verticalizado no backup', () => {
   it('backup antigo (sem campos de edital) ganha padrões nos assuntos e nenhuma matéria de edital', () => {
     const d = lerArquivo(JSON.stringify(legado), AGORA)
-    expect(d.assuntos[0]).toMatchObject({ nome: 'Redes', ordem: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false })
+    expect(d.assuntos[0]).toMatchObject({ nome: 'Redes', ordem: 0, importancia: 0, horasIdeais: 0, estudado: false, noCiclo: false })
     expect(d.materiasEdital).toEqual([])
   })
 
@@ -151,5 +152,28 @@ describe.skipIf(!process.env.BACKUP_REAL)('backup real', () => {
     await substituirDados(db, d, AGORA)
     expect(await carregarDados(db)).toEqual(d)
     expect(lerArquivo(JSON.stringify(paraArquivo(d, AGORA)), AGORA)).toEqual(d)
+  })
+})
+
+describe('banco v5 (importância não definida)', () => {
+  it('os assuntos com importância 3 (o antigo padrão) viram 0; as outras escolhas ficam', async () => {
+    const nome = `migracao-${++n}`
+    const antigo = new Dexie(nome)
+    antigo.version(4).stores({
+      valores: 'chave, sujo', semanasFechadas: 'id, inicio, sujo, excluidoEm', modelos: 'id, sujo, excluidoEm', notas: 'id, materia, atualizado, sujo, excluidoEm',
+      assuntos: 'id, materia, sujo, excluidoEm', questoes: 'id, data, materia, sujo, excluidoEm', sessoes: 'id, data, materia, sujo, excluidoEm',
+      local: 'chave', baralhos: 'id, nome, sujo, excluidoEm', gruposOpcoes: 'id, sujo', tiposNota: 'id, sujo', notasFc: 'id, tipoId, baralhoId, sujo, excluidoEm',
+      cartoes: 'id, notaId, baralhoId, tipo, venceDia, venceMs, sujo, excluidoEm', revlog: 'id, cartaoId, baralhoId, dia, sujo', materiasEdital: 'id, nome, sujo, excluidoEm',
+    })
+    await antigo.table('assuntos').bulkPut([
+      { id: 'a1', materia: 'X', nome: 'Padrão', importancia: 3, sujo: 0, excluidoEm: null },
+      { id: 'a2', materia: 'X', nome: 'Escolhida', importancia: 5, sujo: 0, excluidoEm: null },
+    ])
+    antigo.close()
+    const novo = new BancoCiclo(nome)
+    const a = await novo.assuntos.toArray()
+    expect(a.find((x) => x.id === 'a1')).toMatchObject({ importancia: 0, sujo: 1 })
+    expect(a.find((x) => x.id === 'a2')).toMatchObject({ importancia: 5, sujo: 0 })
+    novo.close()
   })
 })
