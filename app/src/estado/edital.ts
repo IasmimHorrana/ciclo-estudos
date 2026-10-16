@@ -9,8 +9,12 @@ interface EditalUi {
   filtroMateria: string | null
   /** Matérias (ids) recolhidas. */
   recolhidas: string[]
+  /** Tópicos (ids de assuntos) recolhidos: os subtópicos deles ficam escondidos. */
+  topicosRecolhidos: string[]
   definir: (p: Partial<Pick<EditalUi, 'ordem' | 'ocultarEstudados' | 'filtroMateria'>>) => void
   alternarRecolhida: (id: string) => void
+  alternarTopico: (id: string) => void
+  definirTopicosRecolhidos: (ids: string[]) => void
 }
 
 export const useEditalUi = create<EditalUi>()(
@@ -20,8 +24,11 @@ export const useEditalUi = create<EditalUi>()(
       ocultarEstudados: false,
       filtroMateria: null,
       recolhidas: [],
+      topicosRecolhidos: [],
       definir: (p) => set(p),
       alternarRecolhida: (id) => set((s) => ({ recolhidas: s.recolhidas.includes(id) ? s.recolhidas.filter((x) => x !== id) : [...s.recolhidas, id] })),
+      alternarTopico: (id) => set((s) => ({ topicosRecolhidos: s.topicosRecolhidos.includes(id) ? s.topicosRecolhidos.filter((x) => x !== id) : [...s.topicosRecolhidos, id] })),
+      definirTopicosRecolhidos: (ids) => set({ topicosRecolhidos: ids }),
     }),
     { name: 'ciclo-estudos.edital' },
   ),

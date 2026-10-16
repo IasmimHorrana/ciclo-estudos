@@ -6,7 +6,7 @@ import { Button } from '@/componentes/ui/button'
 import { Selecao } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
 import {
-  adicionarMateriaEdital, carregarEdital, enviarAoCiclo, incluirAssuntos, mudarAssunto, mudarMateriaEdital, tirarAssuntoDoEdital, tirarMateriaDoEdital,
+  adicionarMateriaEdital, carregarEdital, enviarAoCiclo, incluirAssuntos, mudarAssunto, mudarComSubtopicos, mudarMateriaEdital, tirarAssuntoDoEdital, tirarMateriaDoEdital,
 } from '@/dados/edital'
 import { useCiclo } from '@/dados/useCiclo'
 import { corDe, fmtH, todasMaterias } from '@/dominio/ciclo'
@@ -30,7 +30,11 @@ export function Edital() {
 
   const materias = materiasDoEdital(dados.materias, dados.assuntos)
   const filtro = materias.some((m) => m.id === ui.filtroMateria) ? ui.filtroMateria : null
-  const { blocos, total } = montarEdital({ ...dados, ordem: ui.ordem, ocultarEstudados: ui.ocultarEstudados, filtroMateria: filtro })
+  const { blocos, total } = montarEdital({ ...dados, ordem: ui.ordem, ocultarEstudados: ui.ocultarEstudados, filtroMateria: filtro, recolhidos: new Set(ui.topicosRecolhidos) })
+  // tópicos = assuntos do edital que têm subtópicos
+  const idsDoEdital = new Set(dados.assuntos.filter((a) => a.noEdital).map((a) => a.id))
+  const topicos = [...new Set(dados.assuntos.filter((a) => a.noEdital && a.paiId && idsDoEdital.has(a.paiId)).map((a) => a.paiId as string))]
+  const tudoRecolhido = topicos.length > 0 && topicos.every((id) => ui.topicosRecolhidos.includes(id))
   const maxPrioridade = Math.max(1, ...blocos.flatMap((b) => b.linhas.filter((l) => !l.estudado).map((l) => l.prioridade)))
   const conhecidas = [...new Set([...todasMaterias(ciclo.config), ...dados.materias.map((m) => m.nome), ...dados.assuntos.map((a) => a.materia)])]
 
@@ -62,6 +66,11 @@ export function Edital() {
             <option value="prioridade">Maior prioridade</option>
             <option value="falta">Mais horas faltando</option>
           </Selecao>
+          {topicos.length > 0 && (
+            <Button variant="outline" size="sm" title="Fecha ou abre todos os tópicos (os subtópicos ficam escondidos quando fechados)" onClick={() => ui.definirTopicosRecolhidos(tudoRecolhido ? [] : topicos)}>
+              {tudoRecolhido ? 'Abrir tópicos' : 'Recolher tópicos'}
+            </Button>
+          )}
           <label className="flex cursor-pointer items-center gap-1.5 text-sm">
             <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={ui.ocultarEstudados} onChange={(e) => ui.definir({ ocultarEstudados: e.target.checked })} />
             Ocultar estudados
@@ -150,7 +159,7 @@ function BlocoMateria({ b, maxPrioridade, recolhida }: { b: BlocoEdital; maxPrio
   }
 
   async function paraOCiclo() {
-    const top = b.linhas.filter((l) => !l.estudado && !l.noCiclo).sort((x, y) => y.prioridade - x.prioridade).slice(0, 3)
+    const top = b.linhas.filter((l) => l.nivel === 0 && !l.estudado && !l.noCiclo).sort((x, y) => y.prioridade - x.prioridade).slice(0, 3)
     await enviarAoCiclo(db, { materia: b.materia.nome, pesoMateria: b.materia.peso, horasQueFaltam: b.faltam, assuntoIds: top.map((l) => l.id) })
   }
 
@@ -199,33 +208,72 @@ function BlocoMateria({ b, maxPrioridade, recolhida }: { b: BlocoEdital; maxPrio
 }
 
 function LinhaAssunto({ l, b, maxPrioridade }: { l: LinhaEdital; b: BlocoEdital; maxPrioridade: number }) {
+  const recolhido = useEditalUi((s) => s.topicosRecolhidos.includes(l.id))
+  const alternarTopico = useEditalUi((s) => s.alternarTopico)
   const pct = l.estudado ? 0 : Math.round((l.prioridade / maxPrioridade) * 100)
   const nivel = pct >= 66 ? 'bg-erro' : pct >= 33 ? 'bg-aviso' : 'bg-ok'
   const num = (n: number, cor: string) => <span className={n ? cor : 'text-muted-foreground/50'}>{n}</span>
+  const Seta = recolhido ? ChevronRight : ChevronDown
 
   return (
-    <tr className={cn('border-t hover:bg-accent/40', l.estudado && 'text-muted-foreground')}>
+    <tr className={cn('border-t hover:bg-accent/40', l.temFilhos && 'bg-muted/30 font-semibold', l.estudado && 'text-muted-foreground')}>
       <td className="px-2 text-center">
-        <input type="checkbox" className="size-4 cursor-pointer accent-[var(--primary)]" checked={l.estudado} aria-label={`Estudado: ${l.nome}`} onChange={(e) => void mudarAssunto(db, l.id, { estudado: e.target.checked })} />
+        <input
+          type="checkbox"
+          className="size-4 cursor-pointer accent-[var(--primary)]"
+          checked={l.estudado}
+          aria-label={`Estudado: ${l.nome}`}
+          title={l.temFilhos ? 'Marca ou desmarca o tópico e todos os subtópicos' : undefined}
+          onChange={(e) => void mudarComSubtopicos(db, l.id, { estudado: e.target.checked })}
+        />
       </td>
-      <td className={cn('px-2 py-1.5', l.estudado && 'line-through')}>{l.nome}</td>
+      <td className={cn('py-1.5 pr-2', l.estudado && 'line-through')} style={{ paddingLeft: `${0.5 + l.nivel * 1.5}rem` }}>
+        <span className="flex items-center gap-1">
+          {l.temFilhos ? (
+            <button
+              className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-accent"
+              onClick={() => alternarTopico(l.id)}
+              aria-expanded={!recolhido}
+              aria-label={recolhido ? `Abrir ${l.nome}` : `Recolher ${l.nome}`}
+              title={recolhido ? 'Mostrar os subtópicos' : 'Esconder os subtópicos'}
+            >
+              <Seta className="size-4" />
+            </button>
+          ) : (
+            l.nivel > 0 && <span className="inline-block size-5 shrink-0" />
+          )}
+          <span>{l.nome}</span>
+          {l.temFilhos && <span className="ml-1 text-xs font-normal text-muted-foreground no-underline">{l.folhasEstudadas}/{l.folhas}</span>}
+        </span>
+      </td>
       <td className="px-1 text-center font-semibold tabular-nums">{num(l.certas, 'text-ok')}</td>
       <td className="px-1 text-center font-semibold tabular-nums">{num(l.erradas, 'text-erro')}</td>
       <td className="px-1 text-center font-semibold tabular-nums">{l.total}</td>
       <td className="px-1 text-center tabular-nums">{l.pctAcerto === null ? '—' : `${l.pctAcerto}%`}</td>
       <td className="px-1 text-center">
-        <Selecao className="w-14 px-1 py-0.5" value={l.importancia} aria-label={`Importância de ${l.nome}`} onChange={(e) => void mudarAssunto(db, l.id, { importancia: Number(e.target.value) })}>
+        <Selecao
+          className="w-14 px-1 py-0.5"
+          value={l.importancia ?? ''}
+          aria-label={`Importância de ${l.nome}`}
+          title={l.temFilhos ? 'Vale para o tópico e todos os subtópicos' : undefined}
+          onChange={(e) => e.target.value && void mudarComSubtopicos(db, l.id, { importancia: Number(e.target.value) })}
+        >
+          {l.importancia === null && <option value="">—</option>}
           {[1, 2, 3, 4, 5].map((p) => <option key={p}>{p}</option>)}
         </Selecao>
       </td>
       <td className="px-1 text-center">
-        <CampoNumero
-          key={`hi${l.horasIdeais}`}
-          className="w-14 px-1 py-0.5 text-center"
-          valor={l.horasIdeais}
-          aria-label={`Horas ideais de ${l.nome}`}
-          aoConfirmar={(n) => void mudarAssunto(db, l.id, { horasIdeais: n !== null && n >= 0 ? n : 0 })}
-        />
+        {l.temFilhos ? (
+          <span className="tabular-nums" title="Soma das horas ideais dos subtópicos">{l.horasIdeais ? fmtH(l.horasIdeais) : '—'}</span>
+        ) : (
+          <CampoNumero
+            key={`hi${l.horasIdeais}`}
+            className="w-14 px-1 py-0.5 text-center"
+            valor={l.horasIdeais}
+            aria-label={`Horas ideais de ${l.nome}`}
+            aoConfirmar={(n) => void mudarAssunto(db, l.id, { horasIdeais: n !== null && n >= 0 ? n : 0 })}
+          />
+        )}
       </td>
       <td className="px-1 text-center tabular-nums" title={l.falta ? `Faltam ${fmtH(l.falta)}` : undefined}>{l.horasFeitas ? fmtH(l.horasFeitas) : '—'}</td>
       <td className="px-1">
@@ -263,7 +311,7 @@ function LinhaAssunto({ l, b, maxPrioridade }: { l: LinhaEdital; b: BlocoEdital;
           className="size-7"
           title="Tirar do edital (continua no Desempenho)"
           aria-label={`Tirar ${l.nome} do edital`}
-          onClick={async () => (await confirmar(`Tirar "${l.nome}" do edital? Ele continua no Desempenho, no Pomodoro e nos flashcards, com as questões e os tempos.`, 'Tirar do edital', true)) && void tirarAssuntoDoEdital(db, l.id)}
+          onClick={async () => (await confirmar(`Tirar "${l.nome}" do edital${l.temFilhos ? `, com os ${l.folhas} subtópico(s)` : ''}? ${l.temFilhos ? 'Eles continuam' : 'Ele continua'} no Desempenho, no Pomodoro e nos flashcards, com as questões e os tempos.`, 'Tirar do edital', true)) && void tirarAssuntoDoEdital(db, l.id)}
         >
           <Trash2 className="size-3.5" />
         </Button>

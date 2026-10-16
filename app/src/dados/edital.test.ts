@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { lerArquivo } from '@/dados/converter'
 import { gerarSemana, carregarCiclo } from '@/dados/ciclo'
 import { BancoCiclo } from '@/dados/db'
-import { adicionarMateriaEdital, carregarEdital, criarAssunto, enviarAoCiclo, importarEdital, mudarAssunto, tirarAssuntoDoEdital, tirarMateriaDoEdital } from '@/dados/edital'
+import { adicionarMateriaEdital, carregarEdital, criarAssunto, enviarAoCiclo, importarEdital, mudarAssunto, mudarComSubtopicos, tirarAssuntoDoEdital, tirarMateriaDoEdital } from '@/dados/edital'
 import { substituirDados } from '@/dados/repositorio'
 
 const AGORA = new Date(2026, 9, 7, 10).getTime() // quarta
@@ -16,13 +16,14 @@ async function novoBanco() {
   return db
 }
 
-const edital = [{ materia: 'DIREITO CIVIL', assuntos: ['Posse', 'Contratos'] }]
+const i = (...nomes: string[]) => nomes.map((nome) => ({ nome, filhos: [] as string[] }))
+const edital = [{ materia: 'DIREITO CIVIL', assuntos: i('Posse', 'Contratos') }]
 
 describe('importarEdital', () => {
   it('cria matéria e assuntos; reimportar não duplica (acento e caixa não importam)', async () => {
     const db = await novoBanco()
     expect(await importarEdital(db, edital, [], AGORA)).toEqual({ materiasNovas: 1, assuntosNovos: 2, assuntosQueJaExistiam: 0 })
-    const r = await importarEdital(db, [{ materia: 'Direito Cívil', assuntos: ['POSSE', 'Obrigações'] }], [], AGORA + 1)
+    const r = await importarEdital(db, [{ materia: 'Direito Cívil', assuntos: i('POSSE', 'Obrigações') }], [], AGORA + 1)
     expect(r).toEqual({ materiasNovas: 0, assuntosNovos: 1, assuntosQueJaExistiam: 1 }) // mesma matéria
     const e = await carregarEdital(db)
     expect(e.materias.map((m) => m.nome)).toEqual(['DIREITO CIVIL'])
@@ -31,7 +32,7 @@ describe('importarEdital', () => {
 
   it('usa o nome que o app já conhece e deixa a matéria disponível nas listas', async () => {
     const db = await novoBanco()
-    await importarEdital(db, [{ materia: 'informatica', assuntos: ['Redes'] }], ['Informática'], AGORA)
+    await importarEdital(db, [{ materia: 'informatica', assuntos: i('Redes') }], ['Informática'], AGORA)
     expect((await carregarEdital(db)).materias[0]?.nome).toBe('Informática')
     await importarEdital(db, [{ materia: 'Matéria Nova', assuntos: [] }], [], AGORA + 1)
     expect((await carregarCiclo(db)).config.custom).toContain('Matéria Nova')
@@ -40,14 +41,14 @@ describe('importarEdital', () => {
 
 describe('o edital só mostra o que veio dele', () => {
   const semEdital = (id: string, materia: string, nome: string) => ({
-    id, materia, nome, ordem: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, noEdital: false, atualizadoEm: 1, excluidoEm: null, sujo: 1 as const,
+    id, materia, nome, ordem: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, noEdital: false, paiId: null, atualizadoEm: 1, excluidoEm: null, sujo: 1 as const,
   })
 
   it('importar liga o assunto que já existia (sem duplicar) e os de fora continuam de fora', async () => {
     const db = await novoBanco()
     await db.assuntos.put(semEdital('a1', 'Informática', 'Redes'))
     await db.assuntos.put(semEdital('a2', 'Informática', 'Segurança'))
-    const r = await importarEdital(db, [{ materia: 'informatica', assuntos: ['REDES', 'Hardware'] }], ['Informática'], AGORA)
+    const r = await importarEdital(db, [{ materia: 'informatica', assuntos: i('REDES', 'Hardware') }], ['Informática'], AGORA)
     expect(r).toMatchObject({ assuntosNovos: 1, assuntosQueJaExistiam: 1 })
     const todos = (await carregarEdital(db)).assuntos
     expect(todos).toHaveLength(3)
@@ -72,7 +73,7 @@ describe('o edital só mostra o que veio dele', () => {
 
   it('tirar do edital não apaga nada: o assunto, as questões e os tempos seguem no app', async () => {
     const db = await novoBanco()
-    await importarEdital(db, [{ materia: 'Penal', assuntos: ['Penas', 'Crimes'] }], [], AGORA)
+    await importarEdital(db, [{ materia: 'Penal', assuntos: i('Penas', 'Crimes') }], [], AGORA)
     const e = await carregarEdital(db)
     const penas = e.assuntos.find((a) => a.nome === 'Penas')
     await db.questoes.put({ id: 'q1', data: '2026-10-07', materia: 'Penal', assuntoId: penas?.id ?? null, feitas: 5, acertos: 3, atualizadoEm: 1, excluidoEm: null, sujo: 1 })
@@ -126,5 +127,57 @@ describe('criarAssunto', () => {
     expect(await criarAssunto(db, 'Informática', 'redes', AGORA + 1)).toBe(id)
     expect(await criarAssunto(db, 'Informática', '   ', AGORA)).toBeNull()
     expect((await carregarEdital(db)).assuntos).toHaveLength(1)
+  })
+})
+
+describe('hierarquia no banco', () => {
+  const redes = [{ materia: 'Informática', assuntos: [{ nome: 'Redes', filhos: ['NAT', 'VLAN'] }, { nome: 'Segurança', filhos: [] }] }]
+
+  it('importa tópico com subtópicos, ligando cada filho ao pai', async () => {
+    const db = await novoBanco()
+    expect(await importarEdital(db, redes, [], AGORA)).toMatchObject({ assuntosNovos: 4 })
+    const { assuntos } = await carregarEdital(db)
+    const pai = assuntos.find((a) => a.nome === 'Redes')
+    expect(pai?.paiId).toBeNull()
+    expect(assuntos.filter((a) => a.paiId === pai?.id).map((a) => a.nome).sort()).toEqual(['NAT', 'VLAN'])
+  })
+
+  it('reimportar com hierarquia reorganiza os assuntos que já existiam (soltos), sem duplicar nem perder as questões', async () => {
+    const db = await novoBanco()
+    await importarEdital(db, [{ materia: 'Informática', assuntos: i('Redes', 'NAT', 'VLAN', 'Segurança') }], [], AGORA)
+    const nat = (await carregarEdital(db)).assuntos.find((a) => a.nome === 'NAT')
+    await db.questoes.put({ id: 'q1', data: '2026-10-07', materia: 'Informática', assuntoId: nat?.id ?? null, feitas: 5, acertos: 4, atualizadoEm: 1, excluidoEm: null, sujo: 1 })
+
+    const r = await importarEdital(db, redes, [], AGORA + 1)
+    expect(r).toMatchObject({ assuntosNovos: 0, assuntosQueJaExistiam: 4 })
+    const { assuntos, questoes } = await carregarEdital(db)
+    expect(assuntos).toHaveLength(4)
+    const pai = assuntos.find((a) => a.nome === 'Redes')
+    expect(assuntos.find((a) => a.nome === 'NAT')?.paiId).toBe(pai?.id)
+    expect(assuntos.find((a) => a.nome === 'NAT')?.id).toBe(nat?.id) // mesmo assunto: as questões seguem ligadas
+    expect(questoes[0]?.assuntoId).toBe(nat?.id)
+  })
+
+  it('marcar o tópico como estudado marca os subtópicos; tirar do edital leva os subtópicos junto', async () => {
+    const db = await novoBanco()
+    await importarEdital(db, redes, [], AGORA)
+    const pai = (await carregarEdital(db)).assuntos.find((a) => a.nome === 'Redes')
+    await mudarComSubtopicos(db, pai?.id ?? '', { estudado: true }, AGORA)
+    let { assuntos } = await carregarEdital(db)
+    expect(assuntos.filter((a) => ['Redes', 'NAT', 'VLAN'].includes(a.nome)).every((a) => a.estudado)).toBe(true)
+    expect(assuntos.find((a) => a.nome === 'Segurança')?.estudado).toBe(false)
+
+    await tirarAssuntoDoEdital(db, pai?.id ?? '', AGORA)
+    ;({ assuntos } = await carregarEdital(db))
+    expect(assuntos.filter((a) => ['Redes', 'NAT', 'VLAN'].includes(a.nome)).every((a) => !a.noEdital && a.paiId === null)).toBe(true)
+    expect(assuntos.find((a) => a.nome === 'Segurança')?.noEdital).toBe(true)
+  })
+
+  it('subtópico igual ao nome do tópico é ignorado (nunca vira pai de si mesmo)', async () => {
+    const db = await novoBanco()
+    await importarEdital(db, [{ materia: 'Informática', assuntos: [{ nome: 'Redes', filhos: ['redes', 'NAT'] }] }], [], AGORA)
+    const { assuntos } = await carregarEdital(db)
+    expect(assuntos.map((a) => a.nome).sort()).toEqual(['NAT', 'Redes'])
+    expect(assuntos.find((a) => a.nome === 'Redes')?.paiId).toBeNull()
   })
 })

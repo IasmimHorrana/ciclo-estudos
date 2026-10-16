@@ -82,6 +82,8 @@ const Assunto = z.object({
   noCiclo: z.boolean().catch(false),
   /** Veio de um edital importado (ou foi criado na aba Edital): só estes aparecem lá. */
   noEdital: z.boolean().catch(false),
+  /** Tópico a que este assunto pertence (subtópico), ou `null` (tópico ou assunto solto). */
+  paiId: z.string().nullable().catch(null),
 })
 /** Peso e ordem de cada matéria no edital verticalizado. */
 const MateriaEdital = z.object({ id: z.coerce.string(), nome: txt, peso: z.coerce.number().catch(3), ordem: num })

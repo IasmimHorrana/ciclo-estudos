@@ -1,8 +1,35 @@
 // Edital verticalizado: leitura do texto colado, prioridade dos assuntos e sugestão de passos no ciclo. Puro.
 
+/** Um tópico do edital e os subtópicos dele (se houver). */
+export interface ItemLido {
+  nome: string
+  filhos: string[]
+}
+
 export interface MateriaLida {
   materia: string
-  assuntos: string[]
+  assuntos: ItemLido[]
+}
+
+/** Uma linha da lista que se confere na pré-visualização: tópico (0) ou subtópico (1). */
+export interface LinhaLida {
+  nome: string
+  nivel: 0 | 1
+}
+
+/** Tópicos com subtópicos → lista plana com o nível de cada linha. */
+export const achatarItens = (itens: readonly ItemLido[]): LinhaLida[] =>
+  itens.flatMap((i) => [{ nome: i.nome, nivel: 0 as const }, ...i.filhos.map((f) => ({ nome: f, nivel: 1 as const }))])
+
+/** Lista plana → tópicos com subtópicos. Um subtópico sem tópico acima vira tópico. */
+export function agruparLinhas(linhas: readonly LinhaLida[]): ItemLido[] {
+  const itens: ItemLido[] = []
+  for (const l of linhas) {
+    const ultimo = itens[itens.length - 1]
+    if (l.nivel === 1 && ultimo) ultimo.filhos.push(l.nome)
+    else itens.push({ nome: l.nome, filhos: [] })
+  }
+  return itens
 }
 
 /** Sem acento, minúsculo e com espaços únicos: serve para comparar nomes ao reimportar. */
@@ -37,20 +64,29 @@ function dividir(item: string): string[] {
 }
 
 /**
- * Lê o texto de um edital e separa matérias e assuntos.
+ * Lê o texto de um edital e separa matérias, tópicos e subtópicos.
  * Matéria: "Disciplina: X", linha terminando em ":" ou linha toda em maiúsculas (sem marcador).
- * Assunto: item numerado (1., 1.1, a)), com marcador (-, •) ou frase solta; ";" separa vários numa linha.
+ * Tópico: item numerado (1., a)), com marcador (-, •) ou frase solta; ";" separa vários numa linha.
+ * Subtópico: (1) numeração com ponto depois de um item numerado ("1." seguido de "1.1", "1.2");
+ * (2) item com ";" cuja primeira parte tem ":", como "Redes: conceitos; arquiteturas; NAT" (a primeira parte é o tópico, as outras são os subtópicos).
  * Linha sem marcador que começa em minúscula continua o assunto anterior.
  */
 export function lerEdital(texto: string): MateriaLida[] {
   const materias: MateriaLida[] = []
   let atual: MateriaLida | null = null
   let ultimo = '' // assunto em montagem (pode receber continuação)
+  let ultimoEhFilho = false
+  let topoNumerado = false // o último tópico veio de um item numerado ("1.", "2.")
 
   const fechar = () => {
     if (!atual || !ultimo) return
-    for (const a of dividir(ultimo)) atual.assuntos.push(a)
+    const partes = dividir(ultimo)
+    const donoDosFilhos = atual.assuntos[atual.assuntos.length - 1]
+    if (ultimoEhFilho && donoDosFilhos) donoDosFilhos.filhos.push(...partes)
+    else if (ultimo.includes(';') && partes.length >= 2 && (partes[0] as string).includes(':')) atual.assuntos.push({ nome: partes[0] as string, filhos: partes.slice(1) })
+    else for (const p of partes) atual.assuntos.push({ nome: p, filhos: [] })
     ultimo = ''
+    ultimoEhFilho = false
   }
   const abrirMateria = (nome: string) => {
     fechar()
@@ -60,6 +96,7 @@ export function lerEdital(texto: string): MateriaLida[] {
       atual = { materia: n, assuntos: [] }
       materias.push(atual)
     }
+    topoNumerado = false
   }
 
   for (const bruta of texto.split(/\r?\n/)) {
@@ -86,19 +123,34 @@ export function lerEdital(texto: string): MateriaLida[] {
     }
     fechar()
     if (!atual) abrirMateria('Geral')
+    const pontilhado = /^\s*\d+(?:\.\d+)+[.)]?\s+/.test(linha) // 1.1, 2.3.1…
+    const numerado = /^\s*\d+[.)]\s+/.test(linha) // 1., 2)
+    ultimoEhFilho = comMarcador && pontilhado && topoNumerado
+    if (!ultimoEhFilho) topoNumerado = comMarcador && numerado // só um item "1." vira pai de "1.1", "1.2"
     ultimo = comMarcador ? linha.replace(MARCADOR, '') : linha
   }
   fechar()
 
-  // sem repetições dentro de cada matéria
+  // sem repetições dentro de cada matéria (uma repetição de tópico junta os subtópicos dela ao primeiro)
   return materias.map((mat) => {
     const vistos = new Set<string>()
-    const assuntos = mat.assuntos.filter((a) => {
-      const k = normalizar(a)
-      if (!k || vistos.has(k)) return false
-      vistos.add(k)
-      return true
-    })
+    const novos = (nomes: string[]) =>
+      nomes.filter((n) => {
+        const k = normalizar(n)
+        if (!k || vistos.has(k)) return false
+        vistos.add(k)
+        return true
+      })
+    const assuntos: ItemLido[] = []
+    for (const item of mat.assuntos) {
+      const ja = assuntos.find((i) => normalizar(i.nome) === normalizar(item.nome))
+      if (ja) {
+        ja.filhos.push(...novos(item.filhos))
+        continue
+      }
+      const nome = novos([item.nome])[0]
+      if (nome) assuntos.push({ nome, filhos: novos(item.filhos) })
+    }
     return { materia: mat.materia, assuntos }
   })
 }
@@ -186,20 +238,35 @@ export type OrdemEdital = 'edital' | 'prioridade' | 'falta'
 
 export interface EntradaMontagem {
   materias: readonly { id: string; nome: string; peso: number; ordem: number }[]
-  assuntos: readonly { id: string; materia: string; nome: string; ordem: number; importancia: number; horasIdeais: number; estudado: boolean; noCiclo: boolean; noEdital: boolean }[]
+  assuntos: readonly {
+    id: string; materia: string; nome: string; ordem: number; importancia: number; horasIdeais: number; estudado: boolean; noCiclo: boolean; noEdital: boolean
+    /** Tópico a que pertence (subtópico), ou `null`. */
+    paiId: string | null
+  }[]
   questoes: readonly { assuntoId: string | null; feitas: number; acertos: number }[]
   sessoes: readonly { assuntoId: string | null; minutos: number }[]
   ordem: OrdemEdital
   ocultarEstudados: boolean
   /** Só esta matéria (id), ou todas. */
   filtroMateria: string | null
+  /** Tópicos fechados na tela (ids): os subtópicos deles não entram na lista de linhas. */
+  recolhidos?: ReadonlySet<string>
 }
 
 export interface LinhaEdital {
   id: string
   nome: string
-  importancia: number
+  /** 0 = tópico ou assunto solto, 1 = subtópico… */
+  nivel: number
+  /** É um tópico com subtópicos: os números abaixo são a soma deles. */
+  temFilhos: boolean
+  /** Assuntos de verdade (sem subtópicos) dentro desta linha e quantos já estão estudados. */
+  folhas: number
+  folhasEstudadas: number
+  /** Importância (1 a 5); num tópico, o valor comum dos subtópicos, ou `null` se forem diferentes. */
+  importancia: number | null
   horasIdeais: number
+  /** Num tópico, todos os subtópicos estudados. */
   estudado: boolean
   noCiclo: boolean
   certas: number
@@ -216,7 +283,7 @@ export interface LinhaEdital {
 export interface BlocoEdital {
   materia: { id: string; nome: string; peso: number }
   linhas: LinhaEdital[]
-  /** Resumo de todos os assuntos da matéria (inclusive os ocultos pelo filtro). */
+  /** Resumo dos assuntos de verdade da matéria (sem contar os tópicos), inclusive os ocultos pelo filtro. */
   resumo: ResumoEdital
   /** Horas que faltam nos assuntos ainda não estudados. */
   faltam: number
@@ -237,6 +304,13 @@ export function materiasDoEdital<M extends { nome: string }>(materias: readonly 
   })
 }
 
+interface No {
+  linha: LinhaEdital
+  filhos: No[]
+  /** Linhas dos assuntos de verdade (as folhas) desta árvore. */
+  folhas: LinhaEdital[]
+}
+
 export function montarEdital(e: EntradaMontagem) {
   const assuntosDoEdital = e.assuntos.filter((a) => a.noEdital)
   const porAssunto = new Map<string, { feitas: number; acertos: number; minutos: number }>()
@@ -248,36 +322,82 @@ export function montarEdital(e: EntradaMontagem) {
   for (const q of e.questoes) if (q.assuntoId) { const x = ac(q.assuntoId); x.feitas += q.feitas; x.acertos += q.acertos }
   for (const s of e.sessoes) if (s.assuntoId) ac(s.assuntoId).minutos += s.minutos
 
+  const chaveDaOrdem = (l: LinhaEdital) => (e.ordem === 'prioridade' ? -l.prioridade : e.ordem === 'falta' ? -l.falta : 0)
+
   let blocos: BlocoEdital[] = materiasDoEdital(e.materias, e.assuntos)
     .filter((m) => !e.filtroMateria || m.id === e.filtroMateria)
     .map((m) => {
-      const todas: LinhaEdital[] = assuntosDoEdital
-        .filter((a) => normalizar(a.materia) === normalizar(m.nome))
-        .map((a) => {
-          const x = porAssunto.get(a.id) ?? { feitas: 0, acertos: 0, minutos: 0 }
-          const horasFeitas = arred(x.minutos / 60)
-          return {
-            id: a.id, nome: a.nome, importancia: a.importancia, horasIdeais: a.horasIdeais, estudado: a.estudado, noCiclo: a.noCiclo,
-            certas: x.acertos, erradas: Math.max(0, x.feitas - x.acertos), total: x.feitas,
-            pctAcerto: x.feitas ? Math.round((x.acertos / x.feitas) * 100) : null,
-            horasFeitas,
-            falta: a.horasIdeais > 0 ? arred(Math.max(0, a.horasIdeais - horasFeitas)) : 0,
-            prioridade: prioridade({ pesoMateria: m.peso, importancia: a.importancia, horasIdeais: a.horasIdeais, horasFeitas, estudado: a.estudado, questoes: x.feitas, acertos: x.acertos }),
-            ordem: a.ordem,
-          }
-        })
-        .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'))
-        .map(({ ordem: _o, ...l }) => l)
-      const linhas = todas
-        .filter((l) => !(e.ocultarEstudados && l.estudado))
-        .sort(e.ordem === 'prioridade' ? (a, b) => b.prioridade - a.prioridade : e.ordem === 'falta' ? (a, b) => b.falta - a.falta : () => 0)
+      const dela = assuntosDoEdital.filter((a) => normalizar(a.materia) === normalizar(m.nome))
+      const ids = new Set(dela.map((a) => a.id))
+      const filhosDe = new Map<string, typeof dela>()
+      const raizes: typeof dela = []
+      for (const a of dela) {
+        if (a.paiId && ids.has(a.paiId)) filhosDe.set(a.paiId, [...(filhosDe.get(a.paiId) ?? []), a])
+        else raizes.push(a)
+      }
+      const emOrdem = <T extends { ordem: number; nome: string }>(l: readonly T[]) => [...l].sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'))
+
+      const propria = (a: (typeof dela)[number], nivel: number): LinhaEdital => {
+        const x = porAssunto.get(a.id) ?? { feitas: 0, acertos: 0, minutos: 0 }
+        const horasFeitas = arred(x.minutos / 60)
+        return {
+          id: a.id, nome: a.nome, nivel, temFilhos: false, folhas: 1, folhasEstudadas: a.estudado ? 1 : 0,
+          importancia: a.importancia, horasIdeais: a.horasIdeais, estudado: a.estudado, noCiclo: a.noCiclo,
+          certas: x.acertos, erradas: Math.max(0, x.feitas - x.acertos), total: x.feitas,
+          pctAcerto: x.feitas ? Math.round((x.acertos / x.feitas) * 100) : null,
+          horasFeitas,
+          falta: a.horasIdeais > 0 ? arred(Math.max(0, a.horasIdeais - horasFeitas)) : 0,
+          prioridade: prioridade({ pesoMateria: m.peso, importancia: a.importancia, horasIdeais: a.horasIdeais, horasFeitas, estudado: a.estudado, questoes: x.feitas, acertos: x.acertos }),
+        }
+      }
+
+      const construir = (a: (typeof dela)[number], nivel: number): No => {
+        const eu = propria(a, nivel)
+        const filhos = emOrdem(filhosDe.get(a.id) ?? []).map((f) => construir(f, nivel + 1))
+        if (!filhos.length) return { linha: eu, filhos: [], folhas: [eu] }
+        filhos.sort((x, y) => chaveDaOrdem(x.linha) - chaveDaOrdem(y.linha))
+        const folhas = filhos.flatMap((f) => f.folhas)
+        const soma = (f: (l: LinhaEdital) => number) => filhos.reduce((t, n) => t + f(n.linha), 0)
+        const certas = eu.certas + soma((l) => l.certas)
+        const erradas = eu.erradas + soma((l) => l.erradas)
+        const total = certas + erradas
+        const pendentes = folhas.filter((f) => !f.estudado)
+        const importancias = new Set(folhas.map((f) => f.importancia))
+        const linha: LinhaEdital = {
+          ...eu,
+          temFilhos: true,
+          folhas: folhas.length,
+          folhasEstudadas: folhas.filter((f) => f.estudado).length,
+          importancia: importancias.size === 1 ? (folhas[0]?.importancia ?? null) : null,
+          horasIdeais: arred(soma((l) => l.horasIdeais)),
+          estudado: pendentes.length === 0,
+          certas, erradas, total,
+          pctAcerto: total ? Math.round((certas / total) * 100) : null,
+          horasFeitas: arred(eu.horasFeitas + soma((l) => l.horasFeitas)),
+          falta: arred(pendentes.reduce((t, f) => t + f.falta, 0)),
+          prioridade: pendentes.reduce((mx, f) => Math.max(mx, f.prioridade), 0),
+        }
+        return { linha, filhos, folhas }
+      }
+
+      const arvore = emOrdem(raizes).map((r) => construir(r, 0))
+      arvore.sort((x, y) => chaveDaOrdem(x.linha) - chaveDaOrdem(y.linha))
+      const emitir = (n: No): LinhaEdital[] => {
+        if (e.ocultarEstudados && n.linha.estudado) return []
+        return [n.linha, ...(e.recolhidos?.has(n.linha.id) ? [] : n.filhos.flatMap(emitir))]
+      }
+      const folhas = arvore.flatMap((n) => n.folhas)
+      const todosOsIds = dela.map((a) => porAssunto.get(a.id) ?? { feitas: 0, acertos: 0, minutos: 0 })
       return {
         materia: { id: m.id, nome: m.nome, peso: m.peso },
-        linhas,
-        resumo: resumoEdital(todas),
-        totais: { certas: todas.reduce((t, l) => t + l.certas, 0), erradas: todas.reduce((t, l) => t + l.erradas, 0) },
-        faltam: arred(todas.filter((l) => !l.estudado).reduce((s, l) => s + l.falta, 0)),
-        maiorPrioridade: todas.filter((l) => !l.estudado).reduce((mx, l) => Math.max(mx, l.prioridade), 0),
+        linhas: arvore.flatMap(emitir),
+        resumo: resumoEdital(folhas),
+        totais: {
+          certas: todosOsIds.reduce((t, x) => t + x.acertos, 0),
+          erradas: todosOsIds.reduce((t, x) => t + Math.max(0, x.feitas - x.acertos), 0),
+        },
+        faltam: arred(folhas.filter((l) => !l.estudado).reduce((s, l) => s + l.falta, 0)),
+        maiorPrioridade: folhas.filter((l) => !l.estudado).reduce((mx, l) => Math.max(mx, l.prioridade), 0),
       }
     })
   if (e.ordem === 'prioridade') blocos = [...blocos].sort((a, b) => b.maiorPrioridade - a.maiorPrioridade)
