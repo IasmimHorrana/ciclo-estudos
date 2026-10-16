@@ -15,6 +15,19 @@ import { indicesDeCartoes } from '@/dominio/modelo'
 const eZstd = (b: Uint8Array) => b[0] === 0x28 && b[1] === 0xb5 && b[2] === 0x2f && b[3] === 0xfd
 const descomprimir = (b: Uint8Array) => (eZstd(b) ? zstd(b) : b)
 
+/**
+ * O Anki novo cria colunas com uma ordenação própria ("unicase") que o SQLite do navegador não conhece, e aí
+ * consultas em `fields`, `templates` etc. falham. Trocamos pela "nocase" no esquema e reabrimos; só lemos, então não importa.
+ */
+function trocarOrdenacao(bd: Database, sql: SqlJsStatic): Database {
+  bd.run('PRAGMA writable_schema=1')
+  bd.run("UPDATE sqlite_master SET sql=replace(sql,'unicase','nocase') WHERE sql LIKE '%unicase%'")
+  bd.run('PRAGMA writable_schema=0')
+  const novo = new sql.Database(bd.export())
+  bd.close()
+  return novo
+}
+
 /** Lê todas as linhas de uma consulta como objetos. */
 function consultar(bd: Database, sql: string): Record<string, unknown>[] {
   const r = bd.exec(sql)[0]
@@ -93,9 +106,10 @@ export function lerApkg(bytes: Uint8Array, sql: SqlJsStatic): PacoteAnki {
   }
   const nomeBanco = ['collection.anki21b', 'collection.anki21', 'collection.anki2'].find((n) => arquivos[n])
   if (!nomeBanco) throw new Error('Não encontrei o banco de dados do Anki dentro do pacote.')
-  const bd = new sql.Database(descomprimir(arquivos[nomeBanco] as Uint8Array))
+  let bd = new sql.Database(descomprimir(arquivos[nomeBanco] as Uint8Array))
   try {
     const novo = temTabela(bd, 'notetypes')
+    if (novo) bd = trocarOrdenacao(bd, sql)
     const { tipos, nomes } = novo ? lerTiposEBaralhosNovos(bd) : lerTiposEBaralhosAntigos(bd)
 
     // baralho de cada nota = baralho do primeiro cartão dela
