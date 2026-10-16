@@ -75,13 +75,16 @@ const Assunto = z.object({
   nome: txt,
   // edital verticalizado (backups antigos não trazem: ganham o padrão)
   ordem: num,
-  importancia: z.coerce.number().catch(3),
+  /** Importância do assunto para ela (1 a 5); 0 = ainda não definida. */
+  importancia: z.coerce.number().catch(0),
   horasIdeais: num,
   estudado: z.boolean().catch(false),
   /** Escolhido para entrar no próximo ciclo gerado (vira anotação do passo). */
   noCiclo: z.boolean().catch(false),
   /** Veio de um edital importado (ou foi criado na aba Edital): só estes aparecem lá. */
   noEdital: z.boolean().catch(false),
+  /** Tópico a que este assunto pertence (subtópico), ou `null` (tópico ou assunto solto). */
+  paiId: z.string().nullable().catch(null),
 })
 /** Peso e ordem de cada matéria no edital verticalizado. */
 const MateriaEdital = z.object({ id: z.coerce.string(), nome: txt, peso: z.coerce.number().catch(3), ordem: num })

@@ -1,16 +1,18 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronDown, ChevronRight, Plus, Trash2, X } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronDown, ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { CampoNumero } from '@/componentes/CampoNumero'
 import { avisar, confirmar, pedirTexto } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
-import { Selecao } from '@/componentes/ui/entrada'
+import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
 import {
-  adicionarMateriaEdital, carregarEdital, enviarAoCiclo, incluirAssuntos, mudarAssunto, mudarMateriaEdital, tirarAssuntoDoEdital, tirarMateriaDoEdital,
+  adicionarMateriaEdital, carregarEdital, definirHorasDoTopico, enviarAoCiclo, incluirAssuntos, mudarAssunto, mudarComSubtopicos, mudarMateriaEdital, tirarAssuntoDoEdital, tirarMateriaDoEdital,
 } from '@/dados/edital'
+import { renomearAssunto } from '@/dados/desempenho'
 import { useCiclo } from '@/dados/useCiclo'
 import { corDe, fmtH, todasMaterias } from '@/dominio/ciclo'
-import { materiasDoEdital, montarEdital, type BlocoEdital, type LinhaEdital, type OrdemEdital } from '@/dominio/edital'
+import { materiasDoEdital, montarEdital, partirNome, type BlocoEdital, type LinhaEdital, type OrdemEdital } from '@/dominio/edital'
 import { abrirDialogo } from '@/estado/dialogo'
 import { useEditalUi } from '@/estado/edital'
 import { useUi } from '@/estado/ui'
@@ -30,7 +32,11 @@ export function Edital() {
 
   const materias = materiasDoEdital(dados.materias, dados.assuntos)
   const filtro = materias.some((m) => m.id === ui.filtroMateria) ? ui.filtroMateria : null
-  const { blocos, total } = montarEdital({ ...dados, ordem: ui.ordem, ocultarEstudados: ui.ocultarEstudados, filtroMateria: filtro })
+  const { blocos, total } = montarEdital({ ...dados, ordem: ui.ordem, ocultarEstudados: ui.ocultarEstudados, filtroMateria: filtro, recolhidos: new Set(ui.topicosRecolhidos) })
+  // tópicos = assuntos do edital que têm subtópicos
+  const idsDoEdital = new Set(dados.assuntos.filter((a) => a.noEdital).map((a) => a.id))
+  const topicos = [...new Set(dados.assuntos.filter((a) => a.noEdital && a.paiId && idsDoEdital.has(a.paiId)).map((a) => a.paiId as string))]
+  const tudoRecolhido = topicos.length > 0 && topicos.every((id) => ui.topicosRecolhidos.includes(id))
   const maxPrioridade = Math.max(1, ...blocos.flatMap((b) => b.linhas.filter((l) => !l.estudado).map((l) => l.prioridade)))
   const conhecidas = [...new Set([...todasMaterias(ciclo.config), ...dados.materias.map((m) => m.nome), ...dados.assuntos.map((a) => a.materia)])]
 
@@ -62,6 +68,11 @@ export function Edital() {
             <option value="prioridade">Maior prioridade</option>
             <option value="falta">Mais horas faltando</option>
           </Selecao>
+          {topicos.length > 0 && (
+            <Button variant="outline" size="sm" title="Fecha ou abre todos os tópicos (os subtópicos ficam escondidos quando fechados)" onClick={() => ui.definirTopicosRecolhidos(tudoRecolhido ? [] : topicos)}>
+              {tudoRecolhido ? 'Abrir tópicos' : 'Recolher tópicos'}
+            </Button>
+          )}
           <label className="flex cursor-pointer items-center gap-1.5 text-sm">
             <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={ui.ocultarEstudados} onChange={(e) => ui.definir({ ocultarEstudados: e.target.checked })} />
             Ocultar estudados
@@ -80,6 +91,14 @@ export function Edital() {
         </div>
       ) : (
         <>
+          <p className="m-0 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+            Prioridade:
+            <span className="flex items-center gap-1"><i className="inline-block h-2 w-5 rounded-full bg-ok" /> baixa</span>
+            <span className="flex items-center gap-1"><i className="inline-block h-2 w-5 rounded-full bg-aviso" /> média</span>
+            <span className="flex items-center gap-1"><i className="inline-block h-2 w-5 rounded-full bg-erro" /> alta</span>
+            <span className="flex items-center gap-1"><i className="inline-block h-2 w-5 rounded-full bg-muted" /> cinza: defina a importância ou as horas ideais</span>
+            <span>· a barra é relativa: a mais cheia é o assunto mais urgente da lista</span>
+          </p>
           <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-card shadow-sm">
             <table className="w-full min-w-[56rem] border-collapse text-sm">
               <thead className="sticky top-0 z-10 bg-card text-[0.68rem] text-muted-foreground uppercase shadow-[0_1px_0_var(--border)]">
@@ -150,7 +169,7 @@ function BlocoMateria({ b, maxPrioridade, recolhida }: { b: BlocoEdital; maxPrio
   }
 
   async function paraOCiclo() {
-    const top = b.linhas.filter((l) => !l.estudado && !l.noCiclo).sort((x, y) => y.prioridade - x.prioridade).slice(0, 3)
+    const top = b.linhas.filter((l) => l.nivel === 0 && !l.estudado && !l.noCiclo).sort((x, y) => y.prioridade - x.prioridade).slice(0, 3)
     await enviarAoCiclo(db, { materia: b.materia.nome, pesoMateria: b.materia.peso, horasQueFaltam: b.faltam, assuntoIds: top.map((l) => l.id) })
   }
 
@@ -198,23 +217,120 @@ function BlocoMateria({ b, maxPrioridade, recolhida }: { b: BlocoEdital; maxPrio
   )
 }
 
+/** Nome da linha: num tópico, o título em negrito e a descrição em cinza; duplo clique (ou o lápis) para renomear. */
+function NomeDaLinha({ l }: { l: LinhaEdital }) {
+  const [editando, setEditando] = useState(false)
+  const [texto, setTexto] = useState(l.nome)
+  const { titulo, resto } = l.temFilhos ? partirNome(l.nome) : { titulo: l.nome, resto: '' }
+
+  async function salvar() {
+    setEditando(false)
+    if (texto.trim() === l.nome) return
+    const r = await renomearAssunto(db, l.id, texto)
+    if (r === 'duplicado') void avisar('Renomear', 'Já existe outro assunto com esse nome nesta matéria.')
+    if (r === 'vazio') void avisar('Renomear', 'O nome não pode ficar vazio.')
+  }
+
+  if (editando) {
+    return (
+      <Entrada
+        autoFocus
+        className="py-1 text-sm font-normal"
+        value={texto}
+        aria-label={`Novo nome de ${l.nome}`}
+        onChange={(e) => setTexto(e.target.value)}
+        onBlur={() => void salvar()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') void salvar()
+          if (e.key === 'Escape') {
+            setTexto(l.nome)
+            setEditando(false)
+          }
+        }}
+      />
+    )
+  }
+  return (
+    <span className="flex min-w-0 items-center gap-1">
+      <span
+        className="cursor-text"
+        title={`${l.nome}\n(clique duas vezes para renomear)`}
+        onDoubleClick={() => {
+          setTexto(l.nome)
+          setEditando(true)
+        }}
+      >
+        {titulo}
+        {resto && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{resto}</span>}
+      </span>
+      <button
+        className="cursor-pointer text-muted-foreground opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+        aria-label={`Renomear ${l.nome}`}
+        title="Renomear"
+        onClick={() => {
+          setTexto(l.nome)
+          setEditando(true)
+        }}
+      >
+        <Pencil className="size-3.5" />
+      </button>
+    </span>
+  )
+}
+
 function LinhaAssunto({ l, b, maxPrioridade }: { l: LinhaEdital; b: BlocoEdital; maxPrioridade: number }) {
+  const recolhido = useEditalUi((s) => s.topicosRecolhidos.includes(l.id))
+  const alternarTopico = useEditalUi((s) => s.alternarTopico)
   const pct = l.estudado ? 0 : Math.round((l.prioridade / maxPrioridade) * 100)
   const nivel = pct >= 66 ? 'bg-erro' : pct >= 33 ? 'bg-aviso' : 'bg-ok'
   const num = (n: number, cor: string) => <span className={n ? cor : 'text-muted-foreground/50'}>{n}</span>
+  const Seta = recolhido ? ChevronRight : ChevronDown
 
   return (
-    <tr className={cn('border-t hover:bg-accent/40', l.estudado && 'text-muted-foreground')}>
+    <tr className={cn('group border-t hover:bg-accent/40', l.temFilhos && 'bg-muted/30 font-semibold', l.estudado && 'text-muted-foreground')}>
       <td className="px-2 text-center">
-        <input type="checkbox" className="size-4 cursor-pointer accent-[var(--primary)]" checked={l.estudado} aria-label={`Estudado: ${l.nome}`} onChange={(e) => void mudarAssunto(db, l.id, { estudado: e.target.checked })} />
+        <input
+          type="checkbox"
+          className="size-4 cursor-pointer accent-[var(--primary)]"
+          checked={l.estudado}
+          aria-label={`Estudado: ${l.nome}`}
+          title={l.temFilhos ? 'Marca ou desmarca o tópico e todos os subtópicos' : undefined}
+          onChange={(e) => void mudarComSubtopicos(db, l.id, { estudado: e.target.checked })}
+        />
       </td>
-      <td className={cn('px-2 py-1.5', l.estudado && 'line-through')}>{l.nome}</td>
+      <td className={cn('py-1.5 pr-2', l.estudado && 'line-through')} style={{ paddingLeft: `${0.5 + l.nivel * 1.5}rem` }}>
+        <span className="flex items-center gap-1">
+          {l.temFilhos ? (
+            <button
+              className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-accent"
+              onClick={() => alternarTopico(l.id)}
+              aria-expanded={!recolhido}
+              aria-label={recolhido ? `Abrir ${l.nome}` : `Recolher ${l.nome}`}
+              title={recolhido ? 'Mostrar os subtópicos' : 'Esconder os subtópicos'}
+            >
+              <Seta className="size-4" />
+            </button>
+          ) : (
+            l.nivel > 0 && <span className="inline-block size-5 shrink-0" />
+          )}
+          <NomeDaLinha l={l} />
+          {l.temFilhos && <span className="ml-1 shrink-0 text-xs font-normal text-muted-foreground no-underline">{l.folhasEstudadas}/{l.folhas}</span>}
+        </span>
+      </td>
       <td className="px-1 text-center font-semibold tabular-nums">{num(l.certas, 'text-ok')}</td>
       <td className="px-1 text-center font-semibold tabular-nums">{num(l.erradas, 'text-erro')}</td>
       <td className="px-1 text-center font-semibold tabular-nums">{l.total}</td>
       <td className="px-1 text-center tabular-nums">{l.pctAcerto === null ? '—' : `${l.pctAcerto}%`}</td>
       <td className="px-1 text-center">
-        <Selecao className="w-14 px-1 py-0.5" value={l.importancia} aria-label={`Importância de ${l.nome}`} onChange={(e) => void mudarAssunto(db, l.id, { importancia: Number(e.target.value) })}>
+        <Selecao
+          className="w-14 px-1 py-0.5"
+          value={l.importancia ?? ''}
+          aria-label={`Importância de ${l.nome}`}
+          title={l.temFilhos ? 'Vale para o tópico e todos os subtópicos' : undefined}
+          onChange={(e) => e.target.value !== '' && void mudarComSubtopicos(db, l.id, { importancia: Number(e.target.value) })}
+        >
+          {l.importancia === null && <option value="">vários</option>}
+          <option value={0}>—</option>
           {[1, 2, 3, 4, 5].map((p) => <option key={p}>{p}</option>)}
         </Selecao>
       </td>
@@ -224,13 +340,16 @@ function LinhaAssunto({ l, b, maxPrioridade }: { l: LinhaEdital; b: BlocoEdital;
           className="w-14 px-1 py-0.5 text-center"
           valor={l.horasIdeais}
           aria-label={`Horas ideais de ${l.nome}`}
-          aoConfirmar={(n) => void mudarAssunto(db, l.id, { horasIdeais: n !== null && n >= 0 ? n : 0 })}
+          title={l.temFilhos ? 'Total de horas do tópico: é dividido em partes iguais entre os subtópicos (depois você ajusta um a um)' : undefined}
+          aoConfirmar={(n) => void (l.temFilhos ? definirHorasDoTopico(db, l.id, n !== null && n >= 0 ? n : 0) : mudarAssunto(db, l.id, { horasIdeais: n !== null && n >= 0 ? n : 0 }))}
         />
       </td>
       <td className="px-1 text-center tabular-nums" title={l.falta ? `Faltam ${fmtH(l.falta)}` : undefined}>{l.horasFeitas ? fmtH(l.horasFeitas) : '—'}</td>
       <td className="px-1">
         {l.estudado ? (
           <span className={mudo}>estudado</span>
+        ) : l.semDados ? (
+          <span className="block h-2.5 rounded-full bg-muted" title="Defina a importância ou as horas ideais para a prioridade aparecer" />
         ) : (
           <span className="block h-2.5 overflow-hidden rounded-full bg-muted" title={`Prioridade ${l.prioridade}`}>
             <i className={cn('block h-full rounded-full', nivel)} style={{ width: `${Math.max(4, pct)}%` }} />
@@ -263,7 +382,7 @@ function LinhaAssunto({ l, b, maxPrioridade }: { l: LinhaEdital; b: BlocoEdital;
           className="size-7"
           title="Tirar do edital (continua no Desempenho)"
           aria-label={`Tirar ${l.nome} do edital`}
-          onClick={async () => (await confirmar(`Tirar "${l.nome}" do edital? Ele continua no Desempenho, no Pomodoro e nos flashcards, com as questões e os tempos.`, 'Tirar do edital', true)) && void tirarAssuntoDoEdital(db, l.id)}
+          onClick={async () => (await confirmar(`Tirar "${l.nome}" do edital${l.temFilhos ? `, com os ${l.folhas} subtópico(s)` : ''}? ${l.temFilhos ? 'Eles continuam' : 'Ele continua'} no Desempenho, no Pomodoro e nos flashcards, com as questões e os tempos.`, 'Tirar do edital', true)) && void tirarAssuntoDoEdital(db, l.id)}
         >
           <Trash2 className="size-3.5" />
         </Button>
