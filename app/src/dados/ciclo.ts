@@ -4,7 +4,7 @@ import { novoIdFc } from '@/dados/ids'
 import { hoje } from '@/dominio/datas'
 import { distribuirAssuntos } from '@/dominio/edital'
 import {
-  alterarPasso, alternarPasso, aplicarSnapshot, atribuirCores, configPadrao, construirSemana, limparMarcacoes, normalizarConfig, reagendarPendentes,
+  alterarPasso, alternarPasso, moverPasso, aplicarSnapshot, atribuirCores, configPadrao, construirSemana, limparMarcacoes, normalizarConfig, reagendarPendentes,
   resumoSemana, round2, snapshotConfig, temProgresso, validarGerar, type Passo,
 } from '@/dominio/ciclo'
 
@@ -60,6 +60,7 @@ export async function mudarSemana(db: BancoCiclo, fn: (s: Semana) => Semana, ago
 
 export const marcarPasso = (db: BancoCiclo, id: number, feito: boolean) => mudarSemana(db, (s) => alternarPasso(s, id, feito))
 export const editarPasso = (db: BancoCiclo, id: number, m: Partial<Passo>) => mudarSemana(db, (s) => alterarPasso(s, id, m))
+export const moverPassoNaSemana = (db: BancoCiclo, id: number, dia: string | null, antesDeId: number | null) => mudarSemana(db, (s) => moverPasso(s, id, dia, antesDeId))
 export const definirMeta = (db: BancoCiclo, meta: number | null) => mudarSemana(db, (s) => ({ ...s, meta }))
 
 export async function reagendar(db: BancoCiclo, agora = Date.now()): Promise<number> {
