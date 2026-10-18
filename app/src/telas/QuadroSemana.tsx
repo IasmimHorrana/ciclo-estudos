@@ -1,8 +1,9 @@
+import { Fragment, useState, type DragEvent } from 'react'
 import { Check } from 'lucide-react'
 import { CampoNumero } from '@/componentes/CampoNumero'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
-import { editarPasso, marcarPasso, type Ciclo } from '@/dados/ciclo'
+import { editarPasso, marcarPasso, moverPassoNaSemana, type Ciclo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
 import { resumoDaMateria } from '@/dados/notas'
 import { useCiclo } from '@/dados/useCiclo'
@@ -84,16 +85,30 @@ function abrirEdicao(p: Passo) {
   void abrirDialogo(`${p.id}. ${p.materia}`, (fechar) => <EditarPasso id={p.id} fechar={() => fechar(null)} />)
 }
 
-function CartaoPasso({ p, cores }: { p: Passo; cores: Record<string, number> }) {
+/** Linha verde que mostra onde o cartão arrastado vai cair. */
+const LinhaDeQueda = () => <div className="-my-1 h-1 shrink-0 rounded-full bg-primary" aria-hidden />
+
+interface Arrasto {
+  onDragStart: (e: DragEvent) => void
+  onDragEnd: () => void
+  onDragOver: (e: DragEvent) => void
+  arrastando: boolean
+}
+
+function CartaoPasso({ p, cores, arrasto }: { p: Passo; cores: Record<string, number>; arrasto: Arrasto }) {
   const cor = corDe(cores, p.materia)
   return (
     <div
+      draggable
+      onDragStart={arrasto.onDragStart}
+      onDragEnd={arrasto.onDragEnd}
+      onDragOver={arrasto.onDragOver}
       role="button"
       tabIndex={0}
       onClick={() => abrirEdicao(p)}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), abrirEdicao(p))}
-      title="Clique para editar o passo"
-      className={cn('group relative flex h-28 shrink-0 cursor-pointer flex-col overflow-hidden rounded-lg border-l-4 px-3 py-3 shadow-sm outline-none transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring', p.feito && 'opacity-55')}
+      title="Clique para editar o passo; arraste para mudar o dia ou a ordem"
+      className={cn('group relative flex h-28 shrink-0 cursor-pointer flex-col overflow-hidden rounded-lg border-l-4 px-3 py-3 shadow-sm outline-none transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring', p.feito && 'opacity-55', arrasto.arrastando && 'opacity-30')}
       style={{ background: fundoDe(cor), borderLeftColor: cor }}
     >
       <div className="flex items-start gap-1.5">
@@ -127,6 +142,17 @@ export function QuadroSemana({ s, cores, diasDeEstudo, hojeISO }: { s: SemanaAtu
     const d = addDias(s.seg, i)
     return { chave: d, dia: d, i, itens: s.passos.filter((p) => p.dia === d) }
   })
+  // passo que está sendo arrastado e onde ele cairia ("antes" = id do passo logo abaixo; null = fim da coluna)
+  const [arrastando, setArrastando] = useState<number | null>(null)
+  const [alvo, setAlvo] = useState<{ chave: string; antes: number | null } | null>(null)
+  const parar = () => {
+    setArrastando(null)
+    setAlvo(null)
+  }
+  const soltar = (dia: string | null) => {
+    if (arrastando !== null && alvo) void moverPassoNaSemana(db, arrastando, dia, alvo.antes)
+    parar()
+  }
   const semDia = s.passos.filter((p) => !p.dia || p.dia < s.seg || p.dia > s.dom)
   if (semDia.length) colunas.push({ chave: 'sem', dia: null, i: -1, itens: semDia })
 
@@ -139,7 +165,19 @@ export function QuadroSemana({ s, cores, diasDeEstudo, hojeISO }: { s: SemanaAtu
           const pend = itens.length - fe
           const folga = dia !== null && !diasDeEstudo[i] && !itens.length
           return (
-            <section key={chave} className={cn('flex min-w-0 flex-col', k > 0 && 'border-l', hoje && 'bg-primary/5')}>
+            <section
+              key={chave}
+              className={cn('flex min-w-0 flex-col', k > 0 && 'border-l', hoje && 'bg-primary/5', arrastando !== null && alvo?.chave === chave && 'bg-primary/10')}
+              onDragOver={(e) => {
+                if (arrastando === null) return
+                e.preventDefault()
+                setAlvo({ chave, antes: null }) // área fora dos cartões: vai para o fim do dia
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                soltar(dia)
+              }}
+            >
               <header
                 id={dia ? `dia-${dia}` : undefined}
                 className={cn('sticky top-0 z-10 border-b px-2 py-2 text-center', hoje ? 'bg-primary text-primary-foreground' : 'bg-card')}
@@ -151,9 +189,33 @@ export function QuadroSemana({ s, cores, diasDeEstudo, hojeISO }: { s: SemanaAtu
                 </span>
               </header>
               <div className="flex flex-1 flex-col gap-2 p-2">
-                {itens.map((p) => (
-                  <CartaoPasso key={p.id} p={p} cores={cores} />
+                {itens.map((p, idx) => (
+                  <Fragment key={p.id}>
+                    {arrastando !== null && alvo?.chave === chave && alvo.antes === p.id && p.id !== arrastando && <LinhaDeQueda />}
+                    <CartaoPasso
+                      p={p}
+                      cores={cores}
+                      arrasto={{
+                        arrastando: arrastando === p.id,
+                        onDragStart: (e) => {
+                          e.dataTransfer.effectAllowed = 'move'
+                          e.dataTransfer.setData('text/plain', String(p.id))
+                          setArrastando(p.id)
+                        },
+                        onDragEnd: parar,
+                        onDragOver: (e) => {
+                          if (arrastando === null) return
+                          e.preventDefault()
+                          e.stopPropagation()
+                          const r = e.currentTarget.getBoundingClientRect()
+                          const abaixo = e.clientY > r.top + r.height / 2
+                          setAlvo({ chave, antes: abaixo ? (itens[idx + 1]?.id ?? null) : p.id })
+                        },
+                      }}
+                    />
+                  </Fragment>
                 ))}
+                {arrastando !== null && alvo?.chave === chave && alvo.antes === null && itens.some((p) => p.id !== arrastando) && <LinhaDeQueda />}
                 {!itens.length && <span className="m-auto text-xs text-muted-foreground/70">{folga ? 'folga' : 'sem passos'}</span>}
               </div>
             </section>

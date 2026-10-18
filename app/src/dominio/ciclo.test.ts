@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   agendar, agruparPassosParaEstudo, alternarPasso, materiasParaEstudo, passoAutomatico, aplicarSnapshot, atribuirCores, calcularDistribuicao, configPadrao, construirSemana, corDe, diasDisponiveis, fmtH,
-  gerarCicloEspacado, limparMarcacoes, normalizarConfig, passosDe, previaAgenda, previaPassos, PALETA, reagendarPendentes, resumoSemana,
+  gerarCicloEspacado, limparMarcacoes, moverPasso, normalizarConfig, passosDe, previaAgenda, previaPassos, PALETA, reagendarPendentes, resumoSemana,
   rotuloDoPasso, semanaAlvo, snapshotConfig, validarGerar, todasMaterias, type MateriaCfg,
 } from '@/dominio/ciclo'
 import type { ConfigCiclo } from '@/dados/esquemas'
@@ -235,5 +235,35 @@ describe('materiasParaEstudo e passoAutomatico', () => {
     expect(passoAutomatico(passos, 'Raciocínio Lógico', HOJE)?.id).toBe(3) // o 1 já está feito
     expect(passoAutomatico(passos, 'Língua Portuguesa', HOJE)?.id).toBe(5)
     expect(passoAutomatico(passos, 'Direito', HOJE)).toBeUndefined()
+  })
+})
+
+describe('moverPasso (arrastar no quadro)', () => {
+  const sem = () => construirSemana(cfg(), SEXTA, AGORA) // 6 passos: ids 1-2 na sexta, 3-4 no sábado, 5-6 no domingo
+  const ordem = (s: ReturnType<typeof sem>, dia: string | null) => s.passos.filter((p) => p.dia === dia).map((p) => p.id)
+
+  it('reordena dentro do dia, para cima e para baixo', () => {
+    const s = sem()
+    expect(ordem(moverPasso(s, 2, '2026-10-09', 1), '2026-10-09')).toEqual([2, 1])
+    expect(ordem(moverPasso(s, 1, '2026-10-09', null), '2026-10-09')).toEqual([2, 1])
+  })
+  it('muda de dia e entra na posição pedida', () => {
+    const s = moverPasso(sem(), 1, '2026-10-10', 4)
+    expect(ordem(s, '2026-10-09')).toEqual([2])
+    expect(ordem(s, '2026-10-10')).toEqual([3, 1, 4])
+  })
+  it('vai para o fim do dia, para um dia vazio e para "sem dia"', () => {
+    const s0 = sem()
+    expect(ordem(moverPasso(s0, 1, '2026-10-11', null), '2026-10-11')).toEqual([5, 6, 1])
+    const vazio = moverPasso(s0, 1, '2026-10-08', null)
+    expect(ordem(vazio, '2026-10-08')).toEqual([1])
+    expect(ordem(moverPasso(s0, 3, null, null), null)).toEqual([3])
+  })
+  it('soltar no mesmo lugar não muda nada e os ids e dados do passo ficam', () => {
+    const s = sem()
+    expect(moverPasso(s, 1, '2026-10-09', 1)).toBe(s)
+    const m = moverPasso({ ...s, passos: s.passos.map((p) => (p.id === 1 ? { ...p, nota: 'redes', horasFeitas: 0.5 } : p)) }, 1, '2026-10-11', null)
+    expect(m.passos.map((p) => p.id).sort()).toEqual([1, 2, 3, 4, 5, 6])
+    expect(m.passos.find((p) => p.id === 1)).toMatchObject({ nota: 'redes', horasFeitas: 0.5, dia: '2026-10-11' })
   })
 })

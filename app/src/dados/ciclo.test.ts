@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
 import {
-  atualizarModelo, carregarCiclo, contarPomodoro, definirMeta, editarPasso, excluirModelo, fecharSemana, gerarSemana, limparSemana,
+  atualizarModelo, carregarCiclo, contarPomodoro, definirMeta, editarPasso, moverPassoNaSemana, excluirModelo, fecharSemana, gerarSemana, limparSemana,
   marcarPasso, mudarConfig, nomeModeloExiste, registrarTempo, reagendar, renomearModelo, repetirSemanaFechada, salvarModelo, usarModelo, voltarAoPadrao,
 } from '@/dados/ciclo'
 import { BancoCiclo } from '@/dados/db'
@@ -61,6 +61,14 @@ describe('a semana em andamento', () => {
     expect(s.passos[1]).toMatchObject({ horasFeitas: 0.5, nota: 'redes', dia: '2026-10-11' })
     expect(s.meta).toBe(8)
     expect(s.pomodoros).toBe(1)
+  })
+
+  it('arrastar um passo grava o dia e a ordem', async () => {
+    const db = await montado()
+    await gerarSemana(db, T0)
+    await moverPassoNaSemana(db, 6, '2026-10-09', 1)
+    const s = (await carregarCiclo(db)).semana!
+    expect(s.passos.filter((p) => p.dia === '2026-10-09').map((p) => p.id)).toEqual([6, 1, 2])
   })
 
   it('reagendar leva os pendentes para os dias que restam', async () => {

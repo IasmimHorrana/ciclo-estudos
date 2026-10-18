@@ -240,6 +240,29 @@ export function alternarPasso(s: Semana, id: number, feito: boolean): Semana {
 
 export const alterarPasso = (s: Semana, id: number, mudanca: Partial<Passo>): Semana => ({ ...s, passos: s.passos.map((p) => (p.id === id ? { ...p, ...mudanca } : p)) })
 
+/**
+ * Move um passo para o dia `dia` (`null` = sem dia), logo antes do passo `antesDeId`; sem `antesDeId`, vai para o fim
+ * do dia. Só muda o dia e a posição na lista (a ordem da lista é a ordem no quadro); o número do passo não muda.
+ */
+export function moverPasso(s: Semana, id: number, dia: DataISO | null, antesDeId: number | null): Semana {
+  const passo = s.passos.find((p) => p.id === id)
+  if (!passo || antesDeId === id) return s
+  const resto = s.passos.filter((p) => p.id !== id)
+  const movido: Passo = { ...passo, dia }
+  const alvo = antesDeId === null ? -1 : resto.findIndex((p) => p.id === antesDeId)
+  if (alvo >= 0) {
+    resto.splice(alvo, 0, movido)
+  } else {
+    // fim do dia: logo depois do último passo desse dia; se o dia está vazio, no fim da lista
+    let ultimo = -1
+    resto.forEach((p, i) => {
+      if ((p.dia ?? null) === dia) ultimo = i
+    })
+    resto.splice(ultimo + 1 || resto.length, 0, movido)
+  }
+  return { ...s, passos: resto }
+}
+
 /** Redistribui os passos não concluídos a partir de hoje, nos dias de estudo. */
 export function reagendarPendentes(s: Semana, c: ConfigCiclo, hojeISO: DataISO): Semana {
   const pend = agendar(s.passos.filter((p) => !p.feito), s.seg, c, hojeISO)
