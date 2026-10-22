@@ -9,6 +9,7 @@ import {
   usarModelo, voltarAoPadrao, type Ciclo,
 } from '@/dados/ciclo'
 import { db } from '@/dados/db'
+import { renomearMateria } from '@/dados/materias'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
 import {
   corDe, fmtH, MATERIAS_PADRAO, passosDe, previaAgenda, previaPassos, round2, soma, temProgresso, todasMaterias, validarGerar,
@@ -346,6 +347,14 @@ function gerenciarMaterias() {
   return abrirDialogo('Lista de matérias', (fechar) => <GerenciarMaterias fechar={() => fechar()} />)
 }
 
+async function renomear(antigo: string) {
+  const n = await pedirTexto('Renomear matéria', 'Nome', antigo)
+  if (!n) return
+  const r = await renomearMateria(db, antigo, n)
+  if (r === 'duplicada') void avisar('Renomear matéria', 'Já existe outra matéria com esse nome.')
+  if (r === 'vazia') void avisar('Renomear matéria', 'O nome não pode ficar vazio.')
+}
+
 function GerenciarMaterias({ fechar }: { fechar: () => void }) {
   const ciclo = useCiclo()
   if (!ciclo) return null
@@ -354,7 +363,7 @@ function GerenciarMaterias({ fechar }: { fechar: () => void }) {
   return (
     <>
       <p className={cn(apoio, 'mb-2')}>
-        São estas as matérias que aparecem para escolher no app. Tirar uma matéria da lista a remove também do ciclo que está sendo montado, mas não apaga notas, questões ou semanas que já usam o nome dela.
+        São estas as matérias que aparecem para escolher no app. Renomear troca o nome em tudo que já usa a matéria (semana, histórico, notas, assuntos, questões e edital). Tirar uma matéria da lista a remove também do ciclo que está sendo montado, mas não apaga notas, questões ou semanas que já usam o nome dela.
       </p>
       <div className="max-h-64 overflow-auto">
         {lista.length === 0 && <p className={apoio}>A lista está vazia.</p>}
@@ -362,6 +371,7 @@ function GerenciarMaterias({ fechar }: { fechar: () => void }) {
           <div key={m} className="flex items-center gap-2 border-b py-1 last:border-b-0">
             <i className="size-2.5 rounded-full" style={{ background: corDe(cores, m) }} />
             <span className="flex-1 text-sm">{m}</span>
+            <Button size="sm" variant="outline" onClick={() => void renomear(m)}>Renomear</Button>
             <Button size="sm" variant="destructive" onClick={() => void mudarConfig(db, (x) => ({ ...x, ocultas: [...x.ocultas, m], mats: x.mats.filter((y) => y.nome !== m) }))}>
               Tirar da lista
             </Button>
