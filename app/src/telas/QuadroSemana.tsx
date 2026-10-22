@@ -107,12 +107,12 @@ function CartaoPasso({ p, cores, arrasto }: { p: Passo; cores: Record<string, nu
       tabIndex={0}
       onClick={() => abrirEdicao(p)}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), abrirEdicao(p))}
-      title="Clique para editar o passo; arraste para mudar o dia ou a ordem"
-      className={cn('group relative flex h-28 shrink-0 cursor-pointer flex-col overflow-hidden rounded-lg border-l-4 px-3 py-3 shadow-sm outline-none transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring', p.feito && 'opacity-55', arrasto.arrastando && 'opacity-30')}
+      title={`Planejado ${fmtH(p.horasPlanejadas)} · clique para editar; arraste para mudar o dia ou a ordem`}
+      className={cn('group relative flex shrink-0 cursor-pointer flex-col gap-1 overflow-hidden rounded-sm border-l-4 px-2.5 py-2 shadow-sm outline-none transition hover:brightness-95 focus-visible:ring-2 focus-visible:ring-ring', p.feito && 'opacity-55', arrasto.arrastando && 'opacity-30')}
       style={{ background: fundoDe(cor), borderLeftColor: cor }}
     >
       <div className="flex items-start gap-1.5">
-        <b className={cn('line-clamp-2 min-w-0 flex-1 text-sm leading-tight', p.feito && 'line-through')}>{p.materia}</b>
+        <b className={cn('min-w-0 flex-1 text-sm leading-tight break-words', p.feito && 'line-through')}>{p.materia}</b>
         <button
           onClick={(e) => {
             e.stopPropagation()
@@ -127,11 +127,8 @@ function CartaoPasso({ p, cores, arrasto }: { p: Passo; cores: Record<string, nu
           {p.feito && <Check className="size-3" strokeWidth={3} />}
         </button>
       </div>
-      <div className="mt-auto flex flex-wrap items-center gap-1 pt-1.5">
-        <span className="rounded-full bg-card/80 px-1.5 py-px text-[0.65rem] font-bold">{fmtH(p.horasPlanejadas)}</span>
-        {p.horasFeitas > 0 && <span className="rounded-full bg-card/80 px-1.5 py-px text-[0.65rem] font-semibold text-muted-foreground">feito {fmtH(p.horasFeitas)}</span>}
-      </div>
-      {p.nota && <p className="m-0 mt-1 truncate text-[0.7rem] leading-snug text-muted-foreground" title={p.nota}>{p.nota}</p>}
+      <span className={cn('text-xs tabular-nums', p.horasFeitas > 0 ? 'font-semibold text-foreground/80' : 'text-muted-foreground')}>{fmtH(p.horasFeitas)}</span>
+      {p.nota && <p className="m-0 truncate text-[0.7rem] leading-snug text-muted-foreground" title={p.nota}>{p.nota}</p>}
     </div>
   )
 }
@@ -157,8 +154,8 @@ export function QuadroSemana({ s, cores, diasDeEstudo, hojeISO }: { s: SemanaAtu
   if (semDia.length) colunas.push({ chave: 'sem', dia: null, i: -1, itens: semDia })
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto rounded-lg border">
-      <div className="grid min-h-full auto-cols-[minmax(6.5rem,1fr)] grid-flow-col">
+    <div className="min-h-0 flex-1 overflow-auto rounded-md border">
+      <div className="grid min-h-full auto-cols-[minmax(8.5rem,1fr)] grid-flow-col">
         {colunas.map(({ chave, dia, i, itens }, k) => {
           const hoje = dia === hojeISO
           const fe = itens.filter((p) => p.feito).length
@@ -184,7 +181,7 @@ export function QuadroSemana({ s, cores, diasDeEstudo, hojeISO }: { s: SemanaAtu
               >
                 <b className="block text-sm">{dia ? `${NOMES_DIA[i]}, ${fmtData(dia).slice(0, 2)}` : 'Sem dia'}</b>
                 <span className={cn('block text-[0.68rem]', hoje ? 'text-primary-foreground/85' : 'text-muted-foreground')}>
-                  {itens.length ? `${fe}/${itens.length} · ${fmtH(soma(itens, (p) => p.horasPlanejadas))}` : '—'}
+                  {itens.length ? `${fe}/${itens.length} · ${fmtH(soma(itens, (p) => p.horasFeitas))}` : '—'}
                   {dia && dia < hojeISO && pend > 0 && <span className="font-bold text-erro"> · {pend} atrasado(s)</span>}
                 </span>
               </header>

@@ -6,6 +6,7 @@ import { avisar, confirmar, pedirTexto } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
+import { renomearMateria } from '@/dados/materias'
 import {
   adicionarMateriaEdital, carregarEdital, definirHorasDoTopico, enviarAoCiclo, incluirAssuntos, mudarAssunto, mudarComSubtopicos, mudarMateriaEdital, tirarAssuntoDoEdital, tirarMateriaDoEdital,
 } from '@/dados/edital'
@@ -173,6 +174,14 @@ function BlocoMateria({ b, maxPrioridade, recolhida }: { b: BlocoEdital; maxPrio
     await enviarAoCiclo(db, { materia: b.materia.nome, pesoMateria: b.materia.peso, horasQueFaltam: b.faltam, assuntoIds: top.map((l) => l.id) })
   }
 
+  async function renomearMat() {
+    const n = await pedirTexto('Renomear matéria', 'Nome', b.materia.nome)
+    if (!n) return
+    const r = await renomearMateria(db, b.materia.nome, n)
+    if (r === 'duplicada') void avisar('Renomear matéria', 'Já existe outra matéria com esse nome.')
+    if (r === 'vazia') void avisar('Renomear matéria', 'O nome não pode ficar vazio.')
+  }
+
   async function excluir() {
     if (await confirmar(`Tirar "${b.materia.nome}" do edital? Os assuntos continuam no app (Desempenho, Pomodoro e flashcards), com as questões e os tempos; só saem desta tela.`, 'Tirar do edital', true)) {
       await tirarMateriaDoEdital(db, b.materia.id)
@@ -188,6 +197,9 @@ function BlocoMateria({ b, maxPrioridade, recolhida }: { b: BlocoEdital; maxPrio
               <Seta className="size-4" />
               {b.materia.nome}
             </button>
+            <Button size="icon" variant="ghost" className="-ml-2 size-6" title="Renomear matéria" aria-label={`Renomear ${b.materia.nome}`} onClick={() => void renomearMat()}>
+              <Pencil className="size-3.5" />
+            </Button>
             <label className="flex items-center gap-1 text-xs text-muted-foreground" title="Peso da matéria na prova (1 a 5)">
               Peso
               <Selecao className="w-14 py-0.5" value={b.materia.peso} onChange={(e) => void mudarMateriaEdital(db, b.materia.id, { peso: Number(e.target.value) })}>
