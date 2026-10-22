@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   agendar, agruparPassosParaEstudo, alternarPasso, materiasParaEstudo, passoAutomatico, aplicarSnapshot, atribuirCores, calcularDistribuicao, configPadrao, construirSemana, corDe, diasDisponiveis, fmtH,
-  gerarCicloEspacado, limparMarcacoes, moverPasso, normalizarConfig, passosDe, previaAgenda, previaPassos, PALETA, reagendarPendentes, resumoSemana,
+  cartoesDaMateria, gerarCicloEspacado, limparMarcacoes, moverPasso, moverPassos, normalizarConfig, passosDe, previaAgenda, previaPassos, PALETA, reagendarPendentes, resumoSemana,
   rotuloDoPasso, semanaAlvo, snapshotConfig, validarGerar, todasMaterias, type MateriaCfg,
 } from '@/dominio/ciclo'
 import type { ConfigCiclo } from '@/dados/esquemas'
@@ -265,5 +265,26 @@ describe('moverPasso (arrastar no quadro)', () => {
     const m = moverPasso({ ...s, passos: s.passos.map((p) => (p.id === 1 ? { ...p, nota: 'redes', horasFeitas: 0.5 } : p)) }, 1, '2026-10-11', null)
     expect(m.passos.map((p) => p.id).sort()).toEqual([1, 2, 3, 4, 5, 6])
     expect(m.passos.find((p) => p.id === 1)).toMatchObject({ nota: 'redes', horasFeitas: 0.5, dia: '2026-10-11' })
+  })
+})
+
+describe('cartões da matéria no quadro', () => {
+  const p = (id: number, materia: string, planejadas: number, feitas: number, feito = false) =>
+    ({ id, materia, dia: SEXTA, horasPlanejadas: planejadas, horasFeitas: feitas, feito, nota: '' })
+
+  it('junta os passos da mesma matéria somando planejado e estudado', () => {
+    const c = cartoesDaMateria([p(1, 'Informática', 1, 1.5, true), p(2, 'Direito', 1, 0), p(3, 'Informática', 1, 1)])
+    expect(c.map((x) => x.materia)).toEqual(['Informática', 'Direito'])
+    expect(c[0]).toMatchObject({ planejadas: 2, feitas: 2.5, feito: false })
+    expect(c[0]?.passos.map((x) => x.id)).toEqual([1, 3])
+  })
+  it('o cartão só fica concluído quando todos os passos estão', () => {
+    expect(cartoesDaMateria([p(1, 'A', 1, 1, true), p(2, 'A', 1, 1, true)])[0]?.feito).toBe(true)
+  })
+  it('move os passos do cartão juntos e ignora soltar em cima de si mesmo', () => {
+    const s = construirSemana(cfg(), SEXTA, AGORA)
+    const movido = moverPassos(s, [1, 2], '2026-10-11', null)
+    expect(movido.passos.filter((x) => x.dia === '2026-10-11').map((x) => x.id)).toEqual([5, 6, 1, 2])
+    expect(moverPassos(s, [1, 2], '2026-10-11', 2)).toBe(s)
   })
 })

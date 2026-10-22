@@ -368,3 +368,32 @@ export function rotuloDoPasso(p: { id: number; materia: string; nota: string }):
 }
 
 export { hojeDe }
+
+/** Os passos de uma mesma matéria num dia, vistos como um cartão só no quadro da semana. */
+export interface CartaoDaMateria {
+  materia: string
+  passos: Passo[]
+  planejadas: number
+  feitas: number
+  /** Todos os passos do cartão estão concluídos. */
+  feito: boolean
+}
+
+/** Junta os passos de uma lista (um dia) por matéria, na ordem em que cada matéria aparece primeiro. */
+export function cartoesDaMateria(passos: readonly Passo[]): CartaoDaMateria[] {
+  const porMateria = new Map<string, Passo[]>()
+  for (const p of passos) porMateria.set(p.materia, [...(porMateria.get(p.materia) ?? []), p])
+  return [...porMateria].map(([materia, ps]) => ({
+    materia,
+    passos: ps,
+    planejadas: round2(soma(ps, (p) => p.horasPlanejadas)),
+    feitas: round2(soma(ps, (p) => p.horasFeitas)),
+    feito: ps.every((p) => p.feito),
+  }))
+}
+
+/** Move vários passos (um cartão) juntos, mantendo a ordem entre eles. Soltar o cartão em cima de si mesmo não muda nada. */
+export function moverPassos(s: Semana, ids: readonly number[], dia: DataISO | null, antesDeId: number | null): Semana {
+  if (antesDeId !== null && ids.includes(antesDeId)) return s
+  return ids.reduce((acc, id) => moverPasso(acc, id, dia, antesDeId), s)
+}
