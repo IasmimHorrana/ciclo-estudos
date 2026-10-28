@@ -7,7 +7,7 @@
 > | 2. Dados (Dexie, importador do JSON antigo, backup) | feita |
 > | 3. Flashcards no estilo Anki (SM-2) | em andamento na `dev`: sub-etapas 1 e 2 feitas (dados, SM-2, fila, estudo, baralhos, opções, adicionar simples); aguardando sua revisão ⏸. Feito: importar `.apkg`. Faltam: editor rico (Tiptap, imagens), Navegar, Estatísticas, exportar Anki e importar `.txt` |
 > | 4. Portar Montar, Semana, Desempenho e Resumos | feita na `dev`: as quatro abas, a barra lateral e o Pomodoro já funcionam na base nova; aguardando o seu teste (a criar "cartão a partir dos Resumos" e o quadro de flashcards no Desempenho ficam para depois do Flashcards) |
-> | Extra: aba Edital verticalizado | feita na `dev`: importar com pré-visualização, prioridade, rodapé de progresso e "＋ Ciclo"; aguardando o seu teste com um edital real |
+> | Extra: aba Edital verticalizado | feita na `dev`: importar com pré-visualização, prioridade e "＋ Ciclo". Em out/2026, ideias do "PROMPT GRATUITO": layout em checklist com busca e painel lateral, faixas de acerto ajustáveis, revisão espaçada dos assuntos (Dexie v6) e alertas de reforço; aguardando o seu teste. Ficaram para depois: comando para IA, caderno de erros, simulados, provas em PDF, lei seca e tamanho da letra |
 > | 5. Supabase (login e sincronização) | a fazer |
 > | 6. Publicar e instalar no celular | site no ar em https://iasmimhorrana.github.io/ciclo-estudos/ (GitHub Pages, a cada mudança na `main`); service worker registrado; faltam instalar no celular e testar abrir sem internet |
 # Plano: base nova (Git + Vite/React/TS + Dexie + PWA), Flashcards estilo Anki (SM-2) nela e Supabase depois
