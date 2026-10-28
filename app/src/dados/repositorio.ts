@@ -1,7 +1,7 @@
 import type { BancoCiclo } from '@/dados/db'
-import type { Controle, Dados } from '@/dados/esquemas'
+import { Preferencias, type Controle, type Dados } from '@/dados/esquemas'
 
-const CHAVES = ['tema', 'config', 'semana', 'pomo', 'cores'] as const
+const CHAVES = ['tema', 'config', 'semana', 'pomo', 'cores', 'preferencias'] as const
 
 const vivos = <T extends { excluidoEm: number | null }>(l: T[]) => l.filter((x) => x.excluidoEm === null)
 
@@ -24,6 +24,7 @@ export async function carregarDados(db: BancoCiclo): Promise<Dados | null> {
     semana: (valores.get('semana') ?? null) as Dados['semana'],
     pomo: (valores.get('pomo') ?? { foco: 25, pausa: 5, longa: 15, ate: 4 }) as Dados['pomo'],
     cores: (valores.get('cores') ?? {}) as Dados['cores'],
+    preferencias: Preferencias.parse(valores.get('preferencias') ?? {}),
     fechadas: vivos(fechadas),
     modelos: vivos(modelos),
     notas: vivos(notas),

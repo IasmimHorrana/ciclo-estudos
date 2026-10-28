@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { FAIXAS_PADRAO, validarFaixas } from '@/dominio/desempenho'
 
 /**
  * Esquemas do backup do app em HTML ("Exportar backup completo").
@@ -105,6 +106,15 @@ const Sessao = z.object({
   tipo: txt,
 })
 
+/** Preferências de estudo (faixas de acerto…). Valores fora do lugar voltam ao padrão. */
+const Faixas = z
+  .object({ fraco: z.coerce.number().catch(FAIXAS_PADRAO.fraco), medio: z.coerce.number().catch(FAIXAS_PADRAO.medio), bom: z.coerce.number().catch(FAIXAS_PADRAO.bom) })
+  .catch(FAIXAS_PADRAO)
+  .transform((f) => (validarFaixas(f) ? FAIXAS_PADRAO : f))
+export const Preferencias = z.object({ faixas: Faixas }).catch({ faixas: FAIXAS_PADRAO })
+export type Preferencias = z.infer<typeof Preferencias>
+export const preferenciasPadrao = (): Preferencias => Preferencias.parse({})
+
 export const BackupLegado = z.object({
   tema: z.enum(['auto', 'light', 'dark']).catch('auto'),
   config: ConfigLegado,
@@ -114,6 +124,7 @@ export const BackupLegado = z.object({
     .object({ foco: z.coerce.number().catch(25), pausa: z.coerce.number().catch(5), longa: z.coerce.number().catch(15), ate: z.coerce.number().catch(4) })
     .catch({ foco: 25, pausa: 5, longa: 15, ate: 4 }),
   cores: z.record(z.string(), z.coerce.number()).catch({}),
+  preferencias: Preferencias,
   notas: z.array(Nota).catch([]),
   modelos: z.array(ModeloSalvo).catch([]),
   assuntos: z.array(Assunto).catch([]),
@@ -158,6 +169,7 @@ export interface Dados {
   semana: Semana | null
   pomo: { foco: number; pausa: number; longa: number; ate: number }
   cores: Record<string, number>
+  preferencias: Preferencias
   fechadas: SemanaFechada[]
   modelos: ModeloSalvo[]
   notas: NotaResumo[]

@@ -33,11 +33,27 @@ export interface AssuntoDe {
   nome: string
 }
 
-/** Nível pelo % de acertos: abaixo de 60 Fraco, até 74 Médio, até 89 Bom, 90 ou mais Dominado. */
-export function nivelDe(feitas: number, acertos: number): Nivel {
+/** Onde cada nível começa, em % de acertos: abaixo de `fraco` é Fraco, abaixo de `medio` Médio, abaixo de `bom` Bom, e daí para cima Dominado. */
+export interface Faixas {
+  fraco: number
+  medio: number
+  bom: number
+}
+export const FAIXAS_PADRAO: Faixas = { fraco: 60, medio: 75, bom: 90 }
+
+/** Nível pelo % de acertos (padrão: abaixo de 60 Fraco, até 74 Médio, até 89 Bom, 90 ou mais Dominado). */
+export function nivelDe(feitas: number, acertos: number, faixas: Faixas = FAIXAS_PADRAO): Nivel {
   if (feitas < MIN_QUESTOES) return 'na'
   const p = (acertos / feitas) * 100
-  return p < 60 ? 'fraco' : p < 75 ? 'medio' : p < 90 ? 'bom' : 'dom'
+  return p < faixas.fraco ? 'fraco' : p < faixas.medio ? 'medio' : p < faixas.bom ? 'bom' : 'dom'
+}
+
+/** Problema nas faixas (números de 1 a 100, cada um maior que o anterior), ou `null` se estão boas. */
+export function validarFaixas(f: Faixas): string | null {
+  const v = [f.fraco, f.medio, f.bom]
+  if (v.some((n) => !Number.isFinite(n) || n < 1 || n > 100)) return 'Use números de 1 a 100.'
+  if (!(f.fraco < f.medio && f.medio < f.bom)) return 'Cada faixa precisa começar acima da anterior (Fraco < Médio < Bom).'
+  return null
 }
 
 export const pctDe = (acertos: number, feitas: number) => (feitas ? Math.round((acertos / feitas) * 100) : 0)
@@ -79,6 +95,8 @@ export interface EntradaDesempenho {
   config: { custom: string[]; ocultas: string[] }
   periodo: Periodo
   hojeISO: DataISO
+  /** Limites dos níveis (padrão `FAIXAS_PADRAO`). */
+  faixas?: Faixas
 }
 
 /** Tudo que a visão "Estudo" mostra, calculado para o período escolhido. */
@@ -109,7 +127,7 @@ export function calcularDesempenho(e: EntradaDesempenho) {
     const a = soma(q, (x) => x.acertos)
     const h = horasDe(sm.filter((x) => (x.assuntoId ?? null) === id))
     if (!id && !f && !h) return null
-    return { id, nome, feitas: f, acertos: a, horas: h, nivel: nivelDe(f, a) }
+    return { id, nome, feitas: f, acertos: a, horas: h, nivel: nivelDe(f, a, e.faixas) }
   }
   const blocos: BlocoMateria[] = mats.map((m) => {
     const qm = qs.filter((q) => q.materia === m)
@@ -118,7 +136,7 @@ export function calcularDesempenho(e: EntradaDesempenho) {
     const a = soma(qm, (q) => q.acertos)
     const as = e.assuntos.filter((x) => x.materia === m)
     const linhas = [...as.map((x) => linha(qm, sm, x.id, x.nome)), linha(qm, sm, null, '(sem assunto)')].filter((l): l is LinhaAssunto => l !== null)
-    return { materia: m, feitas: f, acertos: a, horas: horasDe(sm), nivel: nivelDe(f, a), assuntos: linhas, temAssuntos: as.length > 0 }
+    return { materia: m, feitas: f, acertos: a, horas: horasDe(sm), nivel: nivelDe(f, a, e.faixas), assuntos: linhas, temAssuntos: as.length > 0 }
   })
 
   const horasPorMateria = mats

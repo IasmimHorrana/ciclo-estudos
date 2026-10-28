@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcularDesempenho, horasDe, inicioDoPeriodo, nivelDe, pctDe, resumoDasSemanas, validarQuestoes, type EntradaDesempenho } from '@/dominio/desempenho'
+import { calcularDesempenho, horasDe, inicioDoPeriodo, nivelDe, pctDe, resumoDasSemanas, validarFaixas, validarQuestoes, type EntradaDesempenho } from '@/dominio/desempenho'
 
 const HOJE = '2026-10-09'
 const base = (o: Partial<EntradaDesempenho> = {}): EntradaDesempenho => ({
@@ -17,6 +17,23 @@ describe('níveis', () => {
     expect(nivelDe(100, 75)).toBe('bom')
     expect(nivelDe(100, 89)).toBe('bom')
     expect(nivelDe(10, 9)).toBe('dom')
+  })
+  it('faixas ajustáveis (ex.: 60/80/95) mudam o nível; o mínimo de questões continua', () => {
+    const f = { fraco: 60, medio: 80, bom: 95 }
+    expect(nivelDe(100, 59, f)).toBe('fraco')
+    expect(nivelDe(100, 79, f)).toBe('medio')
+    expect(nivelDe(100, 80, f)).toBe('bom')
+    expect(nivelDe(100, 95, f)).toBe('dom')
+    expect(nivelDe(4, 0, f)).toBe('na')
+    const d = calcularDesempenho(base({ questoes: [q('1', HOJE, 'A', 10, 7, 'a1')], assuntos: [{ id: 'a1', materia: 'A', nome: 'X' }], faixas: f }))
+    expect(d.blocos[0]?.nivel).toBe('medio') // 70%: seria Médio também no padrão, mas Bom só a partir de 80
+    expect(calcularDesempenho(base({ questoes: [q('1', HOJE, 'A', 10, 8)], faixas: f })).blocos[0]?.nivel).toBe('bom')
+  })
+  it('validarFaixas exige 1 a 100 em ordem crescente', () => {
+    expect(validarFaixas({ fraco: 60, medio: 75, bom: 90 })).toBeNull()
+    expect(validarFaixas({ fraco: 70, medio: 70, bom: 90 })).toMatch(/acima/)
+    expect(validarFaixas({ fraco: 0, medio: 75, bom: 90 })).toMatch(/1 a 100/)
+    expect(validarFaixas({ fraco: 60, medio: 75, bom: Number.NaN })).toMatch(/1 a 100/)
   })
   it('pctDe não divide por zero', () => {
     expect(pctDe(0, 0)).toBe(0)
