@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { OrdemEdital } from '@/dominio/edital'
+import type { OrdemEdital, PosicaoSoltar } from '@/dominio/edital'
 
 interface EditalUi {
   ordem: OrdemEdital
@@ -11,7 +11,16 @@ interface EditalUi {
   recolhidas: string[]
   /** Tópicos (ids de assuntos) recolhidos: os subtópicos deles ficam escondidos. */
   topicosRecolhidos: string[]
-  definir: (p: Partial<Pick<EditalUi, 'ordem' | 'ocultarEstudados' | 'filtroMateria'>>) => void
+  /** Texto da busca (não fica salvo). */
+  busca: string
+  /** Assunto aberto no painel lateral (não fica salvo). */
+  assuntoAberto: string | null
+  /** Só as revisões de hoje e atrasadas (não fica salvo). */
+  soRevisar: boolean
+  /** Assunto sendo arrastado e onde ele cairia (`alvoId` nulo = solto no fim da matéria). Não fica salvo. */
+  arrasto: { id: string; materiaId: string } | null
+  queda: { alvoId: string | null; pos: PosicaoSoltar } | null
+  definir: (p: Partial<Pick<EditalUi, 'ordem' | 'ocultarEstudados' | 'filtroMateria' | 'busca' | 'assuntoAberto' | 'soRevisar' | 'arrasto' | 'queda'>>) => void
   alternarRecolhida: (id: string) => void
   alternarTopico: (id: string) => void
   definirTopicosRecolhidos: (ids: string[]) => void
@@ -25,11 +34,19 @@ export const useEditalUi = create<EditalUi>()(
       filtroMateria: null,
       recolhidas: [],
       topicosRecolhidos: [],
+      busca: '',
+      assuntoAberto: null,
+      soRevisar: false,
+      arrasto: null,
+      queda: null,
       definir: (p) => set(p),
       alternarRecolhida: (id) => set((s) => ({ recolhidas: s.recolhidas.includes(id) ? s.recolhidas.filter((x) => x !== id) : [...s.recolhidas, id] })),
       alternarTopico: (id) => set((s) => ({ topicosRecolhidos: s.topicosRecolhidos.includes(id) ? s.topicosRecolhidos.filter((x) => x !== id) : [...s.topicosRecolhidos, id] })),
       definirTopicosRecolhidos: (ids) => set({ topicosRecolhidos: ids }),
     }),
-    { name: 'ciclo-estudos.edital' },
+    {
+      name: 'ciclo-estudos.edital',
+      partialize: ({ ordem, ocultarEstudados, filtroMateria, recolhidas, topicosRecolhidos }) => ({ ordem, ocultarEstudados, filtroMateria, recolhidas, topicosRecolhidos }),
+    },
   ),
 )

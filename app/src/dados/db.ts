@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Baralho, CartaoFc, GrupoOpcoes, NotaFc, RegistroRevisao, TipoNota } from '@/dados/flashcards-tipos'
 import type { Assunto, MateriaEdital, ModeloSalvo, NotaResumo, RegistroQuestoes, SemanaFechada, SessaoPomodoro, Valor } from '@/dados/esquemas'
+import { hoje } from '@/dominio/datas'
 
 /**
  * Banco local (IndexedDB, via Dexie). O app lê e grava sempre aqui; a nuvem (etapa 5) é só cópia.
@@ -62,6 +63,18 @@ export class BancoCiclo extends Dexie {
           }
         }),
       )
+    // v6: revisão espaçada dos assuntos (`estudadoEm`, `revisoes`). Os já estudados ficam com a data de hoje
+    // e sem revisões retroativas (as revisões começam quando forem marcados de novo). Só completa campos que
+    // faltavam, sem marcar "sujo" (não é uma mudança feita pela pessoa).
+    this.version(6)
+      .stores({})
+      .upgrade((tx) => {
+        const dia = hoje()
+        return tx.table('assuntos').toCollection().modify((a: { estudado?: boolean; estudadoEm?: string | null; revisoes?: unknown[] }) => {
+          if (a.estudadoEm === undefined) a.estudadoEm = a.estudado ? dia : null
+          if (!Array.isArray(a.revisoes)) a.revisoes = []
+        })
+      })
   }
 }
 

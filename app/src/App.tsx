@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { AvisoSemana } from '@/componentes/AvisoSemana'
 import { Dialogos } from '@/componentes/Dialogos'
+import { FaixasContexto } from '@/componentes/faixas-contexto'
 import { BarraLateral } from '@/componentes/barra-lateral/BarraLateral'
 import { Dados } from '@/telas/Dados'
 import { Desempenho } from '@/telas/Desempenho'
@@ -13,6 +14,7 @@ import { aoConcluirFoco } from '@/componentes/aoConcluirFoco'
 import { iniciarPersistenciaPomodoro } from '@/componentes/restaurar-pomodoro-api'
 import { useCiclo } from '@/dados/useCiclo'
 import { carregarPasta, iniciarBackupAutomatico } from '@/dados/pasta'
+import { FAIXAS_PADRAO } from '@/dominio/desempenho'
 import { fmtMMSS, NOMES_FASE } from '@/dominio/pomodoro'
 import { usePomodoro } from '@/estado/pomodoro'
 import { temaEscuro, useUi, type AbaId } from '@/estado/ui'
@@ -28,7 +30,7 @@ const TELAS: Record<AbaId, ReactNode> = {
 }
 
 export default function App() {
-  const { aba, tema } = useUi()
+  const { aba, tema, paleta } = useUi()
   const ciclo = useCiclo()
   const pomoSalvo = ciclo?.pomo
 
@@ -58,6 +60,12 @@ export default function App() {
     return () => mq.removeEventListener('change', aplicar)
   }, [tema])
 
+  // paleta de cores (a padrão, verde-menta, não precisa do atributo)
+  useEffect(() => {
+    if (paleta === 'menta') delete document.documentElement.dataset.paleta
+    else document.documentElement.dataset.paleta = paleta
+  }, [paleta])
+
   // relógio único do Pomodoro + tempo restante no título da aba do navegador
   useEffect(() => {
     const id = setInterval(() => usePomodoro.getState().tic(), 250)
@@ -71,13 +79,15 @@ export default function App() {
   }, [])
 
   return (
-    <div className="grid h-dvh grid-cols-[276px_minmax(0,1fr)] overflow-hidden max-[900px]:h-auto max-[900px]:min-h-dvh max-[900px]:grid-cols-1 max-[900px]:overflow-visible">
-      <BarraLateral />
-      <main className="flex min-h-0 min-w-0 flex-col overflow-hidden px-5 py-3.5 max-[900px]:overflow-visible max-[900px]:p-4">
-        <AvisoSemana />
-        {TELAS[aba]}
-      </main>
-      <Dialogos />
-    </div>
+    <FaixasContexto.Provider value={ciclo?.preferencias.faixas ?? FAIXAS_PADRAO}>
+      <div className="grid h-dvh grid-cols-[276px_minmax(0,1fr)] overflow-hidden max-[900px]:h-auto max-[900px]:min-h-dvh max-[900px]:grid-cols-1 max-[900px]:overflow-visible">
+        <BarraLateral />
+        <main className="flex min-h-0 min-w-0 flex-col overflow-hidden px-5 py-3.5 max-[900px]:overflow-visible max-[900px]:p-4">
+          <AvisoSemana />
+          {TELAS[aba]}
+        </main>
+        <Dialogos />
+      </div>
+    </FaixasContexto.Provider>
   )
 }

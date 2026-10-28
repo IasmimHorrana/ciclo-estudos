@@ -1,10 +1,12 @@
 import { garantirCores, mudarConfig } from '@/dados/ciclo'
 import { carregarEstudo, type Estudo } from '@/dados/desempenho'
 import type { BancoCiclo } from '@/dados/db'
-import type { Assunto, MateriaEdital } from '@/dados/esquemas'
+import { Preferencias, type Assunto, type MateriaEdital } from '@/dados/esquemas'
 import { novoIdFc } from '@/dados/ids'
 import { MATERIAS_PADRAO, passosDe } from '@/dominio/ciclo'
-import { normalizar, repartirHoras, sugerirRepeticoes, type MateriaLida } from '@/dominio/edital'
+import { hoje } from '@/dominio/datas'
+import { maiuscula, moverNoEdital, normalizar, repartirHoras, sugerirRepeticoes, type MateriaLida, type PosicaoSoltar } from '@/dominio/edital'
+import { aoMudarEstudado, INTERVALOS_PADRAO, responderRevisao } from '@/dominio/revisaoAssuntos'
 
 const vivos = <T extends { excluidoEm: number | null }>(l: T[]) => l.filter((x) => x.excluidoEm === null)
 
@@ -21,7 +23,7 @@ const novaMateria = (nome: string, ordem: number, agora: number): MateriaEdital 
   id: novoIdFc('e', agora + ordem), nome, peso: 3, ordem, atualizadoEm: agora, excluidoEm: null, sujo: 1,
 })
 const novoAssunto = (materia: string, nome: string, ordem: number, agora: number, noEdital: boolean, paiId: string | null): Assunto => ({
-  id: novoIdFc('a', agora + ordem), materia, nome, ordem, importancia: 0, horasIdeais: 0, estudado: false, noCiclo: false, noEdital, paiId,
+  id: novoIdFc('a', agora + ordem), materia, nome, ordem, importancia: 0, horasIdeais: 0, estudado: false, noCiclo: false, noEdital, paiId, estudadoEm: null, revisoes: [],
   atualizadoEm: agora, excluidoEm: null, sujo: 1,
 })
 
@@ -128,9 +130,27 @@ export async function mudarMateriaEdital(db: BancoCiclo, id: string, patch: Part
 
 export type AlteracaoAssunto = Partial<Pick<Assunto, 'importancia' | 'horasIdeais' | 'estudado' | 'noCiclo' | 'noEdital' | 'paiId'>>
 
-export async function mudarAssunto(db: BancoCiclo, id: string, patch: AlteracaoAssunto, agora = Date.now()): Promise<void> {
+/** Intervalos da revisão dos assuntos escolhidos nas preferências (padrão 1, 7 e 30 dias). */
+export async function intervalosDeRevisao(db: BancoCiclo): Promise<number[]> {
+  return Preferencias.parse((await db.valores.get('preferencias'))?.valor ?? {}).intervalosRevisao
+}
+
+/** Muda um assunto. Marcar/desmarcar "estudado" também agenda ou tira as revisões (com `intervalos`). */
+export async function mudarAssunto(db: BancoCiclo, id: string, patch: AlteracaoAssunto, agora = Date.now(), intervalos: readonly number[] = INTERVALOS_PADRAO): Promise<void> {
   const a = await db.assuntos.get(id)
-  if (a) await db.assuntos.put({ ...a, ...patch, atualizadoEm: agora, sujo: 1 })
+  if (!a) return
+  const revisao = patch.estudado === undefined ? null : aoMudarEstudado(a, patch.estudado, hoje(new Date(agora)), intervalos)
+  await db.assuntos.put({ ...a, ...patch, ...revisao, atualizadoEm: agora, sujo: 1 })
+}
+
+/** Responde a próxima revisão do assunto ("Entendi" ou "Preciso rever"). */
+export async function responderRevisaoAssunto(db: BancoCiclo, id: string, resultado: 'ok' | 'rever', agora = Date.now()): Promise<void> {
+  const intervalos = await intervalosDeRevisao(db)
+  await db.transaction('rw', db.assuntos, async () => {
+    const a = await db.assuntos.get(id)
+    if (!a) return
+    await db.assuntos.put({ ...a, revisoes: responderRevisao(a.revisoes ?? [], hoje(new Date(agora)), resultado, intervalos), atualizadoEm: agora, sujo: 1 })
+  })
 }
 
 /** Os ids dos subtópicos de um tópico, em qualquer nível. */
@@ -141,9 +161,10 @@ export function idsDosDescendentes(todos: readonly { id: string; paiId: string |
 
 /** Muda o assunto e, se ele for um tópico, todos os subtópicos dele (marcar estudado, importância, horas…). */
 export async function mudarComSubtopicos(db: BancoCiclo, id: string, patch: AlteracaoAssunto, agora = Date.now()): Promise<void> {
+  const intervalos = patch.estudado === undefined ? INTERVALOS_PADRAO : await intervalosDeRevisao(db)
   await db.transaction('rw', db.assuntos, async () => {
     const todos = vivos(await db.assuntos.toArray())
-    for (const alvo of [id, ...idsDosDescendentes(todos, id)]) await mudarAssunto(db, alvo, patch, agora)
+    for (const alvo of [id, ...idsDosDescendentes(todos, id)]) await mudarAssunto(db, alvo, patch, agora, intervalos)
   })
 }
 
@@ -235,4 +256,51 @@ export async function criarAssunto(db: BancoCiclo, materia: string, nome: string
   await importarEdital(db, [{ materia, assuntos: [{ nome: n, filhos: [] }] }], [materia], agora, false)
   const a = vivos(await db.assuntos.toArray()).find((x) => normalizar(x.materia) === normalizar(materia) && normalizar(x.nome) === normalizar(n))
   return a?.id ?? null
+}
+
+/** Assuntos do edital da mesma matéria (os que podem trocar de lugar entre si). */
+const doEditalNaMateria = async (db: BancoCiclo, materia: string) =>
+  vivos(await db.assuntos.toArray()).filter((a) => a.noEdital && normalizar(a.materia) === normalizar(materia))
+
+async function aplicarMovimento(db: BancoCiclo, id: string, alvoId: string | null, pos: PosicaoSoltar, agora: number): Promise<boolean> {
+  const eu = await db.assuntos.get(id)
+  if (!eu) return false
+  const daMateria = await doEditalNaMateria(db, eu.materia)
+  const mud = moverNoEdital(daMateria, id, alvoId, pos)
+  if (!mud) return false
+  for (const m of mud) {
+    const a = daMateria.find((x) => x.id === m.id)
+    if (a) await db.assuntos.put({ ...a, paiId: m.paiId, ordem: m.ordem, atualizadoEm: agora, sujo: 1 })
+  }
+  return true
+}
+
+/**
+ * Arrastar no Edital: põe o assunto antes/depois de outro ou dentro dele (vira subtópico), na mesma matéria.
+ * `alvoId` nulo = assunto solto no fim da matéria. Os subtópicos vão junto. Devolve `false` se o movimento não vale.
+ */
+export async function moverAssunto(db: BancoCiclo, id: string, alvoId: string | null, pos: PosicaoSoltar, agora = Date.now()): Promise<boolean> {
+  return db.transaction('rw', db.assuntos, () => aplicarMovimento(db, id, alvoId, pos, agora))
+}
+
+/**
+ * Cria um tópico novo no lugar do assunto e põe o assunto dentro dele (ex.: "Vírus" → "Malware › Vírus").
+ * Se já existe um assunto com esse nome fora do edital (criado no Desempenho, por exemplo), ele é ligado e vira o tópico.
+ */
+export async function agruparEmNovoTopico(db: BancoCiclo, id: string, nome: string, agora = Date.now()): Promise<'ok' | 'vazio' | 'duplicado'> {
+  const n = maiuscula(nome.trim())
+  if (!n) return 'vazio'
+  return db.transaction('rw', db.assuntos, async () => {
+    const eu = await db.assuntos.get(id)
+    if (!eu) return 'vazio'
+    const mesmoNome = vivos(await db.assuntos.toArray()).find((a) => normalizar(a.materia) === normalizar(eu.materia) && normalizar(a.nome) === normalizar(n))
+    if (mesmoNome?.noEdital) return 'duplicado'
+    const topico: Assunto = mesmoNome
+      ? { ...mesmoNome, noEdital: true, paiId: eu.paiId, ordem: eu.ordem, atualizadoEm: agora, sujo: 1 }
+      : novoAssunto(eu.materia, n, 0, agora, true, eu.paiId)
+    await db.assuntos.put({ ...topico, ordem: eu.ordem })
+    await aplicarMovimento(db, topico.id, id, 'antes', agora)
+    await aplicarMovimento(db, id, topico.id, 'dentro', agora)
+    return 'ok'
+  })
 }

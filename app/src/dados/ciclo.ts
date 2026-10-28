@@ -1,5 +1,5 @@
 import type { BancoCiclo } from '@/dados/db'
-import type { ConfigCiclo, ModeloSalvo, Semana, SemanaFechada } from '@/dados/esquemas'
+import { Preferencias, type ConfigCiclo, type ModeloSalvo, type Semana, type SemanaFechada } from '@/dados/esquemas'
 import { novoIdFc } from '@/dados/ids'
 import { hoje } from '@/dominio/datas'
 import { distribuirAssuntos } from '@/dominio/edital'
@@ -22,6 +22,7 @@ export interface Ciclo {
   semana: Semana | null
   cores: Record<string, number>
   pomo: Pomo
+  preferencias: Preferencias
   fechadas: SemanaFechada[]
   modelos: ModeloSalvo[]
 }
@@ -34,6 +35,7 @@ export async function carregarCiclo(db: BancoCiclo): Promise<Ciclo> {
     semana: (v.get('semana') as Semana | null | undefined) ?? null,
     cores: (v.get('cores') as Record<string, number> | undefined) ?? {},
     pomo: { ...POMO_PADRAO, ...(v.get('pomo') as Partial<Pomo> | undefined) },
+    preferencias: Preferencias.parse(v.get('preferencias') ?? {}),
     fechadas: fechadas.filter((f) => f.excluidoEm === null).sort((a, b) => a.inicio.localeCompare(b.inicio)),
     modelos: modelos.filter((m) => m.excluidoEm === null).sort((a, b) => a.criado - b.criado),
   }
@@ -241,6 +243,14 @@ export async function contarPomodoro(db: BancoCiclo, agora = Date.now()): Promis
 
 export async function salvarPomo(db: BancoCiclo, pomo: Pomo, agora = Date.now()): Promise<void> {
   await gravar(db, 'pomo', pomo, agora)
+}
+
+/** Altera as preferências de estudo (faixas de acerto…), mantendo o resto. */
+export async function mudarPreferencias(db: BancoCiclo, mudanca: Partial<Preferencias>, agora = Date.now()): Promise<void> {
+  await db.transaction('rw', db.valores, async () => {
+    const atual = Preferencias.parse((await db.valores.get('preferencias'))?.valor ?? {})
+    await gravar(db, 'preferencias', Preferencias.parse({ ...atual, ...mudanca }), agora)
+  })
 }
 
 export { temProgresso }

@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import { FAIXAS_PADRAO, validarFaixas } from '@/dominio/desempenho'
+import { INTERVALOS_PADRAO, lerIntervalos } from '@/dominio/revisaoAssuntos'
 
 /**
  * Esquemas do backup do app em HTML ("Exportar backup completo").
@@ -69,6 +71,11 @@ const Fechada = z.object({
 
 const Nota = z.object({ id: z.coerce.string(), titulo: txt, materia: txt, texto: txt, criado: num, atualizado: num })
 const ModeloSalvo = z.object({ id: z.coerce.string(), nome: txt, criado: num, config: Modelo })
+const Revisao = z.object({
+  dia: z.string(),
+  feitaEm: z.string().nullable().catch(null),
+  resultado: z.enum(['ok', 'rever']).nullable().catch(null),
+})
 const Assunto = z.object({
   id: z.coerce.string(),
   materia: txt,
@@ -85,6 +92,16 @@ const Assunto = z.object({
   noEdital: z.boolean().catch(false),
   /** Tópico a que este assunto pertence (subtópico), ou `null` (tópico ou assunto solto). */
   paiId: z.string().nullable().catch(null),
+  /** Dia em que foi marcado como estudado (as revisões contam dali), ou `null`. */
+  estudadoEm: z.string().nullable().catch(null),
+  /** Revisão espaçada do assunto. Uma revisão com defeito é descartada sozinha, sem perder as outras. */
+  revisoes: z
+    .array(z.unknown())
+    .catch([])
+    .transform((l) => l.flatMap((x) => {
+      const r = Revisao.safeParse(x)
+      return r.success ? [r.data] : []
+    })),
 })
 /** Peso e ordem de cada matéria no edital verticalizado. */
 const MateriaEdital = z.object({ id: z.coerce.string(), nome: txt, peso: z.coerce.number().catch(3), ordem: num })
@@ -105,6 +122,21 @@ const Sessao = z.object({
   tipo: txt,
 })
 
+/** Preferências de estudo (faixas de acerto, intervalos da revisão dos assuntos). Valores fora do lugar voltam ao padrão. */
+const Faixas = z
+  .object({ fraco: z.coerce.number().catch(FAIXAS_PADRAO.fraco), medio: z.coerce.number().catch(FAIXAS_PADRAO.medio), bom: z.coerce.number().catch(FAIXAS_PADRAO.bom) })
+  .catch(FAIXAS_PADRAO)
+  .transform((f) => (validarFaixas(f) ? FAIXAS_PADRAO : f))
+const Intervalos = z
+  .array(z.coerce.number())
+  .catch([...INTERVALOS_PADRAO])
+  .transform((l) => lerIntervalos(l.join(' ')) ?? [...INTERVALOS_PADRAO])
+export const Preferencias = z
+  .object({ faixas: Faixas, intervalosRevisao: Intervalos })
+  .catch({ faixas: FAIXAS_PADRAO, intervalosRevisao: [...INTERVALOS_PADRAO] })
+export type Preferencias = z.infer<typeof Preferencias>
+export const preferenciasPadrao = (): Preferencias => Preferencias.parse({})
+
 export const BackupLegado = z.object({
   tema: z.enum(['auto', 'light', 'dark']).catch('auto'),
   config: ConfigLegado,
@@ -114,6 +146,7 @@ export const BackupLegado = z.object({
     .object({ foco: z.coerce.number().catch(25), pausa: z.coerce.number().catch(5), longa: z.coerce.number().catch(15), ate: z.coerce.number().catch(4) })
     .catch({ foco: 25, pausa: 5, longa: 15, ate: 4 }),
   cores: z.record(z.string(), z.coerce.number()).catch({}),
+  preferencias: Preferencias,
   notas: z.array(Nota).catch([]),
   modelos: z.array(ModeloSalvo).catch([]),
   assuntos: z.array(Assunto).catch([]),
@@ -158,6 +191,7 @@ export interface Dados {
   semana: Semana | null
   pomo: { foco: number; pausa: number; longa: number; ate: number }
   cores: Record<string, number>
+  preferencias: Preferencias
   fechadas: SemanaFechada[]
   modelos: ModeloSalvo[]
   notas: NotaResumo[]

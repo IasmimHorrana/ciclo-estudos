@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest'
 import { lerArquivo } from '@/dados/converter'
 import { gerarSemana, carregarCiclo } from '@/dados/ciclo'
 import { BancoCiclo } from '@/dados/db'
-import { adicionarMateriaEdital, carregarEdital, criarAssunto, enviarAoCiclo, importarEdital, mudarAssunto, definirHorasDoTopico, mudarComSubtopicos, tirarAssuntoDoEdital, tirarMateriaDoEdital } from '@/dados/edital'
+import { adicionarMateriaEdital, carregarEdital, criarAssunto, enviarAoCiclo, importarEdital, mudarAssunto, definirHorasDoTopico, mudarComSubtopicos, moverAssunto, agruparEmNovoTopico, responderRevisaoAssunto, tirarAssuntoDoEdital, tirarMateriaDoEdital } from '@/dados/edital'
+import { mudarPreferencias } from '@/dados/ciclo'
 import { substituirDados } from '@/dados/repositorio'
 
 const AGORA = new Date(2026, 9, 7, 10).getTime() // quarta
@@ -41,7 +42,7 @@ describe('importarEdital', () => {
 
 describe('o edital só mostra o que veio dele', () => {
   const semEdital = (id: string, materia: string, nome: string) => ({
-    id, materia, nome, ordem: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, noEdital: false, paiId: null, atualizadoEm: 1, excluidoEm: null, sujo: 1 as const,
+    id, materia, nome, ordem: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, noEdital: false, paiId: null, estudadoEm: null, revisoes: [], atualizadoEm: 1, excluidoEm: null, sujo: 1 as const,
   })
 
   it('importar liga o assunto que já existia (sem duplicar) e os de fora continuam de fora', async () => {
@@ -212,5 +213,77 @@ describe('horas no tópico e nomes', () => {
     await importarEdital(db, [{ materia: 'Informática', assuntos: [{ nome: 'Hardware e software', filhos: [] }] }], [], AGORA + 1)
     const { assuntos } = await carregarEdital(db)
     expect(assuntos.map((a) => a.nome)).toEqual(['Hardware e software'])
+  })
+})
+
+describe('revisão dos assuntos no banco', () => {
+  const redes = [{ materia: 'Informática', assuntos: [{ nome: 'Redes', filhos: ['NAT', 'VLAN'] }] }]
+  const DIA = '2026-10-07' // AGORA
+
+  it('marcar o tópico agenda as revisões dos subtópicos com os intervalos escolhidos; desmarcar tira as pendentes', async () => {
+    const db = await novoBanco()
+    await mudarPreferencias(db, { intervalosRevisao: [2, 10] }, AGORA)
+    await importarEdital(db, redes, [], AGORA)
+    const pai = (await carregarEdital(db)).assuntos.find((a) => a.nome === 'Redes')
+    await mudarComSubtopicos(db, pai?.id ?? '', { estudado: true }, AGORA)
+    const nat = (await carregarEdital(db)).assuntos.find((a) => a.nome === 'NAT')
+    expect(nat).toMatchObject({ estudadoEm: DIA })
+    expect(nat?.revisoes.map((r) => r.dia)).toEqual(['2026-10-09', '2026-10-17'])
+
+    // marcar de novo (já estava) não reagenda
+    await mudarAssunto(db, nat?.id ?? '', { estudado: true }, AGORA + 86_400_000)
+    expect((await db.assuntos.get(nat?.id ?? ''))?.revisoes.map((r) => r.dia)).toEqual(['2026-10-09', '2026-10-17'])
+
+    await mudarComSubtopicos(db, pai?.id ?? '', { estudado: false }, AGORA)
+    expect(await db.assuntos.get(nat?.id ?? '')).toMatchObject({ estudado: false, estudadoEm: null, revisoes: [] })
+  })
+
+  it('"Entendi" conclui a próxima; "Preciso rever" recomeça a partir do dia da resposta', async () => {
+    const db = await novoBanco()
+    const id = (await criarAssunto(db, 'Informática', 'Firewall', AGORA)) ?? ''
+    await mudarAssunto(db, id, { estudado: true }, AGORA)
+    const dia2 = new Date(2026, 9, 8, 10).getTime()
+    await responderRevisaoAssunto(db, id, 'ok', dia2)
+    let a = await db.assuntos.get(id)
+    expect(a?.revisoes[0]).toEqual({ dia: '2026-10-08', feitaEm: '2026-10-08', resultado: 'ok' })
+    const dia20 = new Date(2026, 9, 20, 10).getTime()
+    await responderRevisaoAssunto(db, id, 'rever', dia20)
+    a = await db.assuntos.get(id)
+    expect(a?.revisoes.filter((r) => r.feitaEm).map((r) => r.resultado)).toEqual(['ok', 'rever'])
+    expect(a?.revisoes.filter((r) => !r.feitaEm).map((r) => r.dia)).toEqual(['2026-10-21', '2026-10-27', '2026-11-19'])
+  })
+})
+
+describe('reorganizar o edital (mover e agrupar)', () => {
+  const linhas = [{ materia: 'Informática', assuntos: [{ nome: 'Vírus', filhos: [] }, { nome: 'Worm', filhos: [] }, { nome: 'Redes', filhos: ['NAT'] }] }]
+  const nomes = async (db: BancoCiclo) => {
+    const { assuntos } = await carregarEdital(db)
+    const ed = assuntos.filter((a) => a.noEdital)
+    const nome = (id: string | null) => ed.find((a) => a.id === id)?.nome ?? '-'
+    return ed.sort((a, b) => a.ordem - b.ordem).map((a) => `${nome(a.paiId)}>${a.nome}`)
+  }
+  const id = async (db: BancoCiclo, nome: string) => (await carregarEdital(db)).assuntos.find((a) => a.nome === nome)?.id ?? ''
+
+  it('agrupar cria o tópico no lugar do assunto; arrastar outro para dentro junta os dois; as questões continuam ligadas', async () => {
+    const db = await novoBanco()
+    await importarEdital(db, linhas, [], AGORA)
+    const virus = await id(db, 'Vírus')
+    await db.questoes.put({ id: 'q1', data: '2026-10-07', materia: 'Informática', assuntoId: virus, feitas: 10, acertos: 8, atualizadoEm: AGORA, excluidoEm: null, sujo: 1 })
+    expect(await agruparEmNovoTopico(db, virus, 'malware', AGORA)).toBe('ok')
+    expect(await moverAssunto(db, await id(db, 'Worm'), await id(db, 'Malware'), 'dentro', AGORA)).toBe(true)
+    const l = await nomes(db)
+    expect(l.filter((x) => x.startsWith('Malware>'))).toEqual(['Malware>Vírus', 'Malware>Worm'])
+    expect(l).toContain('->Malware')
+    expect((await db.questoes.get('q1'))?.assuntoId).toBe(virus)
+    expect(await agruparEmNovoTopico(db, await id(db, 'Redes'), 'MALWARE', AGORA)).toBe('duplicado')
+  })
+
+  it('não solta dentro de um subtópico dele nem em outra matéria', async () => {
+    const db = await novoBanco()
+    await importarEdital(db, [...linhas, { materia: 'Penal', assuntos: [{ nome: 'Penas', filhos: [] }] }], [], AGORA)
+    expect(await moverAssunto(db, await id(db, 'Redes'), await id(db, 'NAT'), 'dentro', AGORA)).toBe(false)
+    expect(await moverAssunto(db, await id(db, 'Vírus'), await id(db, 'Penas'), 'dentro', AGORA)).toBe(false)
+    expect(await moverAssunto(db, await id(db, 'NAT'), null, 'dentro', AGORA)).toBe(true)
+    expect((await nomes(db)).filter((x) => x.endsWith('>NAT'))).toEqual(['->NAT'])
   })
 })

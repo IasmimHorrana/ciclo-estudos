@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { abrirQuestoes } from '@/componentes/abrirQuestoes'
+import { AjustarFaixas } from '@/componentes/AjustarFaixas'
 import { avisar, confirmar, pedirTexto } from '@/componentes/dialogos-api'
 import { Barras } from '@/componentes/graficos/Barras'
 import { Rosca } from '@/componentes/graficos/Rosca'
@@ -11,7 +12,9 @@ import { db } from '@/dados/db'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
 import { corDe, fmtH, todasMaterias } from '@/dominio/ciclo'
 import { fmtData } from '@/dominio/datas'
-import { calcularDesempenho, MIN_QUESTOES, NOMES_NIVEL, nivelDe, pctDe, resumoDasSemanas, type Nivel, type Periodo } from '@/dominio/desempenho'
+import { calcularDesempenho, MIN_QUESTOES, nivelDe, pctDe, resumoDasSemanas, type Periodo } from '@/dominio/desempenho'
+import { Etiqueta } from '@/componentes/nivel'
+import { COR_NIVEL } from '@/componentes/nivel-cores'
 import { abrirDialogo } from '@/estado/dialogo'
 import { useDesempenhoUi } from '@/estado/desempenho'
 import { useUi } from '@/estado/ui'
@@ -21,16 +24,6 @@ import { cn } from '@/lib/utils'
 
 const card = 'rounded-xl border bg-card p-3.5 shadow-sm'
 const mudo = 'text-xs text-muted-foreground'
-const COR_NIVEL: Record<Nivel, string> = { na: 'var(--muted-foreground)', fraco: 'var(--erro)', medio: 'var(--aviso)', bom: 'var(--primary)', dom: 'var(--ok)' }
-
-function Etiqueta({ nivel }: { nivel: Nivel }) {
-  return (
-    <span className="rounded-full px-2 py-0.5 text-[0.65rem] font-bold whitespace-nowrap" style={{ color: COR_NIVEL[nivel], background: `color-mix(in srgb, ${COR_NIVEL[nivel]} 14%, transparent)` }}>
-      {NOMES_NIVEL[nivel]}
-    </span>
-  )
-}
-
 function Kpi({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
     <div className={cn(card, 'py-2.5')}>
@@ -65,6 +58,9 @@ export function Desempenho() {
         {botoes<'estudo' | 'semanas'>([['estudo', 'Estudo'], ['semanas', 'Semanas']], visao, (k) => definir({ visao: k }))}
         {visao === 'estudo' && botoes<Periodo>([['hoje', 'Hoje'], ['7', '7 dias'], ['30', '30 dias'], ['tudo', 'Tudo']], periodo, (k) => definir({ periodo: k }))}
         <span className="flex-1" />
+        <Button variant="outline" title="Onde começa cada nível (Fraco, Médio, Bom, Dominado)" onClick={() => void abrirDialogo('Faixas de acerto', (fechar) => <AjustarFaixas atual={ciclo.preferencias.faixas} fechar={() => fechar()} />)}>
+          Faixas de acerto
+        </Button>
         {visao === 'estudo' && <Button onClick={() => void abrirQuestoes()}>＋ Registrar questões</Button>}
       </div>
       {visao === 'estudo' ? <VisaoEstudo ciclo={ciclo} estudo={estudo} periodo={periodo} /> : <VisaoSemanas ciclo={ciclo} />}
@@ -78,8 +74,9 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
   const alternarAberta = useDesempenhoUi((s) => s.alternarAberta)
   const d = calcularDesempenho({
     questoes: estudo.questoes, sessoes: estudo.sessoes, assuntos: estudo.assuntos, periodo, hojeISO,
-    materiasDaSemana: ciclo.semana?.passos.map((p) => p.materia) ?? [], config: ciclo.config,
+    materiasDaSemana: ciclo.semana?.passos.map((p) => p.materia) ?? [], config: ciclo.config, faixas: ciclo.preferencias.faixas,
   })
+  const fx = ciclo.preferencias.faixas
   const cor = (m: string) => corDe(ciclo.cores, m)
   const nomeAssunto = (id: string | null) => estudo.assuntos.find((a) => a.id === id)?.nome
   const todas = [...new Set([...todasMaterias(ciclo.config), ...d.mats])]
@@ -97,7 +94,7 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
         <section className={cn(card, 'flex min-h-0 flex-col')}>
           <h2 className="m-0 mb-1 text-sm font-bold">Matérias e assuntos</h2>
           <p className={cn(mudo, 'm-0 mb-2')}>
-            O nível de cada assunto vem da porcentagem de acertos no período (mínimo de {MIN_QUESTOES} questões): abaixo de 60% é Fraco, até 74% Médio, até 89% Bom e 90% ou mais Dominado.
+            O nível de cada assunto vem da porcentagem de acertos no período (mínimo de {MIN_QUESTOES} questões): abaixo de {fx.fraco}% é Fraco, até {fx.medio - 1}% Médio, até {fx.bom - 1}% Bom e {fx.bom}% ou mais Dominado (ajuste em "Faixas de acerto").
           </p>
           <FormAssuntos materias={todas} />
           <div className="min-h-0 flex-1 overflow-auto">
@@ -160,7 +157,7 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
                   <span className="min-w-0 flex-1 truncate" title={x.materia}>{x.materia}</span>
                   <span className={mudo}>{x.acertos}/{x.feitas} · {pctDe(x.acertos, x.feitas)}%</span>
                 </div>
-                <div className="mt-1 h-1.5 overflow-hidden rounded bg-muted"><i className="block h-full" style={{ width: `${pctDe(x.acertos, x.feitas)}%`, background: COR_NIVEL[nivelDe(x.feitas, x.acertos)] }} /></div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded bg-muted"><i className="block h-full" style={{ width: `${pctDe(x.acertos, x.feitas)}%`, background: COR_NIVEL[nivelDe(x.feitas, x.acertos, ciclo.preferencias.faixas)] }} /></div>
               </div>
             ))}
           </section>

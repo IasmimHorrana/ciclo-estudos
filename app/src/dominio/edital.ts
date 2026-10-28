@@ -1,5 +1,8 @@
 // Edital verticalizado: leitura do texto colado, prioridade dos assuntos e sugestão de passos no ciclo. Puro.
 
+import { hoje as hojeLocal, type DataISO } from '@/dominio/datas'
+import { estadoRevisoes, piorEstado, proximaRevisao, type EstadoRevisao, type Revisao } from '@/dominio/revisaoAssuntos'
+
 /** Um tópico do edital e os subtópicos dele (se houver). */
 export interface ItemLido {
   nome: string
@@ -265,6 +268,7 @@ export interface EntradaMontagem {
     id: string; materia: string; nome: string; ordem: number; importancia: number; horasIdeais: number; estudado: boolean; noCiclo: boolean; noEdital: boolean
     /** Tópico a que pertence (subtópico), ou `null`. */
     paiId: string | null
+    revisoes?: readonly Revisao[]
   }[]
   questoes: readonly { assuntoId: string | null; feitas: number; acertos: number }[]
   sessoes: readonly { assuntoId: string | null; minutos: number }[]
@@ -274,6 +278,15 @@ export interface EntradaMontagem {
   filtroMateria: string | null
   /** Tópicos fechados na tela (ids): os subtópicos deles não entram na lista de linhas. */
   recolhidos?: ReadonlySet<string>
+  /**
+   * Palavras procuradas no nome (sem acento e caixa). Fica a linha que casa, os tópicos acima dela e, se casou um tópico
+   * ou a matéria, tudo o que está dentro. Durante a busca os tópicos ficam abertos e as matérias sem nada encontrado somem.
+   */
+  busca?: string
+  /** Só os assuntos com revisão para hoje ou atrasada (e os tópicos acima deles); ignora "ocultar estudados". */
+  soRevisar?: boolean
+  /** Dia de hoje, para o estado das revisões (padrão: o dia do aparelho). */
+  hoje?: DataISO
 }
 
 export interface LinhaEdital {
@@ -281,6 +294,8 @@ export interface LinhaEdital {
   nome: string
   /** 0 = tópico ou assunto solto, 1 = subtópico… */
   nivel: number
+  /** Tópico acima (do edital), ou `null`. */
+  paiId: string | null
   /** É um tópico com subtópicos: os números abaixo são a soma deles. */
   temFilhos: boolean
   /** Assuntos de verdade (sem subtópicos) dentro desta linha e quantos já estão estudados. */
@@ -303,7 +318,16 @@ export interface LinhaEdital {
   prioridade: number
   /** Nada definido ainda (sem importância, sem horas ideais, poucas questões): a prioridade não diz nada. */
   semDados: boolean
+  /** Estado da revisão; num tópico, o pior entre os subtópicos. */
+  revisao: EstadoRevisao
+  /** Dia da próxima revisão (num tópico, a mais próxima dos subtópicos), ou `null`. */
+  proximaRevisao: DataISO | null
+  /** As revisões do próprio assunto (vazio num tópico). */
+  revisoes: readonly Revisao[]
 }
+
+/** Revisão que vence hoje ou já passou do dia. */
+export const revisaoDevida = (l: { revisao: EstadoRevisao }) => l.revisao === 'hoje' || l.revisao === 'atrasada'
 
 export interface BlocoEdital {
   materia: { id: string; nome: string; peso: number }
@@ -347,6 +371,9 @@ export function montarEdital(e: EntradaMontagem) {
   for (const q of e.questoes) if (q.assuntoId) { const x = ac(q.assuntoId); x.feitas += q.feitas; x.acertos += q.acertos }
   for (const s of e.sessoes) if (s.assuntoId) ac(s.assuntoId).minutos += s.minutos
 
+  const dia = e.hoje ?? hojeLocal()
+  const procura = normalizar(e.busca ?? '')
+  const casa = (nome: string) => procura !== '' && normalizar(nome).includes(procura)
   const chaveDaOrdem = (l: LinhaEdital) => (e.ordem === 'prioridade' ? -l.prioridade : e.ordem === 'falta' ? -l.falta : 0)
 
   let blocos: BlocoEdital[] = materiasDoEdital(e.materias, e.assuntos)
@@ -366,7 +393,7 @@ export function montarEdital(e: EntradaMontagem) {
         const x = porAssunto.get(a.id) ?? { feitas: 0, acertos: 0, minutos: 0 }
         const horasFeitas = arred(x.minutos / 60)
         return {
-          id: a.id, nome: a.nome, nivel, temFilhos: false, folhas: 1, folhasEstudadas: a.estudado ? 1 : 0,
+          id: a.id, nome: a.nome, nivel, paiId: a.paiId && ids.has(a.paiId) ? a.paiId : null, temFilhos: false, folhas: 1, folhasEstudadas: a.estudado ? 1 : 0,
           importancia: a.importancia, horasIdeais: a.horasIdeais, estudado: a.estudado, noCiclo: a.noCiclo,
           certas: x.acertos, erradas: Math.max(0, x.feitas - x.acertos), total: x.feitas,
           pctAcerto: x.feitas ? Math.round((x.acertos / x.feitas) * 100) : null,
@@ -374,6 +401,9 @@ export function montarEdital(e: EntradaMontagem) {
           falta: a.horasIdeais > 0 ? arred(Math.max(0, a.horasIdeais - horasFeitas)) : 0,
           prioridade: prioridade({ pesoMateria: m.peso, importancia: a.importancia, horasIdeais: a.horasIdeais, horasFeitas, estudado: a.estudado, questoes: x.feitas, acertos: x.acertos }),
           semDados: !(a.importancia > 0) && a.horasIdeais === 0 && x.feitas < 3,
+          revisao: estadoRevisoes(a.revisoes ?? [], dia),
+          proximaRevisao: proximaRevisao(a.revisoes ?? [])?.dia ?? null,
+          revisoes: a.revisoes ?? [],
         }
       }
 
@@ -403,21 +433,28 @@ export function montarEdital(e: EntradaMontagem) {
           falta: arred(pendentes.reduce((t, f) => t + f.falta, 0)),
           prioridade: pendentes.reduce((mx, f) => Math.max(mx, f.prioridade), 0),
           semDados: folhas.every((f) => f.semDados),
+          revisao: piorEstado(folhas.map((f) => f.revisao)),
+          proximaRevisao: folhas.map((f) => f.proximaRevisao).filter((d): d is DataISO => d !== null).sort()[0] ?? null,
+          revisoes: [],
         }
         return { linha, filhos, folhas }
       }
 
       const arvore = emOrdem(raizes).map((r) => construir(r, 0))
       arvore.sort((x, y) => chaveDaOrdem(x.linha) - chaveDaOrdem(y.linha))
-      const emitir = (n: No): LinhaEdital[] => {
-        if (e.ocultarEstudados && n.linha.estudado) return []
-        return [n.linha, ...(e.recolhidos?.has(n.linha.id) ? [] : n.filhos.flatMap(emitir))]
+      const temAchado = (n: No): boolean => casa(n.linha.nome) || n.filhos.some(temAchado)
+      // `dentro`: um tópico acima (ou a matéria) já casou com a busca, então mostra tudo daqui para baixo
+      const emitir = (n: No, dentro: boolean): LinhaEdital[] => {
+        if (e.soRevisar ? !revisaoDevida(n.linha) : e.ocultarEstudados && n.linha.estudado) return []
+        if (procura && !dentro && !temAchado(n)) return []
+        const aberto = procura !== '' || !e.recolhidos?.has(n.linha.id)
+        return [n.linha, ...(aberto ? n.filhos.flatMap((f) => emitir(f, dentro || casa(n.linha.nome))) : [])]
       }
       const folhas = arvore.flatMap((n) => n.folhas)
       const todosOsIds = dela.map((a) => porAssunto.get(a.id) ?? { feitas: 0, acertos: 0, minutos: 0 })
       return {
         materia: { id: m.id, nome: m.nome, peso: m.peso },
-        linhas: arvore.flatMap(emitir),
+        linhas: arvore.flatMap((n) => emitir(n, casa(m.nome))),
         resumo: resumoEdital(folhas),
         totais: {
           certas: todosOsIds.reduce((t, x) => t + x.acertos, 0),
@@ -449,7 +486,8 @@ export function montarEdital(e: EntradaMontagem) {
       pctHoras: horasIdeais > 0 ? Math.round((uteis / horasIdeais) * 100) : 0,
     } satisfies ResumoEdital,
   }
-  return { blocos, total }
+  // os totais continuam sendo de todas as matérias mostradas; a busca e "Revisões de hoje" só escondem as que ficaram vazias
+  return { blocos: procura || e.soRevisar ? blocos.filter((b) => b.linhas.length > 0) : blocos, total }
 }
 
 /** Assunto sugerido a partir da anotação do passo ("Posse; Contratos" → o primeiro que existir entre os assuntos da matéria). */
@@ -461,4 +499,49 @@ export function sugerirAssunto(nota: string, assuntos: readonly { id: string; no
     if (a) return a.id
   }
   return null
+}
+
+/** Onde soltar um assunto arrastado: antes ou depois de outro (mesmo nível) ou dentro dele (vira subtópico). */
+export type PosicaoSoltar = 'antes' | 'depois' | 'dentro'
+
+export interface ItemOrdem {
+  id: string
+  nome: string
+  ordem: number
+  paiId: string | null
+}
+
+/**
+ * Move um assunto dentro da mesma matéria: muda o tópico (`paiId`) e renumera a ordem dos irmãos no destino.
+ * `alvoId` nulo = vira assunto solto, no fim da matéria. Os subtópicos do assunto vão junto (continuam apontando para ele).
+ * Devolve só o que mudou, ou `null` se o movimento não vale (soltar nele mesmo ou dentro de um subtópico dele).
+ */
+export function moverNoEdital(itens: readonly ItemOrdem[], id: string, alvoId: string | null, pos: PosicaoSoltar): Pick<ItemOrdem, 'id' | 'paiId' | 'ordem'>[] | null {
+  const eu = itens.find((i) => i.id === id)
+  const alvo = alvoId === null ? null : itens.find((i) => i.id === alvoId)
+  if (!eu || alvo === undefined || alvoId === id) return null
+  const descendentes = new Set<string>()
+  const juntar = (pai: string): void => {
+    for (const f of itens.filter((i) => i.paiId === pai && !descendentes.has(i.id))) {
+      descendentes.add(f.id)
+      juntar(f.id)
+    }
+  }
+  juntar(id)
+  if (alvo && descendentes.has(alvo.id)) return null
+
+  const ids = new Set(itens.map((i) => i.id))
+  const raiz = (p: string | null) => (p && ids.has(p) ? p : null)
+  const novoPai = alvo === null ? null : pos === 'dentro' ? alvo.id : raiz(alvo.paiId)
+  const irmaos = itens
+    .filter((i) => i.id !== id && raiz(i.paiId) === novoPai)
+    .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'))
+  const k = alvo === null || pos === 'dentro' ? irmaos.length : irmaos.findIndex((i) => i.id === alvo.id) + (pos === 'depois' ? 1 : 0)
+  const nova = [...irmaos.slice(0, k), eu, ...irmaos.slice(k)]
+  return nova
+    .map((i, ordem) => ({ id: i.id, paiId: i.id === id ? novoPai : i.paiId, ordem }))
+    .filter((m) => {
+      const antes = itens.find((i) => i.id === m.id) as ItemOrdem
+      return m.ordem !== antes.ordem || m.paiId !== antes.paiId
+    })
 }

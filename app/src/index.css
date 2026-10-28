@@ -71,6 +71,71 @@
   --calor-4: #78dba5;
 }
 
+/* Paleta "Trigo" (bege e caramelo; referência: Wheat EEE1CD D7C0AE D3BFA6 A39885 B8926B CF916E) */
+:root[data-paleta='trigo']:not(.dark) {
+  --background: #f3ebdf;
+  --foreground: #3f3227;
+  --card: #fffaf3;
+  --card-foreground: #3f3227;
+  --popover: #fffaf3;
+  --popover-foreground: #3f3227;
+  --primary: #8a6340;
+  --primary-foreground: #ffffff;
+  --secondary: #eee1cd;
+  --secondary-foreground: #6e4f31;
+  --muted: #ece2d4;
+  --muted-foreground: #73675a;
+  --accent: #eee1cd;
+  --accent-foreground: #6e4f31;
+  --destructive: #b42318;
+  --border: #e2d5c3;
+  --input: #d7c0ae;
+  --ring: #b8926b;
+  --lateral: #ece2d4;
+  --ok: #5a7a2e;
+  --ok-bg: #e8efd9;
+  --aviso: #b0562e;
+  --aviso-bg: #f6e0d2;
+  --erro: #b42318;
+  --erro-bg: #fbe1dc;
+  --calor-1: #eee1cd;
+  --calor-2: #d3bfa6;
+  --calor-3: #b8926b;
+  --calor-4: #8a6340;
+}
+
+:root.dark[data-paleta='trigo'] {
+  --background: #1c1814;
+  --foreground: #f1e8db;
+  --card: #27211b;
+  --card-foreground: #f1e8db;
+  --popover: #2d261f;
+  --popover-foreground: #f1e8db;
+  --primary: #d9b48a;
+  --primary-foreground: #2b1d0e;
+  --secondary: #3a2f24;
+  --secondary-foreground: #eee1cd;
+  --muted: #2f2820;
+  --muted-foreground: #b3a691;
+  --accent: #3d3126;
+  --accent-foreground: #eee1cd;
+  --destructive: #f2877a;
+  --border: #3d342a;
+  --input: #463b30;
+  --ring: #d9b48a;
+  --lateral: #201b16;
+  --ok: #a9cc85;
+  --ok-bg: #2a3320;
+  --aviso: #e8a87c;
+  --aviso-bg: #3d2a1c;
+  --erro: #f2877a;
+  --erro-bg: #3d2220;
+  --calor-1: #4a3b2c;
+  --calor-2: #7a5f42;
+  --calor-3: #b8926b;
+  --calor-4: #e3c49e;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
