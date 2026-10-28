@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { EscolherAssunto } from '@/componentes/EscolherAssunto'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import { carregarCiclo } from '@/dados/ciclo'
@@ -55,12 +56,7 @@ export function FormularioQuestoes({ inicial, fechar }: { inicial: Preenchimento
       </div>
       <label className="mt-3 flex flex-col gap-1 text-xs font-bold text-muted-foreground uppercase">
         Assunto
-        <Selecao value={assuntoId} onChange={(e) => setAssuntoId(e.target.value)}>
-          <option value="">— sem assunto —</option>
-          {assuntos.map((a) => (
-            <option key={a.id} value={a.id}>{a.nome}</option>
-          ))}
-        </Selecao>
+        <EscolherAssunto assuntos={assuntos} valor={assuntoId} aoMudar={setAssuntoId} />
       </label>
       <label className="mt-3 flex flex-col gap-1 text-xs font-bold text-muted-foreground uppercase">
         …ou criar um assunto novo
