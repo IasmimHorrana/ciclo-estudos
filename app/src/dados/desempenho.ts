@@ -61,6 +61,12 @@ export async function excluirRegistroQuestoes(db: BancoCiclo, id: string, agora 
   if (q) await db.questoes.put({ ...q, excluidoEm: agora, atualizadoEm: agora, sujo: 1 })
 }
 
+/** Apaga um registro de tempo (sessão) do Desempenho e do Edital. As horas já somadas a um passo da semana não mudam. */
+export async function excluirSessao(db: BancoCiclo, id: string, agora = Date.now()): Promise<void> {
+  const s = await db.sessoes.get(id)
+  if (s) await db.sessoes.put({ ...s, excluidoEm: agora, atualizadoEm: agora, sujo: 1 })
+}
+
 /** Salva um registro de questões. Se `novo` vier preenchido, cria (ou reaproveita) o assunto. Devolve a mensagem de erro, se houver. */
 export async function registrarQuestoes(db: BancoCiclo, d: DadosQuestoes, agora = Date.now()): Promise<string | null> {
   const erro = validarQuestoes(d, hoje(new Date(agora)))

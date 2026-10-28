@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
-import { adicionarAssuntos, carregarEstudo, excluirAssunto, excluirRegistroQuestoes, registrarQuestoes, renomearAssunto } from '@/dados/desempenho'
+import { adicionarAssuntos, carregarEstudo, excluirAssunto, excluirRegistroQuestoes, excluirSessao, registrarQuestoes, renomearAssunto } from '@/dados/desempenho'
 import { BancoCiclo } from '@/dados/db'
 
 const T0 = new Date(2026, 9, 9, 10, 0).getTime()
@@ -69,5 +69,16 @@ describe('registrar questões', () => {
     await excluirRegistroQuestoes(db, id, T0 + 1)
     expect((await carregarEstudo(db)).questoes).toEqual([])
     expect((await db.questoes.get(id))?.excluidoEm).toBe(T0 + 1)
+  })
+})
+
+describe('registros de tempo', () => {
+  it('excluir uma sessão a tira do Desempenho, mas guarda a exclusão (exclusão lógica)', async () => {
+    const db = banco()
+    const sessao = { data: '2026-10-09', materia: 'Informática', assuntoId: null, minutos: 29, tipo: 'Teoria', atualizadoEm: T0, excluidoEm: null, sujo: 1 as const }
+    await db.sessoes.bulkPut([{ ...sessao, id: 's1' }, { ...sessao, id: 's2', minutos: 60 }])
+    await excluirSessao(db, 's1', T0 + 1)
+    expect((await carregarEstudo(db)).sessoes.map((x) => x.id)).toEqual(['s2'])
+    expect(await db.sessoes.get('s1')).toMatchObject({ excluidoEm: T0 + 1, sujo: 1 })
   })
 })
