@@ -1,21 +1,45 @@
-import { ChevronDown, ChevronRight, Clock, Pencil, Plus, Trash2 } from 'lucide-react'
+import type { DragEvent } from 'react'
+import { ChevronDown, ChevronRight, Clock, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Menu } from '@/componentes/Menu'
 import { SeloAcerto } from '@/componentes/nivel'
 import { avisar, confirmar, pedirTexto } from '@/componentes/dialogos-api'
 import { Selecao } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
-import { enviarAoCiclo, incluirAssuntos, mudarComSubtopicos, mudarMateriaEdital, tirarMateriaDoEdital } from '@/dados/edital'
+import { enviarAoCiclo, incluirAssuntos, moverAssunto, mudarComSubtopicos, mudarMateriaEdital, tirarMateriaDoEdital } from '@/dados/edital'
 import { renomearMateria } from '@/dados/materias'
 import { useCiclo } from '@/dados/useCiclo'
 import { corDe, fmtH } from '@/dominio/ciclo'
-import { partirNome, type BlocoEdital, type LinhaEdital } from '@/dominio/edital'
+import { partirNome, type BlocoEdital, type LinhaEdital, type PosicaoSoltar } from '@/dominio/edital'
 import { COR_PRIORIDADE, NOME_PRIORIDADE, nivelPrioridade } from '@/telas/edital/prioridade'
 import { useEditalUi } from '@/estado/edital'
 import { cn } from '@/lib/utils'
 
-export function CartaoMateria({ b, maxPrioridade, recolhida }: { b: BlocoEdital; maxPrioridade: number; recolhida: boolean }) {
+/** Solta o assunto arrastado onde a linha de queda indica e abre o tópico que o recebeu. */
+async function soltarArrastado() {
+  const { arrasto, queda, definir } = useEditalUi.getState()
+  definir({ arrasto: null, queda: null })
+  if (!arrasto || !queda) return
+  const ok = await moverAssunto(db, arrasto.id, queda.alvoId, queda.pos)
+  if (ok && queda.pos === 'dentro' && queda.alvoId) {
+    const alvo = queda.alvoId
+    useEditalUi.setState((s) => ({ topicosRecolhidos: s.topicosRecolhidos.filter((t) => t !== alvo) }))
+  }
+}
+
+export function CartaoMateria({ b, maxPrioridade, recolhida, podeSoltar }: {
+  b: BlocoEdital
+  maxPrioridade: number
+  recolhida: boolean
+  /** O assunto arrastado pode cair ali? (não pode dentro dele mesmo nem de um subtópico dele) */
+  podeSoltar: (id: string, alvoId: string | null, pos: PosicaoSoltar) => boolean
+}) {
   const ciclo = useCiclo()
   const alternar = useEditalUi((s) => s.alternarRecolhida)
+  const arrasto = useEditalUi((s) => s.arrasto)
+  const queda = useEditalUi((s) => s.queda)
+  const definir = useEditalUi((s) => s.definir)
+  const daqui = arrasto?.materiaId === b.materia.id
+  const quedaNoFim = daqui && queda?.alvoId === null
   const cor = corDe(ciclo?.cores ?? {}, b.materia.nome)
   const mat = ciclo?.config.mats.find((m) => m.nome === b.materia.nome)
   const Seta = recolhida ? ChevronRight : ChevronDown
@@ -48,7 +72,19 @@ export function CartaoMateria({ b, maxPrioridade, recolhida }: { b: BlocoEdital;
 
   return (
     <section className="rounded-xl border bg-card shadow-sm" style={{ boxShadow: `inset 4px 0 0 ${cor}` }}>
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 pr-2 pl-4">
+      <header
+        className={cn('flex flex-wrap items-center gap-x-3 gap-y-1 rounded-t-xl py-2 pr-2 pl-4', quedaNoFim && 'bg-primary/15')}
+        onDragOver={(e) => {
+          if (!arrasto || !daqui || !podeSoltar(arrasto.id, null, 'dentro')) return
+          e.preventDefault()
+          if (queda?.alvoId !== null) definir({ queda: { alvoId: null, pos: 'dentro' } })
+        }}
+        onDrop={(e) => {
+          e.preventDefault()
+          void soltarArrastado()
+        }}
+        title={daqui ? 'Solte aqui para virar assunto solto (sem tópico), no fim da matéria' : undefined}
+      >
         <button className="flex min-w-0 cursor-pointer items-center gap-1.5 font-bold" onClick={() => alternar(b.materia.id)} aria-expanded={!recolhida}>
           <Seta className="size-4 shrink-0" />
           <span className="truncate">{b.materia.nome}</span>
@@ -81,7 +117,7 @@ export function CartaoMateria({ b, maxPrioridade, recolhida }: { b: BlocoEdital;
       </header>
       {!recolhida && (
         <ul className="m-0 list-none p-0 pb-1">
-          {b.linhas.map((l) => <LinhaAssunto key={l.id} l={l} maxPrioridade={maxPrioridade} />)}
+          {b.linhas.map((l) => <LinhaAssunto key={l.id} l={l} materiaId={b.materia.id} maxPrioridade={maxPrioridade} podeSoltar={podeSoltar} />)}
           {b.linhas.length === 0 && (
             <li className="border-t px-4 py-2 text-xs text-muted-foreground">{b.resumo.assuntos ? 'Todos os assuntos estão estudados (ocultos).' : 'Sem assuntos ainda. Use "⋯ › Novos assuntos".'}</li>
           )}
@@ -91,7 +127,15 @@ export function CartaoMateria({ b, maxPrioridade, recolhida }: { b: BlocoEdital;
   )
 }
 
-function LinhaAssunto({ l, maxPrioridade }: { l: LinhaEdital; maxPrioridade: number }) {
+function LinhaAssunto({ l, materiaId, maxPrioridade, podeSoltar }: {
+  l: LinhaEdital
+  materiaId: string
+  maxPrioridade: number
+  podeSoltar: (id: string, alvoId: string | null, pos: PosicaoSoltar) => boolean
+}) {
+  const arrasto = useEditalUi((s) => s.arrasto)
+  const queda = useEditalUi((s) => (s.queda?.alvoId === l.id ? s.queda.pos : null))
+  const soDentro = useEditalUi((s) => s.ordem !== 'edital') // fora da ordem do edital, antes/depois não faz sentido
   const recolhido = useEditalUi((s) => s.topicosRecolhidos.includes(l.id))
   const alternarTopico = useEditalUi((s) => s.alternarTopico)
   const aberto = useEditalUi((s) => s.assuntoAberto === l.id)
@@ -101,12 +145,47 @@ function LinhaAssunto({ l, maxPrioridade }: { l: LinhaEdital; maxPrioridade: num
   const prio = nivelPrioridade(l, maxPrioridade)
   const Seta = recolhido && !buscando ? ChevronRight : ChevronDown
 
+  function sobre(e: DragEvent<HTMLLIElement>) {
+    if (!arrasto || arrasto.materiaId !== materiaId || arrasto.id === l.id) return
+    const r = e.currentTarget.getBoundingClientRect()
+    const y = (e.clientY - r.top) / r.height
+    const pos: PosicaoSoltar = soDentro ? 'dentro' : y < 0.3 ? 'antes' : y > 0.7 ? 'depois' : 'dentro'
+    if (!podeSoltar(arrasto.id, l.id, pos)) return
+    e.preventDefault()
+    e.stopPropagation()
+    if (queda !== pos) definir({ queda: { alvoId: l.id, pos } })
+  }
+
   return (
     <li
       id={`assunto-${l.id}`}
-      className={cn('flex items-center gap-2 border-t py-1.5 pr-3 hover:bg-accent/40', aberto && 'bg-accent hover:bg-accent', l.estudado && 'text-muted-foreground')}
-      style={{ paddingLeft: `${0.75 + l.nivel * 1.5}rem` }}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', l.nome)
+        definir({ arrasto: { id: l.id, materiaId }, queda: null })
+      }}
+      onDragEnd={() => definir({ arrasto: null, queda: null })}
+      onDragOver={sobre}
+      onDrop={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        void soltarArrastado()
+      }}
+      className={cn(
+        'group flex items-center gap-2 border-t py-1.5 pr-3 hover:bg-accent/40',
+        aberto && 'bg-accent hover:bg-accent',
+        l.estudado && 'text-muted-foreground',
+        arrasto?.id === l.id && 'opacity-40',
+        queda === 'dentro' && 'bg-primary/15 outline-2 -outline-offset-2 outline-primary',
+      )}
+      style={{
+        paddingLeft: `${0.25 + l.nivel * 1.5}rem`,
+        boxShadow: queda === 'antes' ? 'inset 0 2px 0 var(--primary)' : queda === 'depois' ? 'inset 0 -2px 0 var(--primary)' : undefined,
+      }}
+      title={queda === 'dentro' ? `Soltar dentro de "${l.nome}" (vira subtópico)` : undefined}
     >
+      <GripVertical className="size-3.5 shrink-0 cursor-grab text-muted-foreground opacity-0 group-hover:opacity-60" aria-hidden />
       {l.temFilhos ? (
         <button
           className="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-accent disabled:cursor-default"

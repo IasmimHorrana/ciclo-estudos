@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { achatarItens, agruparLinhas, distribuirAssuntos, lerEdital, maiuscula, partirNome, repartirHoras, materiasDoEdital, montarEdital, sugerirAssunto, normalizar, notaDosAssuntos, prioridade, resumoEdital, sugerirRepeticoes } from './edital'
+import { achatarItens, agruparLinhas, moverNoEdital, distribuirAssuntos, lerEdital, maiuscula, partirNome, repartirHoras, materiasDoEdital, montarEdital, sugerirAssunto, normalizar, notaDosAssuntos, prioridade, resumoEdital, sugerirRepeticoes } from './edital'
 
 const t = (...nomes: string[]) => nomes.map((nome) => ({ nome, filhos: [] as string[] }))
 
@@ -457,5 +457,47 @@ describe('revisões no edital', () => {
     const r = montarEdital({ ...base, soRevisar: true, ocultarEstudados: true })
     expect(r.blocos.map((b) => b.linhas.map((x) => x.nome))).toEqual([['Redes', 'NAT', 'VLAN']])
     expect(r.total.resumo.assuntos).toBe(4)
+  })
+})
+
+describe('mover assuntos no edital', () => {
+  // Malware (tópico vazio), Vírus, Worm, Redes › NAT
+  const itens = [
+    { id: 'm', nome: 'Malware', ordem: 0, paiId: null },
+    { id: 'v', nome: 'Vírus', ordem: 1, paiId: null },
+    { id: 'w', nome: 'Worm', ordem: 2, paiId: null },
+    { id: 'r', nome: 'Redes', ordem: 3, paiId: null },
+    { id: 'n', nome: 'NAT', ordem: 4, paiId: 'r' },
+  ]
+  const aplicar = (l: typeof itens, mud: ReturnType<typeof moverNoEdital>) => l.map((i) => ({ ...i, ...mud?.find((m) => m.id === i.id) }))
+
+  it('soltar dentro vira subtópico, no fim dos filhos; o que sobra não precisa ser renumerado', () => {
+    const mud = moverNoEdital(itens, 'v', 'm', 'dentro')
+    expect(mud).toEqual([{ id: 'v', paiId: 'm', ordem: 0 }])
+    const depois = aplicar(itens, mud)
+    expect(moverNoEdital(depois, 'w', 'm', 'dentro')).toEqual([{ id: 'w', paiId: 'm', ordem: 1 }])
+  })
+
+  it('antes e depois ficam no mesmo nível do alvo, renumerando os irmãos', () => {
+    expect(moverNoEdital(itens, 'r', 'm', 'antes')).toEqual([
+      { id: 'r', paiId: null, ordem: 0 }, { id: 'm', paiId: null, ordem: 1 }, { id: 'v', paiId: null, ordem: 2 }, { id: 'w', paiId: null, ordem: 3 },
+    ])
+    // subtópico solto ao lado de um tópico vira assunto solto
+    expect(moverNoEdital(itens, 'n', 'v', 'depois')).toEqual([
+      { id: 'n', paiId: null, ordem: 2 }, { id: 'w', paiId: null, ordem: 3 }, { id: 'r', paiId: null, ordem: 4 },
+    ])
+  })
+
+  it('sem alvo vira assunto solto no fim da matéria', () => {
+    expect(moverNoEdital(itens, 'n', null, 'dentro')).toEqual([{ id: 'n', paiId: null, ordem: 4 }])
+  })
+
+  it('não solta nele mesmo nem dentro de um subtópico dele; o tópico leva os filhos junto', () => {
+    expect(moverNoEdital(itens, 'r', 'r', 'dentro')).toBeNull()
+    expect(moverNoEdital(itens, 'r', 'n', 'dentro')).toBeNull()
+    expect(moverNoEdital(itens, 'r', 'n', 'antes')).toBeNull()
+    const mud = moverNoEdital(itens, 'r', 'm', 'dentro')
+    expect(mud).toEqual([{ id: 'r', paiId: 'm', ordem: 0 }])
+    expect(aplicar(itens, mud).find((i) => i.id === 'n')?.paiId).toBe('r')
   })
 })

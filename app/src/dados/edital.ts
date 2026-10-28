@@ -5,7 +5,7 @@ import { Preferencias, type Assunto, type MateriaEdital } from '@/dados/esquemas
 import { novoIdFc } from '@/dados/ids'
 import { MATERIAS_PADRAO, passosDe } from '@/dominio/ciclo'
 import { hoje } from '@/dominio/datas'
-import { normalizar, repartirHoras, sugerirRepeticoes, type MateriaLida } from '@/dominio/edital'
+import { maiuscula, moverNoEdital, normalizar, repartirHoras, sugerirRepeticoes, type MateriaLida, type PosicaoSoltar } from '@/dominio/edital'
 import { aoMudarEstudado, INTERVALOS_PADRAO, responderRevisao } from '@/dominio/revisaoAssuntos'
 
 const vivos = <T extends { excluidoEm: number | null }>(l: T[]) => l.filter((x) => x.excluidoEm === null)
@@ -256,4 +256,51 @@ export async function criarAssunto(db: BancoCiclo, materia: string, nome: string
   await importarEdital(db, [{ materia, assuntos: [{ nome: n, filhos: [] }] }], [materia], agora, false)
   const a = vivos(await db.assuntos.toArray()).find((x) => normalizar(x.materia) === normalizar(materia) && normalizar(x.nome) === normalizar(n))
   return a?.id ?? null
+}
+
+/** Assuntos do edital da mesma matéria (os que podem trocar de lugar entre si). */
+const doEditalNaMateria = async (db: BancoCiclo, materia: string) =>
+  vivos(await db.assuntos.toArray()).filter((a) => a.noEdital && normalizar(a.materia) === normalizar(materia))
+
+async function aplicarMovimento(db: BancoCiclo, id: string, alvoId: string | null, pos: PosicaoSoltar, agora: number): Promise<boolean> {
+  const eu = await db.assuntos.get(id)
+  if (!eu) return false
+  const daMateria = await doEditalNaMateria(db, eu.materia)
+  const mud = moverNoEdital(daMateria, id, alvoId, pos)
+  if (!mud) return false
+  for (const m of mud) {
+    const a = daMateria.find((x) => x.id === m.id)
+    if (a) await db.assuntos.put({ ...a, paiId: m.paiId, ordem: m.ordem, atualizadoEm: agora, sujo: 1 })
+  }
+  return true
+}
+
+/**
+ * Arrastar no Edital: põe o assunto antes/depois de outro ou dentro dele (vira subtópico), na mesma matéria.
+ * `alvoId` nulo = assunto solto no fim da matéria. Os subtópicos vão junto. Devolve `false` se o movimento não vale.
+ */
+export async function moverAssunto(db: BancoCiclo, id: string, alvoId: string | null, pos: PosicaoSoltar, agora = Date.now()): Promise<boolean> {
+  return db.transaction('rw', db.assuntos, () => aplicarMovimento(db, id, alvoId, pos, agora))
+}
+
+/**
+ * Cria um tópico novo no lugar do assunto e põe o assunto dentro dele (ex.: "Vírus" → "Malware › Vírus").
+ * Se já existe um assunto com esse nome fora do edital (criado no Desempenho, por exemplo), ele é ligado e vira o tópico.
+ */
+export async function agruparEmNovoTopico(db: BancoCiclo, id: string, nome: string, agora = Date.now()): Promise<'ok' | 'vazio' | 'duplicado'> {
+  const n = maiuscula(nome.trim())
+  if (!n) return 'vazio'
+  return db.transaction('rw', db.assuntos, async () => {
+    const eu = await db.assuntos.get(id)
+    if (!eu) return 'vazio'
+    const mesmoNome = vivos(await db.assuntos.toArray()).find((a) => normalizar(a.materia) === normalizar(eu.materia) && normalizar(a.nome) === normalizar(n))
+    if (mesmoNome?.noEdital) return 'duplicado'
+    const topico: Assunto = mesmoNome
+      ? { ...mesmoNome, noEdital: true, paiId: eu.paiId, ordem: eu.ordem, atualizadoEm: agora, sujo: 1 }
+      : novoAssunto(eu.materia, n, 0, agora, true, eu.paiId)
+    await db.assuntos.put({ ...topico, ordem: eu.ordem })
+    await aplicarMovimento(db, topico.id, id, 'antes', agora)
+    await aplicarMovimento(db, id, topico.id, 'dentro', agora)
+    return 'ok'
+  })
 }

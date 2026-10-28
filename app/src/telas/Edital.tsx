@@ -11,7 +11,7 @@ import { mudarPreferencias } from '@/dados/ciclo'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
 import { todasMaterias } from '@/dominio/ciclo'
 import { alertasDeReforco } from '@/dominio/alertas'
-import { materiasDoEdital, montarEdital, revisaoDevida, type OrdemEdital } from '@/dominio/edital'
+import { materiasDoEdital, montarEdital, moverNoEdital, normalizar, revisaoDevida, type OrdemEdital, type PosicaoSoltar } from '@/dominio/edital'
 import { lerIntervalos } from '@/dominio/revisaoAssuntos'
 import { abrirDialogo } from '@/estado/dialogo'
 import { useEditalUi } from '@/estado/edital'
@@ -81,6 +81,14 @@ export function Edital() {
       assuntoAberto: id,
     }))
     setTimeout(() => document.getElementById(`assunto-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60)
+  }
+
+  /** O movimento vale? (mesma matéria, nem nele mesmo nem dentro de um subtópico dele) */
+  function podeSoltar(id: string, alvoId: string | null, pos: PosicaoSoltar) {
+    const todos = dados?.assuntos ?? []
+    const eu = todos.find((a) => a.id === id)
+    if (!eu) return false
+    return moverNoEdital(todos.filter((a) => a.noEdital && normalizar(a.materia) === normalizar(eu.materia)), id, alvoId, pos) !== null
   }
 
   function porNoCiclo(id: string) {
@@ -189,7 +197,7 @@ export function Edital() {
       <div className="flex min-h-0 flex-1 gap-3">
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto pr-1">
           {blocos.map((b) => (
-            <CartaoMateria key={b.materia.id} b={b} maxPrioridade={maxPrioridade} recolhida={ui.recolhidas.includes(b.materia.id) && !ui.busca.trim()} />
+            <CartaoMateria key={b.materia.id} b={b} maxPrioridade={maxPrioridade} recolhida={ui.recolhidas.includes(b.materia.id) && !ui.busca.trim()} podeSoltar={podeSoltar} />
           ))}
           {blocos.length === 0 && (
             <p className="m-auto p-6 text-center text-sm text-muted-foreground">

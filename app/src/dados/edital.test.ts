@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { lerArquivo } from '@/dados/converter'
 import { gerarSemana, carregarCiclo } from '@/dados/ciclo'
 import { BancoCiclo } from '@/dados/db'
-import { adicionarMateriaEdital, carregarEdital, criarAssunto, enviarAoCiclo, importarEdital, mudarAssunto, definirHorasDoTopico, mudarComSubtopicos, responderRevisaoAssunto, tirarAssuntoDoEdital, tirarMateriaDoEdital } from '@/dados/edital'
+import { adicionarMateriaEdital, carregarEdital, criarAssunto, enviarAoCiclo, importarEdital, mudarAssunto, definirHorasDoTopico, mudarComSubtopicos, moverAssunto, agruparEmNovoTopico, responderRevisaoAssunto, tirarAssuntoDoEdital, tirarMateriaDoEdital } from '@/dados/edital'
 import { mudarPreferencias } from '@/dados/ciclo'
 import { substituirDados } from '@/dados/repositorio'
 
@@ -251,5 +251,39 @@ describe('revisão dos assuntos no banco', () => {
     a = await db.assuntos.get(id)
     expect(a?.revisoes.filter((r) => r.feitaEm).map((r) => r.resultado)).toEqual(['ok', 'rever'])
     expect(a?.revisoes.filter((r) => !r.feitaEm).map((r) => r.dia)).toEqual(['2026-10-21', '2026-10-27', '2026-11-19'])
+  })
+})
+
+describe('reorganizar o edital (mover e agrupar)', () => {
+  const linhas = [{ materia: 'Informática', assuntos: [{ nome: 'Vírus', filhos: [] }, { nome: 'Worm', filhos: [] }, { nome: 'Redes', filhos: ['NAT'] }] }]
+  const nomes = async (db: BancoCiclo) => {
+    const { assuntos } = await carregarEdital(db)
+    const ed = assuntos.filter((a) => a.noEdital)
+    const nome = (id: string | null) => ed.find((a) => a.id === id)?.nome ?? '-'
+    return ed.sort((a, b) => a.ordem - b.ordem).map((a) => `${nome(a.paiId)}>${a.nome}`)
+  }
+  const id = async (db: BancoCiclo, nome: string) => (await carregarEdital(db)).assuntos.find((a) => a.nome === nome)?.id ?? ''
+
+  it('agrupar cria o tópico no lugar do assunto; arrastar outro para dentro junta os dois; as questões continuam ligadas', async () => {
+    const db = await novoBanco()
+    await importarEdital(db, linhas, [], AGORA)
+    const virus = await id(db, 'Vírus')
+    await db.questoes.put({ id: 'q1', data: '2026-10-07', materia: 'Informática', assuntoId: virus, feitas: 10, acertos: 8, atualizadoEm: AGORA, excluidoEm: null, sujo: 1 })
+    expect(await agruparEmNovoTopico(db, virus, 'malware', AGORA)).toBe('ok')
+    expect(await moverAssunto(db, await id(db, 'Worm'), await id(db, 'Malware'), 'dentro', AGORA)).toBe(true)
+    const l = await nomes(db)
+    expect(l.filter((x) => x.startsWith('Malware>'))).toEqual(['Malware>Vírus', 'Malware>Worm'])
+    expect(l).toContain('->Malware')
+    expect((await db.questoes.get('q1'))?.assuntoId).toBe(virus)
+    expect(await agruparEmNovoTopico(db, await id(db, 'Redes'), 'MALWARE', AGORA)).toBe('duplicado')
+  })
+
+  it('não solta dentro de um subtópico dele nem em outra matéria', async () => {
+    const db = await novoBanco()
+    await importarEdital(db, [...linhas, { materia: 'Penal', assuntos: [{ nome: 'Penas', filhos: [] }] }], [], AGORA)
+    expect(await moverAssunto(db, await id(db, 'Redes'), await id(db, 'NAT'), 'dentro', AGORA)).toBe(false)
+    expect(await moverAssunto(db, await id(db, 'Vírus'), await id(db, 'Penas'), 'dentro', AGORA)).toBe(false)
+    expect(await moverAssunto(db, await id(db, 'NAT'), null, 'dentro', AGORA)).toBe(true)
+    expect((await nomes(db)).filter((x) => x.endsWith('>NAT'))).toEqual(['->NAT'])
   })
 })

@@ -1,14 +1,14 @@
 import { useState, type ReactNode } from 'react'
-import { Check, ClipboardList, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, ClipboardList, FolderPlus, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react'
 import { abrirQuestoes } from '@/componentes/abrirQuestoes'
 import { CampoNumero } from '@/componentes/CampoNumero'
 import { SeloAcerto } from '@/componentes/nivel'
-import { avisar, confirmar } from '@/componentes/dialogos-api'
+import { avisar, confirmar, pedirTexto } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
 import { renomearAssunto } from '@/dados/desempenho'
-import { definirHorasDoTopico, enviarAoCiclo, mudarAssunto, mudarComSubtopicos, responderRevisaoAssunto, tirarAssuntoDoEdital } from '@/dados/edital'
+import { agruparEmNovoTopico, definirHorasDoTopico, enviarAoCiclo, moverAssunto, mudarAssunto, mudarComSubtopicos, responderRevisaoAssunto, tirarAssuntoDoEdital } from '@/dados/edital'
 import { fmtH } from '@/dominio/ciclo'
 import { fmtData } from '@/dominio/datas'
 import { proximaRevisao } from '@/dominio/revisaoAssuntos'
@@ -141,6 +141,60 @@ function Revisoes({ l, intervalos }: { l: LinhaEdital; intervalos: readonly numb
   )
 }
 
+/** Organizar: em qual tópico o assunto fica, a ordem entre os irmãos e "pôr dentro de um tópico novo". Alternativa ao arrastar. */
+function Organizar({ l, b }: { l: LinhaEdital; b: BlocoEdital }) {
+  // `b.linhas` vem na ordem do edital, com tudo aberto
+  const abaixo = new Set<string>()
+  for (const x of b.linhas) if (x.id === l.id || (x.paiId && abaixo.has(x.paiId))) abaixo.add(x.id)
+  const destinos = b.linhas.filter((x) => !abaixo.has(x.id))
+  const irmaos = b.linhas.filter((x) => x.paiId === l.paiId)
+  const i = irmaos.findIndex((x) => x.id === l.id)
+  const anterior = irmaos[i - 1]
+  const seguinte = irmaos[i + 1]
+
+  async function novoTopico() {
+    const nome = await pedirTexto('Pôr dentro de um tópico novo', 'Nome do tópico', '', {
+      ok: 'Criar',
+      placeholder: 'Ex.: Malware',
+      ajuda: `O tópico novo fica no lugar de "${l.nome}", e ele vira o primeiro subtópico. Depois arraste os outros para dentro (ou escolha o tópico em "Dentro de").`,
+    })
+    if (!nome) return
+    const r = await agruparEmNovoTopico(db, l.id, nome)
+    if (r === 'duplicado') void avisar('Tópico novo', 'Já existe um assunto com esse nome nesta matéria. Escolha-o em "Dentro de" ou arraste para cima dele.')
+  }
+
+  return (
+    <section className="flex flex-col gap-2">
+      <span className={rotulo}>Organizar</span>
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-muted-foreground">Dentro de</span>
+        <Selecao
+          value={l.paiId ?? ''}
+          aria-label={`Tópico de ${l.nome}`}
+          onChange={(e) => void moverAssunto(db, l.id, e.target.value || null, 'dentro')}
+        >
+          <option value="">(nenhum: assunto solto)</option>
+          {destinos.map((x) => (
+            <option key={x.id} value={x.id}>{'\u00a0\u00a0'.repeat(x.nivel)}{x.nome}</option>
+          ))}
+        </Selecao>
+      </label>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" disabled={!anterior} title="Troca de lugar com o de cima (no mesmo nível)" onClick={() => anterior && void moverAssunto(db, l.id, anterior.id, 'antes')}>
+          <ArrowUp className="size-3.5" /> Subir
+        </Button>
+        <Button size="sm" variant="outline" disabled={!seguinte} title="Troca de lugar com o de baixo (no mesmo nível)" onClick={() => seguinte && void moverAssunto(db, l.id, seguinte.id, 'depois')}>
+          <ArrowDown className="size-3.5" /> Descer
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => void novoTopico()}>
+          <FolderPlus className="size-3.5" /> Tópico novo
+        </Button>
+      </div>
+      <p className="m-0 text-xs text-muted-foreground">Na lista, você também pode arrastar: no meio de outra linha vira subtópico dela; na borda de cima ou de baixo muda a ordem; no nome da matéria vira assunto solto.</p>
+    </section>
+  )
+}
+
 export function PainelAssunto({ l, b, maxPrioridade, fechar, intervalos }: {
   l: LinhaEdital; b: BlocoEdital; maxPrioridade: number; fechar: () => void; intervalos: readonly number[]
 }) {
@@ -177,6 +231,8 @@ export function PainelAssunto({ l, b, maxPrioridade, fechar, intervalos }: {
       </label>
 
       <Revisoes l={l} intervalos={intervalos} />
+
+      <Organizar l={l} b={b} />
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between">

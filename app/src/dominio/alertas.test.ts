@@ -4,7 +4,7 @@ import type { LinhaEdital } from './edital'
 
 const HOJE = '2026-10-28'
 const linha = (id: string, extra: Partial<LinhaEdital> = {}): LinhaEdital => ({
-  id, nome: id, nivel: 0, temFilhos: false, folhas: 1, folhasEstudadas: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false,
+  id, nome: id, nivel: 0, paiId: null, temFilhos: false, folhas: 1, folhasEstudadas: 0, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false,
   certas: 0, erradas: 0, total: 0, pctAcerto: null, horasFeitas: 0, falta: 0, prioridade: 1, semDados: false,
   revisao: 'nenhuma', proximaRevisao: null, revisoes: [], ...extra,
 })

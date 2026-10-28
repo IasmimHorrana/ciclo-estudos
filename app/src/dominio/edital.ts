@@ -294,6 +294,8 @@ export interface LinhaEdital {
   nome: string
   /** 0 = tópico ou assunto solto, 1 = subtópico… */
   nivel: number
+  /** Tópico acima (do edital), ou `null`. */
+  paiId: string | null
   /** É um tópico com subtópicos: os números abaixo são a soma deles. */
   temFilhos: boolean
   /** Assuntos de verdade (sem subtópicos) dentro desta linha e quantos já estão estudados. */
@@ -391,7 +393,7 @@ export function montarEdital(e: EntradaMontagem) {
         const x = porAssunto.get(a.id) ?? { feitas: 0, acertos: 0, minutos: 0 }
         const horasFeitas = arred(x.minutos / 60)
         return {
-          id: a.id, nome: a.nome, nivel, temFilhos: false, folhas: 1, folhasEstudadas: a.estudado ? 1 : 0,
+          id: a.id, nome: a.nome, nivel, paiId: a.paiId && ids.has(a.paiId) ? a.paiId : null, temFilhos: false, folhas: 1, folhasEstudadas: a.estudado ? 1 : 0,
           importancia: a.importancia, horasIdeais: a.horasIdeais, estudado: a.estudado, noCiclo: a.noCiclo,
           certas: x.acertos, erradas: Math.max(0, x.feitas - x.acertos), total: x.feitas,
           pctAcerto: x.feitas ? Math.round((x.acertos / x.feitas) * 100) : null,
@@ -497,4 +499,49 @@ export function sugerirAssunto(nota: string, assuntos: readonly { id: string; no
     if (a) return a.id
   }
   return null
+}
+
+/** Onde soltar um assunto arrastado: antes ou depois de outro (mesmo nível) ou dentro dele (vira subtópico). */
+export type PosicaoSoltar = 'antes' | 'depois' | 'dentro'
+
+export interface ItemOrdem {
+  id: string
+  nome: string
+  ordem: number
+  paiId: string | null
+}
+
+/**
+ * Move um assunto dentro da mesma matéria: muda o tópico (`paiId`) e renumera a ordem dos irmãos no destino.
+ * `alvoId` nulo = vira assunto solto, no fim da matéria. Os subtópicos do assunto vão junto (continuam apontando para ele).
+ * Devolve só o que mudou, ou `null` se o movimento não vale (soltar nele mesmo ou dentro de um subtópico dele).
+ */
+export function moverNoEdital(itens: readonly ItemOrdem[], id: string, alvoId: string | null, pos: PosicaoSoltar): Pick<ItemOrdem, 'id' | 'paiId' | 'ordem'>[] | null {
+  const eu = itens.find((i) => i.id === id)
+  const alvo = alvoId === null ? null : itens.find((i) => i.id === alvoId)
+  if (!eu || alvo === undefined || alvoId === id) return null
+  const descendentes = new Set<string>()
+  const juntar = (pai: string): void => {
+    for (const f of itens.filter((i) => i.paiId === pai && !descendentes.has(i.id))) {
+      descendentes.add(f.id)
+      juntar(f.id)
+    }
+  }
+  juntar(id)
+  if (alvo && descendentes.has(alvo.id)) return null
+
+  const ids = new Set(itens.map((i) => i.id))
+  const raiz = (p: string | null) => (p && ids.has(p) ? p : null)
+  const novoPai = alvo === null ? null : pos === 'dentro' ? alvo.id : raiz(alvo.paiId)
+  const irmaos = itens
+    .filter((i) => i.id !== id && raiz(i.paiId) === novoPai)
+    .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR'))
+  const k = alvo === null || pos === 'dentro' ? irmaos.length : irmaos.findIndex((i) => i.id === alvo.id) + (pos === 'depois' ? 1 : 0)
+  const nova = [...irmaos.slice(0, k), eu, ...irmaos.slice(k)]
+  return nova
+    .map((i, ordem) => ({ id: i.id, paiId: i.id === id ? novoPai : i.paiId, ordem }))
+    .filter((m) => {
+      const antes = itens.find((i) => i.id === m.id) as ItemOrdem
+      return m.ordem !== antes.ordem || m.paiId !== antes.paiId
+    })
 }
