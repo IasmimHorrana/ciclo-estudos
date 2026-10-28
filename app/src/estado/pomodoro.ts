@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { DataISO } from '@/dominio/datas'
 import { CONFIG_PADRAO, duracaoSeg, minutosDecorridos, proximaFase, type AlvoFoco, type ConfigPomodoro, type EstadoRestaurado, type Fase } from '@/dominio/pomodoro'
 
 /** Um foco terminou (ou foi encerrado) e há minutos para somar a um passo. */
@@ -6,6 +7,8 @@ export interface FocoConcluido {
   minutos: number
   /** `true` = o relógio chegou ao fim (conta um pomodoro); `false` = encerrado antes. */
   completo: boolean
+  /** Dia em que o foco aconteceu (só no foco recuperado depois de o app ficar fechado); sem ele, conta hoje. */
+  data?: DataISO
 }
 
 export type { AlvoFoco }

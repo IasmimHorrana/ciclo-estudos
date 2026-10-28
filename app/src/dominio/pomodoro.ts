@@ -1,5 +1,7 @@
 // Regras do Pomodoro (puras, sem relógio nem tela): o estado do cronômetro fica em src/estado/pomodoro.ts.
 
+import { hoje, type DataISO } from '@/dominio/datas'
+
 export type Fase = 'foco' | 'pausa' | 'longa'
 
 export interface ConfigPomodoro {
@@ -72,6 +74,8 @@ export type Restauracao =
       minutosEstudados: number
       minutosFora: number
       focoCompleto: boolean
+      /** Dia (fuso local) do último instante visto: o tempo somado conta nesse dia, não no dia em que o app reabriu. */
+      dataDoFoco: DataISO
     }
 
 /** Ausência menor que isto (recarregar a página) não incomoda: o relógio segue como se nada tivesse acontecido. */
@@ -136,5 +140,6 @@ export function restaurarPomodoro(salvo: PomodoroSalvo | null, agora: number, cf
     minutosEstudados: minutosDecorridos(cfg, restaVisto),
     minutosFora: Math.round(foraSeg / 60),
     focoCompleto: restaVisto === 0,
+    dataDoFoco: hoje(new Date(salvo.visto)),
   }
 }
