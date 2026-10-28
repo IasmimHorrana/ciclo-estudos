@@ -6,15 +6,17 @@ import { avisar, pedirTexto } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
-import { adicionarMateriaEdital, carregarEdital } from '@/dados/edital'
+import { adicionarMateriaEdital, carregarEdital, enviarAoCiclo } from '@/dados/edital'
 import { mudarPreferencias } from '@/dados/ciclo'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
 import { todasMaterias } from '@/dominio/ciclo'
+import { alertasDeReforco } from '@/dominio/alertas'
 import { materiasDoEdital, montarEdital, revisaoDevida, type OrdemEdital } from '@/dominio/edital'
 import { lerIntervalos } from '@/dominio/revisaoAssuntos'
 import { abrirDialogo } from '@/estado/dialogo'
 import { useEditalUi } from '@/estado/edital'
 import { useUi } from '@/estado/ui'
+import { Alertas } from '@/telas/edital/Alertas'
 import { CartaoMateria } from '@/telas/edital/CartaoMateria'
 import { ImportarEdital } from '@/telas/edital/ImportarEdital'
 import { PainelAssunto, ResumoGeral } from '@/telas/edital/PainelAssunto'
@@ -57,6 +59,35 @@ export function Edital() {
   const tudoRecolhido = topicos.length > 0 && topicos.every((id) => ui.topicosRecolhidos.includes(id))
   const conhecidas = [...new Set([...todasMaterias(ciclo.config), ...dados.materias.map((m) => m.nome), ...dados.assuntos.map((a) => a.materia)])]
   const fechar = () => ui.definir({ assuntoAberto: null })
+  const todasAsLinhas = completo.blocos.flatMap((b) => b.linhas.map((l) => ({ linha: l, b })))
+  const reforco = alertasDeReforco({
+    linhas: todasAsLinhas.map((x) => ({ linha: x.linha, materia: x.b.materia.nome })),
+    questoes: dados.questoes, sessoes: dados.sessoes, hoje: hojeISO, maxPrioridade, faixas: ciclo.preferencias.faixas,
+  })
+
+  /** Abre o assunto no painel e mostra a linha dele (abre a matéria e os tópicos acima, tira busca e filtros). */
+  function abrirAssunto(id: string) {
+    const x = todasAsLinhas.find((t) => t.linha.id === id)
+    if (!x) return
+    const acima: string[] = []
+    for (let pai = dados?.assuntos.find((a) => a.id === id)?.paiId; pai; pai = dados?.assuntos.find((a) => a.id === pai)?.paiId) acima.push(pai)
+    useEditalUi.setState((s) => ({
+      recolhidas: s.recolhidas.filter((m) => m !== x.b.materia.id),
+      topicosRecolhidos: s.topicosRecolhidos.filter((t) => !acima.includes(t)),
+      filtroMateria: s.filtroMateria && s.filtroMateria !== x.b.materia.id ? null : s.filtroMateria,
+      ocultarEstudados: x.linha.estudado ? false : s.ocultarEstudados,
+      busca: '',
+      soRevisar: false,
+      assuntoAberto: id,
+    }))
+    setTimeout(() => document.getElementById(`assunto-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60)
+  }
+
+  function porNoCiclo(id: string) {
+    const x = todasAsLinhas.find((t) => t.linha.id === id)
+    if (!x || x.linha.noCiclo || x.linha.estudado) return null
+    return () => void enviarAoCiclo(db, { materia: x.b.materia.nome, pesoMateria: x.b.materia.peso, horasQueFaltam: x.linha.falta, assuntoIds: [id] })
+  }
 
   async function importar() {
     const msg = await abrirDialogo<string>('Importar edital', (fecharDialogo) => <ImportarEdital conhecidas={conhecidas} fechar={(r) => fecharDialogo(r ?? null)} />)
@@ -178,7 +209,9 @@ export function Edital() {
           {selecionado ? (
             <PainelAssunto l={selecionado.l} b={selecionado.b} maxPrioridade={maxPrioridade} fechar={fechar} intervalos={intervalos} />
           ) : (
-            <ResumoGeral resumo={resumo} certas={completo.total.certas} erradas={completo.total.erradas} />
+            <ResumoGeral resumo={resumo} certas={completo.total.certas} erradas={completo.total.erradas}>
+              <Alertas alertas={reforco.alertas} total={reforco.total} abrir={abrirAssunto} porNoCiclo={porNoCiclo} />
+            </ResumoGeral>
           )}
         </aside>
       </div>

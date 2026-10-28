@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { Check, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react'
+import { Check, ClipboardList, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react'
+import { abrirQuestoes } from '@/componentes/abrirQuestoes'
 import { CampoNumero } from '@/componentes/CampoNumero'
 import { SeloAcerto } from '@/componentes/nivel'
 import { avisar, confirmar } from '@/componentes/dialogos-api'
@@ -187,7 +188,10 @@ export function PainelAssunto({ l, b, maxPrioridade, fechar, intervalos }: {
           <Numero titulo="erradas" valor={l.erradas} cor="text-erro" />
           <Numero titulo="total" valor={l.total} />
         </div>
-        {l.total === 0 && <p className="m-0 text-xs text-muted-foreground">Nenhuma questão registrada ainda (lance em Desempenho ou ao fim do Pomodoro).</p>}
+        {l.total === 0 && <p className="m-0 text-xs text-muted-foreground">Nenhuma questão registrada ainda.</p>}
+        <Button size="sm" variant="outline" className="self-start" onClick={() => void abrirQuestoes({ materia: b.materia.nome, assuntoId: l.id })}>
+          <ClipboardList className="size-3.5" /> Registrar questões
+        </Button>
       </section>
 
       <section className="flex flex-col gap-2">
