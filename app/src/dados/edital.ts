@@ -1,10 +1,12 @@
 import { garantirCores, mudarConfig } from '@/dados/ciclo'
 import { carregarEstudo, type Estudo } from '@/dados/desempenho'
 import type { BancoCiclo } from '@/dados/db'
-import type { Assunto, MateriaEdital } from '@/dados/esquemas'
+import { Preferencias, type Assunto, type MateriaEdital } from '@/dados/esquemas'
 import { novoIdFc } from '@/dados/ids'
 import { MATERIAS_PADRAO, passosDe } from '@/dominio/ciclo'
+import { hoje } from '@/dominio/datas'
 import { normalizar, repartirHoras, sugerirRepeticoes, type MateriaLida } from '@/dominio/edital'
+import { aoMudarEstudado, INTERVALOS_PADRAO, responderRevisao } from '@/dominio/revisaoAssuntos'
 
 const vivos = <T extends { excluidoEm: number | null }>(l: T[]) => l.filter((x) => x.excluidoEm === null)
 
@@ -21,7 +23,7 @@ const novaMateria = (nome: string, ordem: number, agora: number): MateriaEdital 
   id: novoIdFc('e', agora + ordem), nome, peso: 3, ordem, atualizadoEm: agora, excluidoEm: null, sujo: 1,
 })
 const novoAssunto = (materia: string, nome: string, ordem: number, agora: number, noEdital: boolean, paiId: string | null): Assunto => ({
-  id: novoIdFc('a', agora + ordem), materia, nome, ordem, importancia: 0, horasIdeais: 0, estudado: false, noCiclo: false, noEdital, paiId,
+  id: novoIdFc('a', agora + ordem), materia, nome, ordem, importancia: 0, horasIdeais: 0, estudado: false, noCiclo: false, noEdital, paiId, estudadoEm: null, revisoes: [],
   atualizadoEm: agora, excluidoEm: null, sujo: 1,
 })
 
@@ -128,9 +130,27 @@ export async function mudarMateriaEdital(db: BancoCiclo, id: string, patch: Part
 
 export type AlteracaoAssunto = Partial<Pick<Assunto, 'importancia' | 'horasIdeais' | 'estudado' | 'noCiclo' | 'noEdital' | 'paiId'>>
 
-export async function mudarAssunto(db: BancoCiclo, id: string, patch: AlteracaoAssunto, agora = Date.now()): Promise<void> {
+/** Intervalos da revisão dos assuntos escolhidos nas preferências (padrão 1, 7 e 30 dias). */
+export async function intervalosDeRevisao(db: BancoCiclo): Promise<number[]> {
+  return Preferencias.parse((await db.valores.get('preferencias'))?.valor ?? {}).intervalosRevisao
+}
+
+/** Muda um assunto. Marcar/desmarcar "estudado" também agenda ou tira as revisões (com `intervalos`). */
+export async function mudarAssunto(db: BancoCiclo, id: string, patch: AlteracaoAssunto, agora = Date.now(), intervalos: readonly number[] = INTERVALOS_PADRAO): Promise<void> {
   const a = await db.assuntos.get(id)
-  if (a) await db.assuntos.put({ ...a, ...patch, atualizadoEm: agora, sujo: 1 })
+  if (!a) return
+  const revisao = patch.estudado === undefined ? null : aoMudarEstudado(a, patch.estudado, hoje(new Date(agora)), intervalos)
+  await db.assuntos.put({ ...a, ...patch, ...revisao, atualizadoEm: agora, sujo: 1 })
+}
+
+/** Responde a próxima revisão do assunto ("Entendi" ou "Preciso rever"). */
+export async function responderRevisaoAssunto(db: BancoCiclo, id: string, resultado: 'ok' | 'rever', agora = Date.now()): Promise<void> {
+  const intervalos = await intervalosDeRevisao(db)
+  await db.transaction('rw', db.assuntos, async () => {
+    const a = await db.assuntos.get(id)
+    if (!a) return
+    await db.assuntos.put({ ...a, revisoes: responderRevisao(a.revisoes ?? [], hoje(new Date(agora)), resultado, intervalos), atualizadoEm: agora, sujo: 1 })
+  })
 }
 
 /** Os ids dos subtópicos de um tópico, em qualquer nível. */
@@ -141,9 +161,10 @@ export function idsDosDescendentes(todos: readonly { id: string; paiId: string |
 
 /** Muda o assunto e, se ele for um tópico, todos os subtópicos dele (marcar estudado, importância, horas…). */
 export async function mudarComSubtopicos(db: BancoCiclo, id: string, patch: AlteracaoAssunto, agora = Date.now()): Promise<void> {
+  const intervalos = patch.estudado === undefined ? INTERVALOS_PADRAO : await intervalosDeRevisao(db)
   await db.transaction('rw', db.assuntos, async () => {
     const todos = vivos(await db.assuntos.toArray())
-    for (const alvo of [id, ...idsDosDescendentes(todos, id)]) await mudarAssunto(db, alvo, patch, agora)
+    for (const alvo of [id, ...idsDosDescendentes(todos, id)]) await mudarAssunto(db, alvo, patch, agora, intervalos)
   })
 }
 

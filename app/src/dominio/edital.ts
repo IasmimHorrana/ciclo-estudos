@@ -1,5 +1,8 @@
 // Edital verticalizado: leitura do texto colado, prioridade dos assuntos e sugestão de passos no ciclo. Puro.
 
+import { hoje as hojeLocal, type DataISO } from '@/dominio/datas'
+import { estadoRevisoes, piorEstado, proximaRevisao, type EstadoRevisao, type Revisao } from '@/dominio/revisaoAssuntos'
+
 /** Um tópico do edital e os subtópicos dele (se houver). */
 export interface ItemLido {
   nome: string
@@ -265,6 +268,7 @@ export interface EntradaMontagem {
     id: string; materia: string; nome: string; ordem: number; importancia: number; horasIdeais: number; estudado: boolean; noCiclo: boolean; noEdital: boolean
     /** Tópico a que pertence (subtópico), ou `null`. */
     paiId: string | null
+    revisoes?: readonly Revisao[]
   }[]
   questoes: readonly { assuntoId: string | null; feitas: number; acertos: number }[]
   sessoes: readonly { assuntoId: string | null; minutos: number }[]
@@ -279,6 +283,10 @@ export interface EntradaMontagem {
    * ou a matéria, tudo o que está dentro. Durante a busca os tópicos ficam abertos e as matérias sem nada encontrado somem.
    */
   busca?: string
+  /** Só os assuntos com revisão para hoje ou atrasada (e os tópicos acima deles); ignora "ocultar estudados". */
+  soRevisar?: boolean
+  /** Dia de hoje, para o estado das revisões (padrão: o dia do aparelho). */
+  hoje?: DataISO
 }
 
 export interface LinhaEdital {
@@ -308,7 +316,16 @@ export interface LinhaEdital {
   prioridade: number
   /** Nada definido ainda (sem importância, sem horas ideais, poucas questões): a prioridade não diz nada. */
   semDados: boolean
+  /** Estado da revisão; num tópico, o pior entre os subtópicos. */
+  revisao: EstadoRevisao
+  /** Dia da próxima revisão (num tópico, a mais próxima dos subtópicos), ou `null`. */
+  proximaRevisao: DataISO | null
+  /** As revisões do próprio assunto (vazio num tópico). */
+  revisoes: readonly Revisao[]
 }
+
+/** Revisão que vence hoje ou já passou do dia. */
+export const revisaoDevida = (l: { revisao: EstadoRevisao }) => l.revisao === 'hoje' || l.revisao === 'atrasada'
 
 export interface BlocoEdital {
   materia: { id: string; nome: string; peso: number }
@@ -352,6 +369,7 @@ export function montarEdital(e: EntradaMontagem) {
   for (const q of e.questoes) if (q.assuntoId) { const x = ac(q.assuntoId); x.feitas += q.feitas; x.acertos += q.acertos }
   for (const s of e.sessoes) if (s.assuntoId) ac(s.assuntoId).minutos += s.minutos
 
+  const dia = e.hoje ?? hojeLocal()
   const procura = normalizar(e.busca ?? '')
   const casa = (nome: string) => procura !== '' && normalizar(nome).includes(procura)
   const chaveDaOrdem = (l: LinhaEdital) => (e.ordem === 'prioridade' ? -l.prioridade : e.ordem === 'falta' ? -l.falta : 0)
@@ -381,6 +399,9 @@ export function montarEdital(e: EntradaMontagem) {
           falta: a.horasIdeais > 0 ? arred(Math.max(0, a.horasIdeais - horasFeitas)) : 0,
           prioridade: prioridade({ pesoMateria: m.peso, importancia: a.importancia, horasIdeais: a.horasIdeais, horasFeitas, estudado: a.estudado, questoes: x.feitas, acertos: x.acertos }),
           semDados: !(a.importancia > 0) && a.horasIdeais === 0 && x.feitas < 3,
+          revisao: estadoRevisoes(a.revisoes ?? [], dia),
+          proximaRevisao: proximaRevisao(a.revisoes ?? [])?.dia ?? null,
+          revisoes: a.revisoes ?? [],
         }
       }
 
@@ -410,6 +431,9 @@ export function montarEdital(e: EntradaMontagem) {
           falta: arred(pendentes.reduce((t, f) => t + f.falta, 0)),
           prioridade: pendentes.reduce((mx, f) => Math.max(mx, f.prioridade), 0),
           semDados: folhas.every((f) => f.semDados),
+          revisao: piorEstado(folhas.map((f) => f.revisao)),
+          proximaRevisao: folhas.map((f) => f.proximaRevisao).filter((d): d is DataISO => d !== null).sort()[0] ?? null,
+          revisoes: [],
         }
         return { linha, filhos, folhas }
       }
@@ -419,7 +443,7 @@ export function montarEdital(e: EntradaMontagem) {
       const temAchado = (n: No): boolean => casa(n.linha.nome) || n.filhos.some(temAchado)
       // `dentro`: um tópico acima (ou a matéria) já casou com a busca, então mostra tudo daqui para baixo
       const emitir = (n: No, dentro: boolean): LinhaEdital[] => {
-        if (e.ocultarEstudados && n.linha.estudado) return []
+        if (e.soRevisar ? !revisaoDevida(n.linha) : e.ocultarEstudados && n.linha.estudado) return []
         if (procura && !dentro && !temAchado(n)) return []
         const aberto = procura !== '' || !e.recolhidos?.has(n.linha.id)
         return [n.linha, ...(aberto ? n.filhos.flatMap((f) => emitir(f, dentro || casa(n.linha.nome))) : [])]
@@ -460,8 +484,8 @@ export function montarEdital(e: EntradaMontagem) {
       pctHoras: horasIdeais > 0 ? Math.round((uteis / horasIdeais) * 100) : 0,
     } satisfies ResumoEdital,
   }
-  // os totais continuam sendo de todas as matérias mostradas; a busca só esconde as que não acharam nada
-  return { blocos: procura ? blocos.filter((b) => b.linhas.length > 0) : blocos, total }
+  // os totais continuam sendo de todas as matérias mostradas; a busca e "Revisões de hoje" só escondem as que ficaram vazias
+  return { blocos: procura || e.soRevisar ? blocos.filter((b) => b.linhas.length > 0) : blocos, total }
 }
 
 /** Assunto sugerido a partir da anotação do passo ("Posse; Contratos" → o primeiro que existir entre os assuntos da matéria). */

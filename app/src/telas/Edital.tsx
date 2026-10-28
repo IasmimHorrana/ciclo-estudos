@@ -1,15 +1,17 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect } from 'react'
-import { ArrowRight, FileText, ListCollapse, Plus, Search, X } from 'lucide-react'
+import { ArrowRight, CalendarClock, FileText, ListCollapse, Plus, Search, X } from 'lucide-react'
 import { Menu } from '@/componentes/Menu'
 import { avisar, pedirTexto } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
 import { adicionarMateriaEdital, carregarEdital } from '@/dados/edital'
-import { useCiclo } from '@/dados/useCiclo'
+import { mudarPreferencias } from '@/dados/ciclo'
+import { useCiclo, useHojeISO } from '@/dados/useCiclo'
 import { todasMaterias } from '@/dominio/ciclo'
-import { materiasDoEdital, montarEdital, type OrdemEdital } from '@/dominio/edital'
+import { materiasDoEdital, montarEdital, revisaoDevida, type OrdemEdital } from '@/dominio/edital'
+import { lerIntervalos } from '@/dominio/revisaoAssuntos'
 import { abrirDialogo } from '@/estado/dialogo'
 import { useEditalUi } from '@/estado/edital'
 import { useUi } from '@/estado/ui'
@@ -23,6 +25,7 @@ export function Edital() {
   const dados = useLiveQuery(() => carregarEdital(db), [])
   const ui = useEditalUi()
   const irParaAba = useUi((s) => s.irParaAba)
+  const hojeISO = useHojeISO()
 
   // Esc fecha o painel do assunto (quando o foco não está num campo)
   const aberto = ui.assuntoAberto
@@ -41,9 +44,11 @@ export function Edital() {
 
   const materias = materiasDoEdital(dados.materias, dados.assuntos)
   const filtro = materias.some((m) => m.id === ui.filtroMateria) ? ui.filtroMateria : null
-  const { blocos } = montarEdital({ ...dados, ordem: ui.ordem, ocultarEstudados: ui.ocultarEstudados, filtroMateria: filtro, recolhidos: new Set(ui.topicosRecolhidos), busca: ui.busca })
+  const { blocos } = montarEdital({ ...dados, ordem: ui.ordem, ocultarEstudados: ui.ocultarEstudados, filtroMateria: filtro, recolhidos: new Set(ui.topicosRecolhidos), busca: ui.busca, soRevisar: ui.soRevisar, hoje: hojeISO })
   // tudo, sem filtros: o painel acha o assunto aberto mesmo escondido, e a prioridade é relativa ao edital inteiro
-  const completo = montarEdital({ ...dados, ordem: 'edital', ocultarEstudados: false, filtroMateria: null })
+  const completo = montarEdital({ ...dados, ordem: 'edital', ocultarEstudados: false, filtroMateria: null, hoje: hojeISO })
+  const paraRevisar = completo.blocos.flatMap((b) => b.linhas).filter((l) => !l.temFilhos && revisaoDevida(l)).length
+  const intervalos = ciclo.preferencias.intervalosRevisao
   const selecionado = completo.blocos.flatMap((b) => b.linhas.map((l) => ({ l, b }))).find((x) => x.l.id === ui.assuntoAberto)
   const maxPrioridade = Math.max(1, ...completo.blocos.map((b) => b.maiorPrioridade))
   // tópicos = assuntos do edital que têm subtópicos
@@ -56,6 +61,17 @@ export function Edital() {
   async function importar() {
     const msg = await abrirDialogo<string>('Importar edital', (fecharDialogo) => <ImportarEdital conhecidas={conhecidas} fechar={(r) => fecharDialogo(r ?? null)} />)
     if (msg) void avisar('Edital importado', msg)
+  }
+
+  async function ajustarIntervalos() {
+    const t = await pedirTexto('Intervalos de revisão', 'Dias depois de marcar como estudado (separe por vírgula)', intervalos.join(', '), {
+      ok: 'Salvar',
+      ajuda: 'Ex.: 1, 7, 30 = revisar 1 dia, 7 dias e 30 dias depois. Valem para os assuntos marcados daqui para frente e para quem pedir "Preciso rever".',
+    })
+    if (t === null) return
+    const n = lerIntervalos(t)
+    if (!n) return void avisar('Intervalos de revisão', 'Use de 1 a 6 números inteiros de 1 a 365, em ordem crescente (ex.: 1, 7, 30).')
+    await mudarPreferencias(db, { intervalosRevisao: n })
   }
 
   async function novaMateria() {
@@ -114,8 +130,13 @@ export function Edital() {
           <option value="falta">Mais horas faltando</option>
         </Selecao>
         <label className="flex cursor-pointer items-center gap-1.5 text-sm">
-          <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={ui.ocultarEstudados} onChange={(e) => ui.definir({ ocultarEstudados: e.target.checked })} />
+          <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={ui.ocultarEstudados} disabled={ui.soRevisar} onChange={(e) => ui.definir({ ocultarEstudados: e.target.checked })} />
           Ocultar estudados
+        </label>
+        <label className={cn('flex cursor-pointer items-center gap-1.5 text-sm', paraRevisar > 0 && 'font-semibold')} title="Só os assuntos com revisão para hoje ou atrasada">
+          <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={ui.soRevisar} onChange={(e) => ui.definir({ soRevisar: e.target.checked })} />
+          Revisões de hoje
+          <span className={cn('rounded-full px-1.5 text-xs tabular-nums', paraRevisar > 0 ? 'bg-aviso-bg text-aviso' : 'bg-muted text-muted-foreground')}>{paraRevisar}</span>
         </label>
         <Menu
           rotulo="Mais ações do edital"
@@ -123,6 +144,7 @@ export function Edital() {
             { rotulo: 'Importar edital', icone: <FileText className="size-4" />, acao: () => void importar() },
             { rotulo: 'Nova matéria', icone: <Plus className="size-4" />, acao: () => void novaMateria() },
             { rotulo: tudoRecolhido ? 'Abrir todos os tópicos' : 'Recolher todos os tópicos', icone: <ListCollapse className="size-4" />, acao: () => ui.definirTopicosRecolhidos(tudoRecolhido ? [] : topicos), desativado: topicos.length === 0 },
+            { rotulo: `Intervalos de revisão (${intervalos.join(', ')} dias)`, icone: <CalendarClock className="size-4" />, acao: () => void ajustarIntervalos() },
             { rotulo: 'Ir para Montar ciclo', icone: <ArrowRight className="size-4" />, acao: () => irParaAba('montar') },
           ]}
         />
@@ -139,7 +161,9 @@ export function Edital() {
             <CartaoMateria key={b.materia.id} b={b} maxPrioridade={maxPrioridade} recolhida={ui.recolhidas.includes(b.materia.id) && !ui.busca.trim()} />
           ))}
           {blocos.length === 0 && (
-            <p className="m-auto p-6 text-center text-sm text-muted-foreground">{ui.busca.trim() ? `Nada encontrado para "${ui.busca.trim()}".` : 'Nenhuma matéria para mostrar.'}</p>
+            <p className="m-auto p-6 text-center text-sm text-muted-foreground">
+              {ui.busca.trim() ? `Nada encontrado para "${ui.busca.trim()}".` : ui.soRevisar ? 'Nenhuma revisão para hoje. 🎉' : 'Nenhuma matéria para mostrar.'}
+            </p>
           )}
         </div>
 
@@ -152,7 +176,7 @@ export function Edital() {
           )}
         >
           {selecionado ? (
-            <PainelAssunto l={selecionado.l} b={selecionado.b} maxPrioridade={maxPrioridade} fechar={fechar} />
+            <PainelAssunto l={selecionado.l} b={selecionado.b} maxPrioridade={maxPrioridade} fechar={fechar} intervalos={intervalos} />
           ) : (
             <ResumoGeral resumo={resumo} certas={completo.total.certas} erradas={completo.total.erradas} />
           )}

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Clock, Pencil, Plus, Trash2 } from 'lucide-react'
 import { Menu } from '@/componentes/Menu'
 import { SeloAcerto } from '@/componentes/nivel'
 import { avisar, confirmar, pedirTexto } from '@/componentes/dialogos-api'
@@ -139,6 +139,15 @@ function LinhaAssunto({ l, maxPrioridade }: { l: LinhaEdital; maxPrioridade: num
         {resto && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{resto}</span>}
       </button>
       {l.temFilhos && <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{l.folhasEstudadas}/{l.folhas}</span>}
+      {(l.revisao === 'hoje' || l.revisao === 'atrasada') && (
+        <Clock
+          className={cn('size-3.5 shrink-0', l.revisao === 'atrasada' ? 'text-erro' : 'text-aviso')}
+          aria-label={l.revisao === 'atrasada' ? 'Revisão atrasada' : 'Revisão para hoje'}
+          role="img"
+        >
+          <title>{l.revisao === 'atrasada' ? 'Revisão atrasada' : 'Revisão para hoje'}</title>
+        </Clock>
+      )}
       {l.noCiclo && <span className="shrink-0 rounded-full bg-ok-bg px-1.5 py-0.5 text-[0.65rem] font-semibold text-ok">ciclo</span>}
       <SeloAcerto feitas={l.total} acertos={l.certas} />
       <span className="flex w-3 shrink-0 justify-center">

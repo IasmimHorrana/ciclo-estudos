@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { lerArquivo, paraArquivo } from '@/dados/converter'
 import { BancoCiclo } from '@/dados/db'
 import { carregarDados, substituirDados } from '@/dados/repositorio'
+import { hoje } from '@/dominio/datas'
 
 const AGORA = 1_800_000_000_000
 
@@ -97,7 +98,7 @@ describe('edital verticalizado no backup', () => {
   })
 
   it('preferências: backup antigo ganha as faixas padrão; faixas fora de ordem voltam ao padrão; ida e volta mantém', () => {
-    expect(lerArquivo(JSON.stringify(legado), AGORA).preferencias).toEqual({ faixas: { fraco: 60, medio: 75, bom: 90 } })
+    expect(lerArquivo(JSON.stringify(legado), AGORA).preferencias).toEqual({ faixas: { fraco: 60, medio: 75, bom: 90 }, intervalosRevisao: [1, 7, 30] })
     expect(lerArquivo(JSON.stringify({ ...legado, preferencias: { faixas: { fraco: 90, medio: 75, bom: '60' } } }), AGORA).preferencias.faixas).toEqual({ fraco: 60, medio: 75, bom: 90 })
     const d = lerArquivo(JSON.stringify({ ...legado, preferencias: { faixas: { fraco: '50', medio: 70, bom: 85 } } }), AGORA)
     expect(d.preferencias.faixas).toEqual({ fraco: 50, medio: 70, bom: 85 })
@@ -183,5 +184,44 @@ describe('banco v5 (importância não definida)', () => {
     expect(a.find((x) => x.id === 'a1')).toMatchObject({ importancia: 0, sujo: 1 })
     expect(a.find((x) => x.id === 'a2')).toMatchObject({ importancia: 5, sujo: 0 })
     novo.close()
+  })
+})
+
+describe('banco v6 (revisão dos assuntos)', () => {
+  it('completa estudadoEm (hoje para os estudados) e revisoes vazias, sem marcar sujo', async () => {
+    const nome = `migracao-${++n}`
+    const antigo = new Dexie(nome)
+    antigo.version(5).stores({
+      valores: 'chave, sujo', semanasFechadas: 'id, inicio, sujo, excluidoEm', modelos: 'id, sujo, excluidoEm', notas: 'id, materia, atualizado, sujo, excluidoEm',
+      assuntos: 'id, materia, sujo, excluidoEm', questoes: 'id, data, materia, sujo, excluidoEm', sessoes: 'id, data, materia, sujo, excluidoEm',
+      local: 'chave', baralhos: 'id, nome, sujo, excluidoEm', gruposOpcoes: 'id, sujo', tiposNota: 'id, sujo', notasFc: 'id, tipoId, baralhoId, sujo, excluidoEm',
+      cartoes: 'id, notaId, baralhoId, tipo, venceDia, venceMs, sujo, excluidoEm', revlog: 'id, cartaoId, baralhoId, dia, sujo', materiasEdital: 'id, nome, sujo, excluidoEm',
+    })
+    await antigo.table('assuntos').bulkPut([
+      { id: 'a1', materia: 'X', nome: 'Estudado', importancia: 0, estudado: true, sujo: 0, excluidoEm: null },
+      { id: 'a2', materia: 'X', nome: 'Pendente', importancia: 0, estudado: false, sujo: 0, excluidoEm: null },
+    ])
+    antigo.close()
+    const novo = new BancoCiclo(nome)
+    const a = await novo.assuntos.toArray()
+    expect(a.find((x) => x.id === 'a1')).toMatchObject({ estudadoEm: hoje(), revisoes: [], sujo: 0 })
+    expect(a.find((x) => x.id === 'a2')).toMatchObject({ estudadoEm: null, revisoes: [], sujo: 0 })
+    novo.close()
+  })
+
+  it('backup: assunto sem os campos novos ganha o padrão; revisão com defeito some sem levar as outras; ida e volta mantém', () => {
+    const d = lerArquivo(JSON.stringify({
+      ...legado,
+      assuntos: [
+        { id: 'a1', materia: 'Informática', nome: 'Redes' },
+        { id: 'a2', materia: 'Informática', nome: 'NAT', estudado: true, estudadoEm: '2026-10-01', revisoes: [{ dia: '2026-10-02', feitaEm: '2026-10-02', resultado: 'ok' }, { dia: 5 }, { dia: '2026-10-08', feitaEm: null, resultado: 'talvez' }] },
+      ],
+      preferencias: { intervalosRevisao: [2, 9] },
+    }), AGORA)
+    expect(d.assuntos[0]).toMatchObject({ estudadoEm: null, revisoes: [] })
+    expect(d.assuntos[1]?.revisoes).toEqual([{ dia: '2026-10-02', feitaEm: '2026-10-02', resultado: 'ok' }, { dia: '2026-10-08', feitaEm: null, resultado: null }])
+    expect(d.preferencias.intervalosRevisao).toEqual([2, 9])
+    expect(lerArquivo(JSON.stringify({ ...legado, preferencias: { intervalosRevisao: [30, 7] } }), AGORA).preferencias.intervalosRevisao).toEqual([1, 7, 30])
+    expect(lerArquivo(JSON.stringify(paraArquivo(d, AGORA)), AGORA)).toEqual(d)
   })
 })

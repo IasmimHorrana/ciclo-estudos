@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Check, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react'
 import { CampoNumero } from '@/componentes/CampoNumero'
 import { SeloAcerto } from '@/componentes/nivel'
 import { avisar, confirmar } from '@/componentes/dialogos-api'
@@ -7,8 +7,10 @@ import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
 import { renomearAssunto } from '@/dados/desempenho'
-import { definirHorasDoTopico, enviarAoCiclo, mudarAssunto, mudarComSubtopicos, tirarAssuntoDoEdital } from '@/dados/edital'
+import { definirHorasDoTopico, enviarAoCiclo, mudarAssunto, mudarComSubtopicos, responderRevisaoAssunto, tirarAssuntoDoEdital } from '@/dados/edital'
 import { fmtH } from '@/dominio/ciclo'
+import { fmtData } from '@/dominio/datas'
+import { proximaRevisao } from '@/dominio/revisaoAssuntos'
 import type { BlocoEdital, LinhaEdital, ResumoEdital } from '@/dominio/edital'
 import { COR_PRIORIDADE, NOME_PRIORIDADE, nivelPrioridade } from '@/telas/edital/prioridade'
 import { cn } from '@/lib/utils'
@@ -70,7 +72,77 @@ function Titulo({ l }: { l: LinhaEdital }) {
   )
 }
 
-export function PainelAssunto({ l, b, maxPrioridade, fechar }: { l: LinhaEdital; b: BlocoEdital; maxPrioridade: number; fechar: () => void }) {
+const ESTADO: Record<LinhaEdital['revisao'], { texto: string; cor: string }> = {
+  nenhuma: { texto: '', cor: '' },
+  futura: { texto: 'agendada', cor: 'text-muted-foreground' },
+  hoje: { texto: 'para hoje', cor: 'text-aviso' },
+  atrasada: { texto: 'atrasada', cor: 'text-erro' },
+  concluida: { texto: 'todas feitas', cor: 'text-ok' },
+}
+
+/** Revisões do assunto: a lista e, quando vence, "Entendi" / "Preciso rever". Num tópico, só o resumo. */
+function Revisoes({ l, intervalos }: { l: LinhaEdital; intervalos: readonly number[] }) {
+  const devida = l.revisao === 'hoje' || l.revisao === 'atrasada'
+  const prox = proximaRevisao(l.revisoes)
+  const cabecalho = (
+    <div className="flex items-center justify-between">
+      <span className={rotulo}>Revisões</span>
+      {l.revisao !== 'nenhuma' && <span className={cn('text-xs font-semibold', ESTADO[l.revisao].cor)}>{ESTADO[l.revisao].texto}</span>}
+    </div>
+  )
+  if (l.temFilhos) {
+    return (
+      <section className="flex flex-col gap-1.5">
+        {cabecalho}
+        <p className="m-0 text-xs text-muted-foreground">
+          {l.proximaRevisao ? `Próxima revisão de um subtópico: ${fmtData(l.proximaRevisao)}. ` : ''}
+          As revisões são de cada subtópico: abra o subtópico para responder.
+        </p>
+      </section>
+    )
+  }
+  return (
+    <section className="flex flex-col gap-2">
+      {cabecalho}
+      {l.revisoes.length === 0 ? (
+        <p className="m-0 text-xs text-muted-foreground">
+          {l.estudado ? 'Sem revisões agendadas (marcado antes desta função). Desmarque e marque de novo para agendar.' : `Ao marcar como estudado, o app agenda revisões ${intervalos.join(', ')} dias depois.`}
+        </p>
+      ) : (
+        <ol className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+          {l.revisoes.map((r, i) => (
+            <li
+              key={`${r.dia}${i}`}
+              className={cn(
+                'rounded-full border px-2 py-0.5 text-xs tabular-nums',
+                r.feitaEm ? (r.resultado === 'rever' ? 'border-aviso/40 text-aviso' : 'border-ok/40 text-ok') : r === prox && devida ? 'border-erro/40 font-semibold text-erro' : 'text-muted-foreground',
+              )}
+              title={r.feitaEm ? `Feita em ${fmtData(r.feitaEm)}${r.resultado === 'rever' ? ' (precisou rever)' : ''}` : `Para ${fmtData(r.dia)}`}
+            >
+              {r.feitaEm && (r.resultado === 'rever' ? '↺ ' : '✓ ')}
+              {fmtData(r.dia)}
+            </li>
+          ))}
+        </ol>
+      )}
+      {devida && (
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => void responderRevisaoAssunto(db, l.id, 'ok')} title="Conclui esta revisão; a próxima continua agendada">
+            <Check className="size-3.5" /> Entendi
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => void responderRevisaoAssunto(db, l.id, 'rever')} title={`Conclui esta revisão e recomeça as revisões a partir de hoje (${intervalos.join(', ')} dias)`}>
+            <RotateCcw className="size-3.5" /> Preciso rever
+          </Button>
+        </div>
+      )}
+      {!devida && prox && <p className="m-0 text-xs text-muted-foreground">Próxima em {fmtData(prox.dia)}. Os botões aparecem no dia.</p>}
+    </section>
+  )
+}
+
+export function PainelAssunto({ l, b, maxPrioridade, fechar, intervalos }: {
+  l: LinhaEdital; b: BlocoEdital; maxPrioridade: number; fechar: () => void; intervalos: readonly number[]
+}) {
   const prio = nivelPrioridade(l, maxPrioridade)
   const pct = l.estudado ? 0 : Math.round((l.prioridade / Math.max(1, maxPrioridade)) * 100)
 
@@ -102,6 +174,8 @@ export function PainelAssunto({ l, b, maxPrioridade, fechar }: { l: LinhaEdital;
         <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={l.estudado} onChange={(e) => void mudarComSubtopicos(db, l.id, { estudado: e.target.checked })} />
         {l.temFilhos ? `Estudado (${l.folhasEstudadas}/${l.folhas})` : 'Estudado'}
       </label>
+
+      <Revisoes l={l} intervalos={intervalos} />
 
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between">

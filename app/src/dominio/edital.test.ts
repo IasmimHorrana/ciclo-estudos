@@ -429,3 +429,33 @@ describe('busca no edital', () => {
     expect(nomes('xyz')).toEqual([])
   })
 })
+
+describe('revisões no edital', () => {
+  const materias = [{ id: 'm1', nome: 'Informática', peso: 4, ordem: 0 }, { id: 'm2', nome: 'Penal', peso: 3, ordem: 1 }]
+  const rev = (dia: string, feitaEm: string | null = null) => ({ dia, feitaEm, resultado: feitaEm ? ('ok' as const) : null })
+  const a = (id: string, materia: string, nome: string, ordem: number, paiId: string | null, extra = {}) => ({
+    id, materia, nome, ordem, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, noEdital: true, paiId, ...extra,
+  })
+  const assuntos = [
+    a('t1', 'Informática', 'Redes', 0, null),
+    a('f1', 'Informática', 'NAT', 1, 't1', { estudado: true, revisoes: [rev('2026-10-25'), rev('2026-11-30')] }),
+    a('f2', 'Informática', 'VLAN', 2, 't1', { estudado: true, revisoes: [rev('2026-10-28')] }),
+    a('s1', 'Informática', 'Planilhas', 3, null, { estudado: true, revisoes: [rev('2026-11-02')] }),
+    a('p1', 'Penal', 'Penas', 0, null),
+  ]
+  const base = { materias, assuntos, questoes: [], sessoes: [], ordem: 'edital' as const, ocultarEstudados: false, filtroMateria: null, hoje: '2026-10-28' }
+
+  it('estado e próxima revisão por assunto; o tópico mostra o pior estado e a revisão mais próxima', () => {
+    const l = montarEdital(base).blocos[0]?.linhas ?? []
+    expect(l.map((x) => `${x.nome}:${x.revisao}:${x.proximaRevisao}`)).toEqual([
+      'Redes:atrasada:2026-10-25', 'NAT:atrasada:2026-10-25', 'VLAN:hoje:2026-10-28', 'Planilhas:futura:2026-11-02',
+    ])
+    expect(montarEdital(base).blocos[1]?.linhas[0]).toMatchObject({ revisao: 'nenhuma', proximaRevisao: null, revisoes: [] })
+  })
+
+  it('"Revisões de hoje" mostra só as devidas (mesmo estudadas e com ocultar estudados) e some com matérias vazias', () => {
+    const r = montarEdital({ ...base, soRevisar: true, ocultarEstudados: true })
+    expect(r.blocos.map((b) => b.linhas.map((x) => x.nome))).toEqual([['Redes', 'NAT', 'VLAN']])
+    expect(r.total.resumo.assuntos).toBe(4)
+  })
+})
