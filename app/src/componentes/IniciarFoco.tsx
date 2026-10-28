@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { EscolherAssunto } from '@/componentes/EscolherAssunto'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import { criarAssunto } from '@/dados/edital'
@@ -92,7 +93,7 @@ export function IniciarFoco({ semana, inicial, fechar }: { semana: Semana; inici
         </details>
       )}
       {passo && (
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-xs font-bold text-muted-foreground uppercase">
             Tipo de estudo
             <Selecao value={tipo} onChange={(e) => setTipo(e.target.value)}>
@@ -101,13 +102,7 @@ export function IniciarFoco({ semana, inicial, fechar }: { semana: Semana; inici
           </label>
           <label className="flex flex-col gap-1 text-xs font-bold text-muted-foreground uppercase">
             Assunto (opcional)
-            <Selecao value={assuntoId} onChange={(e) => setEscolhido(e.target.value)}>
-              <option value="">— sem assunto —</option>
-              {(assuntos ?? []).map((a) => (
-                <option key={a.id} value={a.id}>{a.nome}</option>
-              ))}
-              <option value={NOVO}>＋ Novo assunto…</option>
-            </Selecao>
+            <EscolherAssunto assuntos={assuntos ?? []} valor={assuntoId} aoMudar={setEscolhido} valorNovo={NOVO} />
           </label>
         </div>
       )}

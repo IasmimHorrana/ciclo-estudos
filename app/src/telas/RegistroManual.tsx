@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { EscolherAssunto } from '@/componentes/EscolherAssunto'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import type { Ciclo } from '@/dados/ciclo'
@@ -91,11 +92,7 @@ export function RegistroManual({ s, config, hojeISO }: { s: SemanaAtual; config:
         </label>
         <label className={rotulo}>
           Assunto (opcional)
-          <Selecao value={assuntoSel} onChange={(e) => setAssuntoSel(e.target.value)}>
-            <option value="">— sem assunto —</option>
-            {(assuntos ?? []).map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
-            <option value={NOVO}>＋ Novo assunto…</option>
-          </Selecao>
+          <EscolherAssunto assuntos={assuntos ?? []} valor={assuntoSel} aoMudar={setAssuntoSel} valorNovo={NOVO} />
         </label>
         {assuntoSel === NOVO && <Entrada placeholder={`Nome do assunto de ${materia}`} value={nomeNovo} onChange={(e) => setNomeNovo(e.target.value)} />}
         <div className="grid grid-cols-2 gap-2">
