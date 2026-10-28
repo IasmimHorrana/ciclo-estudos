@@ -274,6 +274,11 @@ export interface EntradaMontagem {
   filtroMateria: string | null
   /** Tópicos fechados na tela (ids): os subtópicos deles não entram na lista de linhas. */
   recolhidos?: ReadonlySet<string>
+  /**
+   * Palavras procuradas no nome (sem acento e caixa). Fica a linha que casa, os tópicos acima dela e, se casou um tópico
+   * ou a matéria, tudo o que está dentro. Durante a busca os tópicos ficam abertos e as matérias sem nada encontrado somem.
+   */
+  busca?: string
 }
 
 export interface LinhaEdital {
@@ -347,6 +352,8 @@ export function montarEdital(e: EntradaMontagem) {
   for (const q of e.questoes) if (q.assuntoId) { const x = ac(q.assuntoId); x.feitas += q.feitas; x.acertos += q.acertos }
   for (const s of e.sessoes) if (s.assuntoId) ac(s.assuntoId).minutos += s.minutos
 
+  const procura = normalizar(e.busca ?? '')
+  const casa = (nome: string) => procura !== '' && normalizar(nome).includes(procura)
   const chaveDaOrdem = (l: LinhaEdital) => (e.ordem === 'prioridade' ? -l.prioridade : e.ordem === 'falta' ? -l.falta : 0)
 
   let blocos: BlocoEdital[] = materiasDoEdital(e.materias, e.assuntos)
@@ -409,15 +416,19 @@ export function montarEdital(e: EntradaMontagem) {
 
       const arvore = emOrdem(raizes).map((r) => construir(r, 0))
       arvore.sort((x, y) => chaveDaOrdem(x.linha) - chaveDaOrdem(y.linha))
-      const emitir = (n: No): LinhaEdital[] => {
+      const temAchado = (n: No): boolean => casa(n.linha.nome) || n.filhos.some(temAchado)
+      // `dentro`: um tópico acima (ou a matéria) já casou com a busca, então mostra tudo daqui para baixo
+      const emitir = (n: No, dentro: boolean): LinhaEdital[] => {
         if (e.ocultarEstudados && n.linha.estudado) return []
-        return [n.linha, ...(e.recolhidos?.has(n.linha.id) ? [] : n.filhos.flatMap(emitir))]
+        if (procura && !dentro && !temAchado(n)) return []
+        const aberto = procura !== '' || !e.recolhidos?.has(n.linha.id)
+        return [n.linha, ...(aberto ? n.filhos.flatMap((f) => emitir(f, dentro || casa(n.linha.nome))) : [])]
       }
       const folhas = arvore.flatMap((n) => n.folhas)
       const todosOsIds = dela.map((a) => porAssunto.get(a.id) ?? { feitas: 0, acertos: 0, minutos: 0 })
       return {
         materia: { id: m.id, nome: m.nome, peso: m.peso },
-        linhas: arvore.flatMap(emitir),
+        linhas: arvore.flatMap((n) => emitir(n, casa(m.nome))),
         resumo: resumoEdital(folhas),
         totais: {
           certas: todosOsIds.reduce((t, x) => t + x.acertos, 0),
@@ -449,7 +460,8 @@ export function montarEdital(e: EntradaMontagem) {
       pctHoras: horasIdeais > 0 ? Math.round((uteis / horasIdeais) * 100) : 0,
     } satisfies ResumoEdital,
   }
-  return { blocos, total }
+  // os totais continuam sendo de todas as matérias mostradas; a busca só esconde as que não acharam nada
+  return { blocos: procura ? blocos.filter((b) => b.linhas.length > 0) : blocos, total }
 }
 
 /** Assunto sugerido a partir da anotação do passo ("Posse; Contratos" → o primeiro que existir entre os assuntos da matéria). */

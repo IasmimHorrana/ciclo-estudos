@@ -395,3 +395,37 @@ describe('importância "não definida" (0)', () => {
     expect(linha(3)?.semDados).toBe(false)
   })
 })
+
+describe('busca no edital', () => {
+  const materias = [{ id: 'm1', nome: 'Informática', peso: 4, ordem: 0 }, { id: 'm2', nome: 'Direito Penal', peso: 3, ordem: 1 }]
+  const a = (id: string, materia: string, nome: string, ordem: number, paiId: string | null = null) => ({
+    id, materia, nome, ordem, importancia: 3, horasIdeais: 0, estudado: false, noCiclo: false, noEdital: true, paiId,
+  })
+  const assuntos = [
+    a('t1', 'Informática', 'Redes', 0),
+    a('f1', 'Informática', 'NAT', 1, 't1'),
+    a('f2', 'Informática', 'Segurança de redes', 2, 't1'),
+    a('s1', 'Informática', 'Planilhas', 3),
+    a('p1', 'Direito Penal', 'Crimes contra a pessoa', 0),
+  ]
+  const base = { materias, assuntos, questoes: [], sessoes: [], ordem: 'edital' as const, ocultarEstudados: false, filtroMateria: null }
+  const nomes = (busca: string, extra = {}) => montarEdital({ ...base, busca, ...extra }).blocos.map((b) => `${b.materia.nome}: ${b.linhas.map((l) => l.nome).join(', ')}`)
+
+  it('acha o subtópico (sem acento e caixa) e mantém o tópico acima; matérias sem nada somem', () => {
+    expect(nomes('SEGURANCA')).toEqual(['Informática: Redes, Segurança de redes'])
+  })
+
+  it('tópico encontrado mostra todos os subtópicos, mesmo recolhido', () => {
+    expect(nomes('redes', { recolhidos: new Set(['t1']) })).toEqual(['Informática: Redes, NAT, Segurança de redes'])
+  })
+
+  it('nome da matéria encontrado mostra a matéria inteira', () => {
+    expect(nomes('penal')).toEqual(['Direito Penal: Crimes contra a pessoa'])
+  })
+
+  it('busca vazia não muda nada, e os totais não dependem da busca', () => {
+    expect(nomes('  ')).toEqual(nomes(''))
+    expect(montarEdital({ ...base, busca: 'nat' }).total.resumo.assuntos).toBe(4)
+    expect(nomes('xyz')).toEqual([])
+  })
+})

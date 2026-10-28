@@ -11,7 +11,9 @@ import { db } from '@/dados/db'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
 import { corDe, fmtH, todasMaterias } from '@/dominio/ciclo'
 import { fmtData } from '@/dominio/datas'
-import { calcularDesempenho, MIN_QUESTOES, NOMES_NIVEL, nivelDe, pctDe, resumoDasSemanas, type Nivel, type Periodo } from '@/dominio/desempenho'
+import { calcularDesempenho, MIN_QUESTOES, nivelDe, pctDe, resumoDasSemanas, type Periodo } from '@/dominio/desempenho'
+import { Etiqueta } from '@/componentes/nivel'
+import { COR_NIVEL } from '@/componentes/nivel-cores'
 import { abrirDialogo } from '@/estado/dialogo'
 import { useDesempenhoUi } from '@/estado/desempenho'
 import { useUi } from '@/estado/ui'
@@ -21,16 +23,6 @@ import { cn } from '@/lib/utils'
 
 const card = 'rounded-xl border bg-card p-3.5 shadow-sm'
 const mudo = 'text-xs text-muted-foreground'
-const COR_NIVEL: Record<Nivel, string> = { na: 'var(--muted-foreground)', fraco: 'var(--erro)', medio: 'var(--aviso)', bom: 'var(--primary)', dom: 'var(--ok)' }
-
-function Etiqueta({ nivel }: { nivel: Nivel }) {
-  return (
-    <span className="rounded-full px-2 py-0.5 text-[0.65rem] font-bold whitespace-nowrap" style={{ color: COR_NIVEL[nivel], background: `color-mix(in srgb, ${COR_NIVEL[nivel]} 14%, transparent)` }}>
-      {NOMES_NIVEL[nivel]}
-    </span>
-  )
-}
-
 function Kpi({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
     <div className={cn(card, 'py-2.5')}>
