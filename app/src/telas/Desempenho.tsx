@@ -6,7 +6,7 @@ import { Rosca } from '@/componentes/graficos/Rosca'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import { excluirSemanaFechada, repetirSemanaFechada, type Ciclo } from '@/dados/ciclo'
-import { adicionarAssuntos, carregarEstudo, excluirAssunto, excluirRegistroQuestoes, renomearAssunto, type Estudo } from '@/dados/desempenho'
+import { adicionarAssuntos, carregarEstudo, excluirAssunto, excluirRegistroQuestoes, excluirSessao, renomearAssunto, type Estudo } from '@/dados/desempenho'
 import { db } from '@/dados/db'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
 import { corDe, fmtH, todasMaterias } from '@/dominio/ciclo'
@@ -165,7 +165,7 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
             ))}
           </section>
           <section className={card}>
-            <h2 className="m-0 mb-2 text-sm font-bold">Últimos registros</h2>
+            <h2 className="m-0 mb-2 text-sm font-bold">Últimos registros de questões</h2>
             {d.ultimos.length === 0 && <p className={mudo}>Nenhum registro ainda.</p>}
             {d.ultimos.map((q) => (
               <div key={q.id} className="flex items-center gap-2 border-b py-1 text-sm last:border-b-0">
@@ -173,6 +173,18 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
                 <span className="min-w-0 flex-1 truncate">{q.materia}{nomeAssunto(q.assuntoId) ? ` › ${nomeAssunto(q.assuntoId)}` : ''}</span>
                 <b>{q.acertos}/{q.feitas}</b>
                 <Button size="sm" variant="outline" title="Apagar este registro" aria-label="Apagar registro" onClick={() => void apagarRegistro(q.id)}>🗑</Button>
+              </div>
+            ))}
+          </section>
+          <section className={card}>
+            <h2 className="m-0 mb-2 text-sm font-bold">Últimos registros de tempo</h2>
+            {d.ultimasSessoes.length === 0 && <p className={mudo}>Nenhum tempo registrado ainda.</p>}
+            {d.ultimasSessoes.map((x) => (
+              <div key={x.id} className="flex items-center gap-2 border-b py-1 text-sm last:border-b-0">
+                <span className={mudo}>{fmtData(x.data)}</span>
+                <span className="min-w-0 flex-1 truncate">{x.materia}{nomeAssunto(x.assuntoId) ? ` › ${nomeAssunto(x.assuntoId)}` : ''} <span className={mudo}>· {x.tipo || 'Teoria'}</span></span>
+                <b>{x.minutos} min</b>
+                <Button size="sm" variant="outline" title="Apagar este registro de tempo" aria-label="Apagar registro de tempo" onClick={() => void apagarSessao(x.id, x.minutos)}>🗑</Button>
               </div>
             ))}
           </section>
@@ -190,6 +202,10 @@ async function renomear(id: string, atual: string) {
 }
 async function excluir(id: string, nome: string) {
   if (await confirmar(`Excluir o assunto "${nome}"? Os registros de questões e horas dele continuam, mas passam a contar como "sem assunto".`, 'Excluir', true)) await excluirAssunto(db, id)
+}
+async function apagarSessao(id: string, minutos: number) {
+  const msg = `Apagar este registro de ${minutos} min? Ele sai do Desempenho e do Edital. Se o tempo também foi somado a um passo da semana, corrija as horas do passo na aba Semana.`
+  if (await confirmar(msg, 'Apagar', true)) await excluirSessao(db, id)
 }
 async function apagarRegistro(id: string) {
   if (await confirmar('Apagar este registro de questões? Não dá para desfazer.', 'Apagar', true)) await excluirRegistroQuestoes(db, id)

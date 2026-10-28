@@ -6,10 +6,10 @@ import { registrarTempo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
 import type { Semana } from '@/dados/esquemas'
 import { agruparPassosParaEstudo, rotuloDoPasso } from '@/dominio/ciclo'
-import { hoje } from '@/dominio/datas'
+import { fmtData, hoje, type DataISO } from '@/dominio/datas'
 
 /** "Foco concluído: a qual passo somar esse tempo?" */
-export function RegistrarTempo({ semana, minutos, fechar }: { semana: Semana; minutos: number; fechar: () => void }) {
+export function RegistrarTempo({ semana, minutos, data, fechar }: { semana: Semana; minutos: number; data?: DataISO; fechar: () => void }) {
   const h = hoje()
   const grupos = agruparPassosParaEstudo(semana.passos, h)
   const opcoes = grupos.flatMap((g) => g.passos)
@@ -24,13 +24,13 @@ export function RegistrarTempo({ semana, minutos, fechar }: { semana: Semana; mi
   )
 
   async function somar() {
-    if (passoId) await registrarTempo(db, { passoId, minutos, tipo, assuntoId: assuntoId || null, feito })
+    if (passoId) await registrarTempo(db, { passoId, minutos, tipo, assuntoId: assuntoId || null, feito, data })
     fechar()
   }
 
   return (
     <>
-      <p className="mt-0 mb-2 text-sm">A qual passo somar esse tempo ({minutos} min)?</p>
+      <p className="mt-0 mb-2 text-sm">A qual passo somar esse tempo ({minutos} min{data && data !== h ? <>, estudados em <b>{fmtData(data)}</b></> : null})?</p>
       <Selecao
         autoFocus
         value={passoId}

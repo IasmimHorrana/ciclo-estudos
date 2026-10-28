@@ -94,6 +94,11 @@ describe('calcularDesempenho', () => {
     expect(d.ultimos).toHaveLength(8)
     expect(d.ultimos[0]?.data).toBe('2026-10-10')
   })
+
+  it('últimos registros de tempo: pela data informada, não pela ordem de gravação', () => {
+    const d = calcularDesempenho(base({ sessoes: [s('a', HOJE, 'A', 60), s('b', '2026-10-08', 'A', 29)] }))
+    expect(d.ultimasSessoes.map((x) => x.id)).toEqual(['a', 'b'])
+  })
 })
 
 describe('semanas fechadas', () => {

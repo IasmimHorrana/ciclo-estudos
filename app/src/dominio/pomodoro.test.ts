@@ -79,6 +79,13 @@ describe('restaurarPomodoro (voltar de onde parou)', () => {
     expect(r).toMatchObject({ tipo: 'perguntar', minutosEstudados: 20, minutosFora: 70, focoCompleto: false })
   })
 
+  it('reabriu no dia seguinte: o tempo conta no dia do foco, não no dia em que o app voltou', () => {
+    const ontem23h = new Date(2026, 9, 27, 23, 0).getTime()
+    const salvo: PomodoroSalvo = { fase: 'foco', rodando: true, fimMs: ontem23h + 25 * MIN, restaSeg: 1500, focosConcluidos: 0, alvo, visto: ontem23h + 20 * MIN }
+    const r = restaurarPomodoro(salvo, new Date(2026, 9, 28, 9, 0).getTime(), CONFIG_PADRAO)
+    expect(r).toMatchObject({ tipo: 'perguntar', minutosEstudados: 20, dataDoFoco: '2026-10-27' })
+  })
+
   it('visto só no instante final: foco conta como completo', () => {
     const r = restaurarPomodoro(rodando(T0 + 25 * MIN), T0 + 30 * MIN, CONFIG_PADRAO)
     expect(r).toMatchObject({ tipo: 'perguntar', minutosEstudados: 25, focoCompleto: true })

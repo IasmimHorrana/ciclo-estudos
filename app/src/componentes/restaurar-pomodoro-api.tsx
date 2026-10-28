@@ -30,7 +30,7 @@ export async function iniciarPersistenciaPomodoro(): Promise<void> {
     if (escolha === 'somar') {
       const prox = r.focoCompleto ? proximaFase('foco', focosConcluidos, cfg) : { fase: 'foco' as const, focosConcluidos }
       usePomodoro.getState().restaurar({ fase: prox.fase, focosConcluidos: prox.focosConcluidos, rodando: false, fimMs: 0, restaSeg: duracaoSeg(prox.fase, cfg), alvo })
-      usePomodoro.getState().concluirFoco({ minutos: r.minutosEstudados, completo: r.focoCompleto }) // o App soma ao passo escolhido
+      usePomodoro.getState().concluirFoco({ minutos: r.minutosEstudados, completo: r.focoCompleto, data: r.dataDoFoco }) // o App soma ao passo escolhido
     } else if (escolha === 'descartar') {
       usePomodoro.getState().restaurar({ fase: 'foco', focosConcluidos, rodando: false, fimMs: 0, restaSeg: duracaoSeg('foco', cfg), alvo: null })
     }

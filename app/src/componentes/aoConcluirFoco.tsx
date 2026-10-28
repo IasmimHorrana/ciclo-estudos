@@ -18,8 +18,8 @@ export async function aoConcluirFoco(f: FocoConcluido): Promise<void> {
   const { semana } = await carregarCiclo(db)
   if (!semana) return
   if (alvo && semana.passos.some((p) => p.id === alvo.passoId)) {
-    await registrarTempo(db, { passoId: alvo.passoId, minutos: f.minutos, tipo: alvo.tipo, assuntoId: alvo.assuntoId, feito: false })
+    await registrarTempo(db, { passoId: alvo.passoId, minutos: f.minutos, tipo: alvo.tipo, assuntoId: alvo.assuntoId, feito: false, data: f.data })
     return
   }
-  await abrirDialogo(`Foco concluído: ${f.minutos} min`, (fechar) => <RegistrarTempo semana={semana} minutos={f.minutos} fechar={() => fechar()} />)
+  await abrirDialogo(`Foco concluído: ${f.minutos} min`, (fechar) => <RegistrarTempo semana={semana} minutos={f.minutos} data={f.data} fechar={() => fechar()} />)
 }

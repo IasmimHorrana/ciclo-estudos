@@ -151,8 +151,10 @@ export function calcularDesempenho(e: EntradaDesempenho) {
     .filter((x) => x.feitas > 0)
     .sort((a, b) => pctDe(b.acertos, b.feitas) - pctDe(a.acertos, a.feitas))
 
-  const ultimos = [...e.questoes].sort((a, b) => b.data.localeCompare(a.data) || b.id.localeCompare(a.id)).slice(0, 8)
-  return { feitas, acertos, dias, horas, tipos, mats, blocos, horasPorMateria, colsHoras, colsQuestoes, acertoPorMateria, ultimos }
+  const recentes = <T extends { data: DataISO; id: string }>(l: T[]) => [...l].sort((a, b) => b.data.localeCompare(a.data) || b.id.localeCompare(a.id)).slice(0, 8)
+  const ultimos = recentes(e.questoes)
+  const ultimasSessoes = recentes(e.sessoes)
+  return { feitas, acertos, dias, horas, tipos, mats, blocos, horasPorMateria, colsHoras, colsQuestoes, acertoPorMateria, ultimos, ultimasSessoes }
 }
 
 /** Indicadores da visão "Semanas" (histórico de semanas fechadas). */
