@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
-import { Layers, CalendarDays, ListChecks, Moon, NotebookPen, Puzzle, Sun, TrendingUp, type LucideIcon } from 'lucide-react'
+import { Layers, CalendarDays, ListChecks, Moon, NotebookPen, Palette, Puzzle, Sun, TrendingUp, type LucideIcon } from 'lucide-react'
 import { Button } from '@/componentes/ui/button'
 import { MiniCalendario } from '@/componentes/barra-lateral/MiniCalendario'
 import { PomodoroCard } from '@/componentes/barra-lateral/PomodoroCard'
 import { useBackup } from '@/estado/backup'
-import { useUi, temaEscuro, type AbaId } from '@/estado/ui'
+import { useUi, temaEscuro, PALETAS, type AbaId } from '@/estado/ui'
 import { cn } from '@/lib/utils'
 
 const ABAS: { id: AbaId; rotulo: string; Icone: LucideIcon }[] = [
@@ -28,8 +28,9 @@ function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
 }
 
 export function BarraLateral() {
-  const { aba, irParaAba, tema, alternarTema } = useUi()
+  const { aba, irParaAba, tema, alternarTema, paleta, trocarPaleta } = useUi()
   const escuro = temaEscuro(tema)
+  const nomePaleta = PALETAS.find((p) => p.id === paleta)?.nome
   const bk = useBackup((s) => s.estado)
   const backupOk = bk === 'ok' || bk === 'gravando'
   return (
@@ -39,9 +40,14 @@ export function BarraLateral() {
           <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" className="size-6 rounded-md" />
           Ciclo de Estudos
         </span>
-        <Button variant="outline" size="icon" onClick={alternarTema} title="Alternar tema" aria-label="Alternar tema">
-          {escuro ? <Sun className="size-4" /> : <Moon className="size-4" />}
-        </Button>
+        <div className="flex gap-1">
+          <Button variant="outline" size="icon" onClick={trocarPaleta} title={`Paleta: ${nomePaleta} (clique para trocar)`} aria-label="Trocar paleta de cores">
+            <Palette className="size-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={alternarTema} title="Alternar tema" aria-label="Alternar tema">
+            {escuro ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </Button>
+        </div>
       </div>
 
       <nav className="flex flex-col max-[900px]:flex-row max-[900px]:flex-wrap">

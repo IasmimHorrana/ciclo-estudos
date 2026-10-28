@@ -30,7 +30,7 @@ const TELAS: Record<AbaId, ReactNode> = {
 }
 
 export default function App() {
-  const { aba, tema } = useUi()
+  const { aba, tema, paleta } = useUi()
   const ciclo = useCiclo()
   const pomoSalvo = ciclo?.pomo
 
@@ -59,6 +59,12 @@ export default function App() {
     mq.addEventListener('change', aplicar)
     return () => mq.removeEventListener('change', aplicar)
   }, [tema])
+
+  // paleta de cores (a padrão, verde-menta, não precisa do atributo)
+  useEffect(() => {
+    if (paleta === 'menta') delete document.documentElement.dataset.paleta
+    else document.documentElement.dataset.paleta = paleta
+  }, [paleta])
 
   // relógio único do Pomodoro + tempo restante no título da aba do navegador
   useEffect(() => {
