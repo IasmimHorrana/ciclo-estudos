@@ -93,7 +93,12 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
 
       <div className={cn(card, 'grid grid-cols-[repeat(5,minmax(0,1fr))] items-start gap-4 max-[900px]:grid-cols-2')}>
         <Estat rotulo="Hoje" valor={fmtHs(r.hoje.horas)} sub={r.hoje.materias.length ? r.hoje.materias.map((m) => m.materia).join(' · ') : 'nada registrado ainda'} />
-        <div className="col-span-2 flex min-w-0 flex-col gap-0.5">
+        <Estat
+          rotulo="Questões hoje"
+          valor={r.hoje.feitas ? `${r.hoje.acertos}/${r.hoje.feitas}` : '—'}
+          sub={r.hoje.feitas ? `${r.hoje.pct}% de acertos` : undefined}
+        />
+        <div className="col-span-3 flex min-w-0 flex-col gap-0.5 max-[900px]:col-span-2">
           <span className={mudo}>Horas na semana</span>
           <b className="text-xl leading-tight">
             {fmtHs(g.horas)} <span className="text-sm font-normal text-muted-foreground">de {fmtH(g.meta)}{g.estendida > g.meta ? ` · estendida ${fmtH(g.estendida)}` : ''}</span>
@@ -107,31 +112,6 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
                 : `Faltam ${fmtHs(g.faltaMeta)} para a meta`}
           </span>
         </div>
-        <div className="flex flex-col gap-1">
-          <span className={mudo}>Meta desta semana (h)</span>
-          <CampoNumero
-            key={`meta${g.meta}`}
-            className="w-24"
-            valor={g.meta}
-            aoConfirmar={(v) => {
-              if (v === null || v <= 0) return
-              void ajustarMetaDaSemana(db, hojeISO, v === p.metaLivre.base ? null : v)
-            }}
-          />
-          {ajustada && (
-            <span className={mudo}>
-              só nesta semana ·{' '}
-              <button className="cursor-pointer underline" onClick={() => void ajustarMetaDaSemana(db, hojeISO, null)}>
-                voltar a {fmtH(p.metaLivre.base)}
-              </button>
-            </span>
-          )}
-        </div>
-        <Estat
-          rotulo="Questões hoje"
-          valor={r.hoje.feitas ? `${r.hoje.acertos}/${r.hoje.feitas}` : '—'}
-          sub={r.hoje.feitas ? `${r.hoje.pct}% de acertos` : undefined}
-        />
       </div>
 
       {/* a coluna da direita vai do topo ao fim; à esquerda, só a faixa de dias cresce (e rola por dentro se faltar espaço) */}
@@ -257,7 +237,23 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
                 Estendida (h)
                 <CampoNumero key={`e${p.metaLivre.estendida}`} valor={p.metaLivre.estendida} aoConfirmar={(v) => v !== null && void mudarPadrao(p.metaLivre.base, v)} />
               </label>
+              <label className={cn(rotulo, 'col-span-2')}>
+                Só esta semana (h)
+                <CampoNumero
+                  key={`s${g.meta}`}
+                  valor={g.meta}
+                  aoConfirmar={(v) => {
+                    if (v === null || v <= 0) return
+                    void ajustarMetaDaSemana(db, hojeISO, v === p.metaLivre.base ? null : v)
+                  }}
+                />
+              </label>
             </div>
+            {ajustada && (
+              <button className={cn(mudo, 'mt-1.5 cursor-pointer underline')} onClick={() => void ajustarMetaDaSemana(db, hojeISO, null)}>
+                voltar a {fmtH(p.metaLivre.base)}
+              </button>
+            )}
           </section>
           <RegistroManual s={null} config={config} hojeISO={hojeISO} primeiras={doDia} />
         </div>
