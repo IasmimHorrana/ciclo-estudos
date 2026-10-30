@@ -66,7 +66,7 @@ export function resumoRespostas(rs: readonly Resposta[], desdeDia = -Infinity, f
     if (r.dia < desdeDia) continue
     somar(total, r)
     somar(r.estadoAntes === 'revisao' ? revisao : aprendizado, r)
-    botoes[r.botao - 1]++
+    botoes[(r.botao - 1) as 0 | 1 | 2 | 3]++
     cartoes.add(r.cartaoId)
     tempoMs += r.tempoMs
   }
