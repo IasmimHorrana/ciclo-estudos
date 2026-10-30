@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { CamposQuestoes } from '@/componentes/CamposQuestoes'
 import { EscolherAssunto } from '@/componentes/EscolherAssunto'
 import { Button } from '@/componentes/ui/button'
 import { Selecao } from '@/componentes/ui/entrada'
 import { registrarTempo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
+import { registrarQuestoes } from '@/dados/desempenho'
 import type { Semana } from '@/dados/esquemas'
 import { agruparPassosParaEstudo, rotuloDoPasso } from '@/dominio/ciclo'
 import { fmtData, hoje, type DataISO } from '@/dominio/datas'
+import { validarQuestoes } from '@/dominio/desempenho'
 
 /** "Foco concluído: a qual passo somar esse tempo?" */
 export function RegistrarTempo({ semana, minutos, data, fechar }: { semana: Semana; minutos: number; data?: DataISO; fechar: () => void }) {
@@ -18,6 +21,9 @@ export function RegistrarTempo({ semana, minutos, data, fechar }: { semana: Sema
   const [tipo, setTipo] = useState('Teoria')
   const [assuntoId, setAssuntoId] = useState('')
   const [feito, setFeito] = useState(false)
+  const [feitas, setFeitas] = useState('')
+  const [acertos, setAcertos] = useState('')
+  const [erro, setErro] = useState<string | null>(null)
   const passo = semana.passos.find((p) => p.id === passoId)
   const assuntos = useLiveQuery(
     async () => (passo ? (await db.assuntos.toArray()).filter((a) => a.excluidoEm === null && a.materia === passo.materia) : []),
@@ -25,7 +31,12 @@ export function RegistrarTempo({ semana, minutos, data, fechar }: { semana: Sema
   )
 
   async function somar() {
+    // questões (opcionais): vão para a matéria do passo, no mesmo dia do foco
+    const q = passo && Number(feitas) > 0 ? { data: data ?? h, materia: passo.materia, assuntoId, novo: '', feitas: Number(feitas), acertos: Number(acertos) || 0 } : null
+    const e = q && validarQuestoes(q, h)
+    if (e) return setErro(e)
     if (passoId) await registrarTempo(db, { passoId, minutos, tipo, assuntoId: assuntoId || null, feito, data })
+    if (q) await registrarQuestoes(db, q)
     fechar()
   }
 
@@ -63,6 +74,12 @@ export function RegistrarTempo({ semana, minutos, data, fechar }: { semana: Sema
           <EscolherAssunto assuntos={assuntos ?? []} valor={assuntoId} aoMudar={setAssuntoId} />
         </label>
       </div>
+      {passo && (
+        <div className="mt-3">
+          <CamposQuestoes feitas={feitas} acertos={acertos} aoMudar={(f, a) => { setFeitas(f); setAcertos(a) }} />
+        </div>
+      )}
+      {erro && <p className="mt-2 mb-0 text-xs text-erro" role="alert">{erro}</p>}
       <label className="mt-3 flex items-center gap-2 text-sm">
         <input type="checkbox" checked={feito} onChange={(e) => setFeito(e.target.checked)} /> Marcar o passo como concluído
       </label>
