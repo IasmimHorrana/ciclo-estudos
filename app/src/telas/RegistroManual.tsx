@@ -17,9 +17,12 @@ type SemanaAtual = NonNullable<Ciclo['semana']>
 const NOVO = '__novo'
 const rotulo = 'flex flex-col gap-1 text-[0.7rem] font-bold tracking-wide text-muted-foreground uppercase'
 
-/** Registro manual: estudo feito fora do app (outro lugar, sem o Pomodoro). Tempo, matéria, assunto e, se for o caso, questões × acertos. */
-export function RegistroManual({ s, config, hojeISO }: { s: SemanaAtual; config: Ciclo['config']; hojeISO: string }) {
-  const materias = [...new Set([...s.passos.map((p) => p.materia), ...todasMaterias(config)])]
+/**
+ * Registro manual: estudo feito fora do app (outro lugar, sem o Pomodoro). Tempo, matéria, assunto e, se for o caso, questões × acertos.
+ * Sem semana (`s` nulo, como no modo Livre) o tempo vai só para as sessões, sem passo. `primeiras` vêm no topo da lista de matérias.
+ */
+export function RegistroManual({ s, config, hojeISO, primeiras = [] }: { s: SemanaAtual | null; config: Ciclo['config']; hojeISO: string; primeiras?: string[] }) {
+  const materias = [...new Set([...primeiras, ...(s?.passos.map((p) => p.materia) ?? []), ...todasMaterias(config)])]
   const [data, setData] = useState(hojeISO)
   const [materiaEscolhida, setMateria] = useState('')
   const [tipo, setTipo] = useState<string>('Teoria')
@@ -38,7 +41,7 @@ export function RegistroManual({ s, config, hojeISO }: { s: SemanaAtual; config:
     async () => (await db.assuntos.toArray()).filter((a) => a.excluidoEm === null && a.materia === materia).sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome, 'pt-BR')),
     [materia],
   )
-  const passos = [...s.passos.filter((p) => p.materia === materia)].sort((a, b) => Number(a.feito) - Number(b.feito))
+  const passos = [...(s?.passos ?? []).filter((p) => p.materia === materia)].sort((a, b) => Number(a.feito) - Number(b.feito))
   const passoId = passoEscolhido ?? passos.find((p) => !p.feito)?.id ?? 0
   const totalMin = (Number(horas) || 0) * 60 + (Number(minutos) || 0)
   const questoes = tipo === 'Questões'
@@ -69,8 +72,7 @@ export function RegistroManual({ s, config, hojeISO }: { s: SemanaAtual; config:
 
   return (
     <section className="rounded-xl border bg-card p-3.5 shadow-sm">
-      <h2 className="m-0 mb-0.5 text-sm font-bold">Registrar estudo manual</h2>
-      <p className="m-0 mb-2 text-xs text-muted-foreground">Para o que você estudou fora do app (outro lugar, sem o Pomodoro).</p>
+      <h2 className="m-0 mb-2 text-sm font-bold">Registrar estudo manual</h2>
       <div className="flex flex-col gap-2">
         <div className="grid grid-cols-2 gap-2">
           <label className={rotulo}>
@@ -116,7 +118,7 @@ export function RegistroManual({ s, config, hojeISO }: { s: SemanaAtual; config:
             </div>
           )}
         </div>
-        {totalMin >= 1 && (
+        {totalMin >= 1 && passos.length > 0 && (
           <label className={rotulo}>
             Somar ao passo
             <Selecao value={passoId} onChange={(e) => setPasso(Number(e.target.value))}>

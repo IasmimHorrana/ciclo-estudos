@@ -69,6 +69,17 @@ describe('registrarEstudoManual', () => {
     expect(e.sessoes[0]).toMatchObject({ minutos: 45, tipo: 'Questões' })
   })
 
+  it('questões também numa sessão de Teoria (ex.: questões no fim do estudo); acertos acima das feitas é recusado', async () => {
+    const db = await bancoComSemana()
+    expect(await registrarEstudoManual(db, { ...base, tipo: 'Teoria', minutos: 60, feitas: 10, acertos: 7 }, AGORA)).toBeNull()
+    expect(await registrarEstudoManual(db, { ...base, tipo: 'Teoria', minutos: 60, feitas: 5, acertos: 7 }, AGORA)).toMatch('acertos')
+    const e = await carregarEstudo(db)
+    expect(e.sessoes).toHaveLength(1)
+    expect(e.sessoes[0]).toMatchObject({ minutos: 60, tipo: 'Teoria' })
+    expect(e.questoes).toHaveLength(1)
+    expect(e.questoes[0]).toMatchObject({ feitas: 10, acertos: 7 })
+  })
+
   it('questões sem tempo não cria sessão; registro inválido não grava nada', async () => {
     const db = await bancoComSemana()
     await registrarEstudoManual(db, { ...base, tipo: 'Questões', minutos: 0, feitas: 10, acertos: 7 }, AGORA)

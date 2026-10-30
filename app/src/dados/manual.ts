@@ -12,7 +12,7 @@ export interface PedidoManual extends EstudoManual {
 
 /**
  * Registra um estudo feito fora do app: o tempo (somado a um passo da semana, se escolhido, e guardado como sessão
- * para o Desempenho e o Edital) e, no tipo Questões, as questões feitas e os acertos. Devolve a mensagem de erro, se houver.
+ * para o Desempenho e o Edital) e as questões feitas e os acertos, se houver (em qualquer tipo de estudo). Devolve a mensagem de erro, se houver.
  */
 export async function registrarEstudoManual(db: BancoCiclo, d: PedidoManual, agora = Date.now()): Promise<string | null> {
   const erro = validarEstudoManual(d, hoje(new Date(agora)))
@@ -28,7 +28,7 @@ export async function registrarEstudoManual(db: BancoCiclo, d: PedidoManual, ago
         })
       }
     }
-    if (d.tipo === 'Questões' && d.feitas >= 1) {
+    if (d.feitas >= 1) {
       await db.questoes.put({
         id: novoIdFc('q', agora + 1), data: d.data, materia: d.materia, assuntoId: d.assuntoId, feitas: d.feitas, acertos: d.acertos,
         atualizadoEm: agora, excluidoEm: null, sujo: 1,

@@ -10,7 +10,8 @@ import { excluirSemanaFechada, repetirSemanaFechada, type Ciclo } from '@/dados/
 import { adicionarAssuntos, carregarEstudo, excluirAssunto, excluirRegistroQuestoes, excluirSessao, renomearAssunto, type Estudo } from '@/dados/desempenho'
 import { db } from '@/dados/db'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
-import { corDe, fmtH, todasMaterias } from '@/dominio/ciclo'
+import { fmtDuracao } from '@/dominio/cronometro'
+import { corDe, fmtH, fmtHs, todasMaterias } from '@/dominio/ciclo'
 import { fmtData } from '@/dominio/datas'
 import { calcularDesempenho, MIN_QUESTOES, nivelDe, pctDe, resumoDasSemanas, type Periodo } from '@/dominio/desempenho'
 import { Etiqueta } from '@/componentes/nivel'
@@ -84,7 +85,7 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
   return (
     <>
       <div className="grid grid-cols-4 gap-3 max-[700px]:grid-cols-2">
-        <Kpi rotulo="Horas (Pomodoro)" valor={fmtH(d.horas)} />
+        <Kpi rotulo="Horas estudadas" valor={fmtHs(d.horas)} />
         <Kpi rotulo="Questões feitas" valor={String(d.feitas)} />
         <Kpi rotulo="Acertos" valor={d.feitas ? `${pctDe(d.acertos, d.feitas)}%` : '—'} />
         <Kpi rotulo="Dias com estudo" valor={String(d.dias)} />
@@ -104,7 +105,7 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
                 <summary className="flex cursor-pointer items-center gap-2 py-2 text-sm">
                   <i className="size-3 shrink-0 rounded-sm" style={{ background: cor(b.materia) }} />
                   <span className="min-w-0 flex-1 truncate font-bold" title={b.materia}>{b.materia}</span>
-                  <span className={mudo}>{b.feitas ? `${b.acertos}/${b.feitas} · ${pctDe(b.acertos, b.feitas)}%` : 'sem questões'} · {fmtH(b.horas)}</span>
+                  <span className={mudo}>{b.feitas ? `${b.acertos}/${b.feitas} · ${pctDe(b.acertos, b.feitas)}%` : 'sem questões'} · {fmtHs(b.horas)}</span>
                   <Etiqueta nivel={b.nivel} />
                 </summary>
                 {b.assuntos.map((a) => (
@@ -112,7 +113,7 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
                     <span className="truncate" title={a.nome}>{a.nome}</span>
                     <div>
                       <div className="h-1 overflow-hidden rounded bg-muted"><i className="block h-full" style={{ width: `${pctDe(a.acertos, a.feitas)}%`, background: COR_NIVEL[a.nivel] }} /></div>
-                      <div className={mudo}>{a.feitas ? `${a.acertos}/${a.feitas} · ${pctDe(a.acertos, a.feitas)}%` : 'sem questões'}{a.horas ? ` · ${fmtH(a.horas)}` : ''}</div>
+                      <div className={mudo}>{a.feitas ? `${a.acertos}/${a.feitas} · ${pctDe(a.acertos, a.feitas)}%` : 'sem questões'}{a.horas ? ` · ${fmtHs(a.horas)}` : ''}</div>
                     </div>
                     <Etiqueta nivel={a.nivel} />
                     <span className="flex gap-1">
@@ -135,12 +136,12 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
         <div className="flex min-h-0 flex-col gap-3 overflow-auto max-[1000px]:overflow-visible">
           <section className={card}>
             <h2 className="m-0 mb-2 text-sm font-bold">Horas por matéria</h2>
-            <Rosca dados={d.horasPorMateria.map((x) => ({ nome: x.nome, valor: x.valor, cor: cor(x.nome), rotulo: fmtH(x.valor) }))} centro={fmtH(d.horas)} sub="estudadas" />
-            <p className={cn(mudo, 'm-0 mt-2 text-center')}>{d.tipos.map((t) => `${t.tipo}: ${fmtH(t.horas)}`).join(' · ')}</p>
+            <Rosca dados={d.horasPorMateria.map((x) => ({ nome: x.nome, valor: x.valor, cor: cor(x.nome), rotulo: fmtHs(x.valor) }))} centro={fmtHs(d.horas)} sub="estudadas" />
+            <p className={cn(mudo, 'm-0 mt-2 text-center')}>{d.tipos.map((t) => `${t.tipo}: ${fmtHs(t.horas)}`).join(' · ')}</p>
           </section>
           <section className={card}>
             <h2 className="m-0 mb-2 text-sm font-bold">Horas por dia</h2>
-            <Barras cols={colorir(d.colsHoras, cor, { acerto: 'var(--primary)', erro: 'var(--erro)' })} fmt={fmtH} />
+            <Barras cols={colorir(d.colsHoras, cor, { acerto: 'var(--primary)', erro: 'var(--erro)' })} fmt={fmtHs} />
           </section>
           <section className={card}>
             <h2 className="m-0 mb-2 text-sm font-bold">Questões por dia</h2>
@@ -180,7 +181,7 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
               <div key={x.id} className="flex items-center gap-2 border-b py-1 text-sm last:border-b-0">
                 <span className={mudo}>{fmtData(x.data)}</span>
                 <span className="min-w-0 flex-1 truncate">{x.materia}{nomeAssunto(x.assuntoId) ? ` › ${nomeAssunto(x.assuntoId)}` : ''} <span className={mudo}>· {x.tipo || 'Teoria'}</span></span>
-                <b>{x.minutos} min</b>
+                <b className="whitespace-nowrap">{fmtDuracao(x.minutos)}</b>
                 <Button size="sm" variant="outline" title="Apagar este registro de tempo" aria-label="Apagar registro de tempo" onClick={() => void apagarSessao(x.id, x.minutos)}>🗑</Button>
               </div>
             ))}
@@ -201,7 +202,7 @@ async function excluir(id: string, nome: string) {
   if (await confirmar(`Excluir o assunto "${nome}"? Os registros de questões e horas dele continuam, mas passam a contar como "sem assunto".`, 'Excluir', true)) await excluirAssunto(db, id)
 }
 async function apagarSessao(id: string, minutos: number) {
-  const msg = `Apagar este registro de ${minutos} min? Ele sai do Desempenho e do Edital. Se o tempo também foi somado a um passo da semana, corrija as horas do passo na aba Semana.`
+  const msg = `Apagar este registro de ${fmtDuracao(minutos)}? Ele sai do Desempenho e do Edital. Se o tempo também foi somado a um passo da semana, corrija as horas do passo na aba Semana.`
   if (await confirmar(msg, 'Apagar', true)) await excluirSessao(db, id)
 }
 async function apagarRegistro(id: string) {
@@ -324,7 +325,7 @@ function VisaoSemanas({ ciclo }: { ciclo: Ciclo }) {
           </section>
           <section className={card}>
             <h2 className="m-0 mb-1 text-sm font-bold">Sobre estas horas</h2>
-            <p className={cn(mudo, 'm-0')}>Nas semanas fechadas, as horas somam o que foi marcado nos passos (focos do Pomodoro e horas digitadas à mão). Na visão <b>Estudo</b>, as horas vêm só dos focos do Pomodoro.</p>
+            <p className={cn(mudo, 'm-0')}>Nas semanas fechadas, as horas somam o que foi marcado nos passos (focos do Pomodoro e horas digitadas à mão). Na visão <b>Estudo</b>, as horas vêm das sessões registradas (Pomodoro, cronômetro livre e registro manual).</p>
           </section>
         </div>
       </div>

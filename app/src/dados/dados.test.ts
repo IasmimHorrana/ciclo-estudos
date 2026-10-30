@@ -98,7 +98,9 @@ describe('edital verticalizado no backup', () => {
   })
 
   it('preferências: backup antigo ganha as faixas padrão; faixas fora de ordem voltam ao padrão; ida e volta mantém', () => {
-    expect(lerArquivo(JSON.stringify(legado), AGORA).preferencias).toEqual({ faixas: { fraco: 60, medio: 75, bom: 90 }, intervalosRevisao: [1, 7, 30] })
+    expect(lerArquivo(JSON.stringify(legado), AGORA).preferencias).toEqual({
+      faixas: { fraco: 60, medio: 75, bom: 90 }, intervalosRevisao: [1, 7, 30], modoEstudo: 'ciclo', metaLivre: { base: 28, estendida: 32, ajustes: {} }, diaLivre: null,
+    })
     expect(lerArquivo(JSON.stringify({ ...legado, preferencias: { faixas: { fraco: 90, medio: 75, bom: '60' } } }), AGORA).preferencias.faixas).toEqual({ fraco: 60, medio: 75, bom: 90 })
     const d = lerArquivo(JSON.stringify({ ...legado, preferencias: { faixas: { fraco: '50', medio: 70, bom: 85 } } }), AGORA)
     expect(d.preferencias.faixas).toEqual({ fraco: 50, medio: 70, bom: 85 })

@@ -12,12 +12,12 @@ type SemanaAtual = NonNullable<Ciclo['semana']>
 const card = 'rounded-xl border bg-card px-3.5 py-2.5 shadow-sm'
 
 /** Faixa dos últimos 28 dias: verde = estudou, vermelho = faltou num dia de estudo, cinza = folga. */
-export function Constancia({ s, diasDeEstudo, hojeISO }: { s: SemanaAtual; diasDeEstudo: boolean[]; hojeISO: string }) {
+export function Constancia({ s, diasDeEstudo, hojeISO }: { s: SemanaAtual | null; diasDeEstudo: boolean[]; hojeISO: string }) {
   const estudo = useLiveQuery(() => carregarEstudo(db), [])
   const ativos = new Set<string>()
   for (const x of estudo?.sessoes ?? []) if (x.excluidoEm === null) ativos.add(x.data)
   for (const q of estudo?.questoes ?? []) if (q.excluidoEm === null && q.feitas > 0) ativos.add(q.data)
-  for (const p of s.passos) if (p.feito && p.dia) ativos.add(p.dia)
+  for (const p of s?.passos ?? []) if (p.feito && p.dia) ativos.add(p.dia)
   const { celulas, sequencia } = constancia(hojeISO, diasDeEstudo, ativos, 28)
   return (
     <section className={card}>

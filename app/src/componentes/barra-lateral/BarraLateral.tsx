@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Layers, CalendarDays, ListChecks, Moon, NotebookPen, Palette, Puzzle, Sun, TrendingUp, type LucideIcon } from 'lucide-react'
 import { Button } from '@/componentes/ui/button'
 import { MiniCalendario } from '@/componentes/barra-lateral/MiniCalendario'
-import { PomodoroCard } from '@/componentes/barra-lateral/PomodoroCard'
+import { Relogio } from '@/componentes/barra-lateral/Relogio'
 import { useBackup } from '@/estado/backup'
 import { useUi, temaEscuro, PALETAS, type AbaId } from '@/estado/ui'
 import { cn } from '@/lib/utils'
@@ -71,8 +71,8 @@ export function BarraLateral() {
         <MiniCalendario />
       </Secao>
 
-      <Secao titulo="Pomodoro">
-        <PomodoroCard />
+      <Secao titulo="Relógio">
+        <Relogio />
       </Secao>
 
       <button

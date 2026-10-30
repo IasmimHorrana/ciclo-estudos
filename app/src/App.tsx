@@ -11,11 +11,14 @@ import { Resumos } from '@/telas/Resumos'
 import { Semana } from '@/telas/Semana'
 import { Flashcards } from '@/telas/flashcards/Flashcards'
 import { aoConcluirFoco } from '@/componentes/aoConcluirFoco'
+import { iniciarPersistenciaCronometro } from '@/componentes/cronometro-api'
 import { iniciarPersistenciaPomodoro } from '@/componentes/restaurar-pomodoro-api'
 import { useCiclo } from '@/dados/useCiclo'
 import { carregarPasta, iniciarBackupAutomatico } from '@/dados/pasta'
+import { fmtHHMMSS } from '@/dominio/cronometro'
 import { FAIXAS_PADRAO } from '@/dominio/desempenho'
 import { fmtMMSS, NOMES_FASE } from '@/dominio/pomodoro'
+import { useCronometro } from '@/estado/cronometro'
 import { usePomodoro } from '@/estado/pomodoro'
 import { temaEscuro, useUi, type AbaId } from '@/estado/ui'
 
@@ -29,6 +32,13 @@ const TELAS: Record<AbaId, ReactNode> = {
   dados: <Dados />,
 }
 
+/** Tempo do relógio que está rodando no título da aba do navegador. */
+function atualizarTitulo() {
+  const p = usePomodoro.getState()
+  const c = useCronometro.getState()
+  document.title = p.rodando ? `(${fmtMMSS(p.restaSeg)}) ${NOMES_FASE[p.fase]}` : c.rodando ? `(${fmtHHMMSS(c.seg)}) Livre` : 'Ciclo de Estudos'
+}
+
 export default function App() {
   const { aba, tema, paleta } = useUi()
   const ciclo = useCiclo()
@@ -38,7 +48,8 @@ export default function App() {
   useEffect(() => {
     if (!pomoSalvo) return
     usePomodoro.getState().definirConfig(pomoSalvo)
-    void iniciarPersistenciaPomodoro() // com os tempos já carregados: devolve o cronômetro ao ponto em que estava
+    // com os tempos já carregados: devolve o Pomodoro ao ponto em que estava; depois, o cronômetro livre (um diálogo de cada vez)
+    void iniciarPersistenciaPomodoro().then(iniciarPersistenciaCronometro)
   }, [pomoSalvo?.foco, pomoSalvo?.pausa, pomoSalvo?.longa, pomoSalvo?.ate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // foco concluído: soma o tempo a um passo
@@ -66,15 +77,19 @@ export default function App() {
     else document.documentElement.dataset.paleta = paleta
   }, [paleta])
 
-  // relógio único do Pomodoro + tempo restante no título da aba do navegador
+  // relógio único do Pomodoro e do cronômetro livre + tempo no título da aba do navegador
   useEffect(() => {
-    const id = setInterval(() => usePomodoro.getState().tic(), 250)
-    const cancelar = usePomodoro.subscribe((s) => {
-      document.title = s.rodando ? `(${fmtMMSS(s.restaSeg)}) ${NOMES_FASE[s.fase]}` : 'Ciclo de Estudos'
-    })
+    const id = setInterval(() => {
+      const agora = Date.now()
+      usePomodoro.getState().tic(agora)
+      useCronometro.getState().tic(agora)
+    }, 250)
+    const cancelarP = usePomodoro.subscribe(atualizarTitulo)
+    const cancelarC = useCronometro.subscribe(atualizarTitulo)
     return () => {
       clearInterval(id)
-      cancelar()
+      cancelarP()
+      cancelarC()
     }
   }, [])
 
