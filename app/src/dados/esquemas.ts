@@ -142,7 +142,7 @@ const MetaLivre = z
   .catch({ ...META_LIVRE_PADRAO, ajustes: {} })
   .transform((m) => (validarMeta(m.base, m.estendida) ? { ...m, base: META_LIVRE_PADRAO.base, estendida: META_LIVRE_PADRAO.estendida } : m))
 const DiaLivre = z
-  .object({ data: z.string(), principal: z.string().nullable().catch(null), secundaria: z.string().nullable().catch(null) })
+  .object({ data: z.string(), principal: z.string().nullable().catch(null), secundaria: z.string().nullable().catch(null), extra: z.string().nullable().catch(null) })
   .nullable()
   .catch(null)
 export const Preferencias = z

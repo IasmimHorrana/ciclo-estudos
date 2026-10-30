@@ -28,12 +28,12 @@ describe('modo Livre no banco', () => {
     expect(await definirMetaLivre(db, 25, 30, AGORA)).toBeNull()
     expect(await definirMetaLivre(db, 25, 20, AGORA)).toMatch('estendida')
     await ajustarMetaDaSemana(db, '2026-10-29', 18, AGORA)
-    await escolherDia(db, { data: '2026-10-29', principal: 'Português', secundaria: 'Direito Adm.' }, AGORA)
+    await escolherDia(db, { data: '2026-10-29', principal: 'Português', secundaria: 'Direito Adm.', extra: null }, AGORA)
     const p = (await carregarCiclo(db)).preferencias
     expect(p.modoEstudo).toBe('livre')
     expect(p.metaLivre).toEqual({ base: 25, estendida: 30, ajustes: { '2026-10-26': 18 } })
     expect(metaDaSemana(p.metaLivre, '2026-11-02')).toBe(25)
-    expect(p.diaLivre).toEqual({ data: '2026-10-29', principal: 'Português', secundaria: 'Direito Adm.' })
+    expect(p.diaLivre).toEqual({ data: '2026-10-29', principal: 'Português', secundaria: 'Direito Adm.', extra: null })
     expect(p.faixas).toEqual({ fraco: 60, medio: 75, bom: 90 })
   })
 
@@ -41,7 +41,7 @@ describe('modo Livre no banco', () => {
     const db = await banco()
     await definirModo(db, 'livre', AGORA)
     await ajustarMetaDaSemana(db, '2026-10-29', 18, AGORA)
-    await escolherDia(db, { data: '2026-10-29', principal: 'Português', secundaria: null }, AGORA)
+    await escolherDia(db, { data: '2026-10-29', principal: 'Português', secundaria: null, extra: 'Redação' }, AGORA)
     const antes = await carregarDados(db)
     const outro = new BancoCiclo(`livre-${++n}`)
     await substituirDados(outro, lerArquivo(JSON.stringify(antes), AGORA), AGORA)

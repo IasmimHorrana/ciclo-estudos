@@ -62,7 +62,7 @@ describe('resumoLivre', () => {
 
 describe('dia com duas matérias', () => {
   it('vale só no próprio dia', () => {
-    expect(diaDe({ data: '2026-10-28', principal: 'Português', secundaria: null }, QUINTA)).toEqual({ data: QUINTA, principal: null, secundaria: null })
+    expect(diaDe({ data: '2026-10-28', principal: 'Português', secundaria: null, extra: null }, QUINTA)).toEqual({ data: QUINTA, principal: null, secundaria: null, extra: null })
   })
 
   it('não deixa as duas iguais (troca de lugar) e promove a secundária se a principal sair', () => {
@@ -74,6 +74,15 @@ describe('dia com duas matérias', () => {
     expect(escolherNoDia({ ...d, secundaria: null }, 'secundaria', 'Português')).toMatchObject({ principal: 'Português', secundaria: null })
     expect(escolherNoDia(d, 'principal', null)).toMatchObject({ principal: 'Direito Adm.', secundaria: null })
     expect(materiasDoDia(escolherNoDia(d, 'secundaria', null))).toEqual(['Português'])
+  })
+
+  it('extra: entra no fim da lista, não repete as outras e sai se uma delas passar a ser a mesma matéria', () => {
+    let d = escolherNoDia(escolherNoDia(diaDe(null, QUINTA), 'principal', 'Português'), 'secundaria', 'Direito Adm.')
+    expect(escolherNoDia(d, 'extra', 'Português')).toBe(d)
+    d = escolherNoDia(d, 'extra', 'Redação')
+    expect(materiasDoDia(d)).toEqual(['Português', 'Direito Adm.', 'Redação'])
+    expect(escolherNoDia(d, 'secundaria', 'Redação')).toMatchObject({ secundaria: 'Redação', extra: null })
+    expect(escolherNoDia(d, 'extra', null).extra).toBeNull()
   })
 
   it('sugere primeiro as nunca estudadas e depois as mais antigas', () => {

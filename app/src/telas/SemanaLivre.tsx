@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Play } from 'lucide-react'
+import { Play, X } from 'lucide-react'
 import { CampoNumero } from '@/componentes/CampoNumero'
 import { estudarMateria } from '@/componentes/cronometro-api'
-import { avisar } from '@/componentes/dialogos-api'
+import { avisar, pedirTexto } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
 import { Selecao } from '@/componentes/ui/entrada'
 import type { Ciclo } from '@/dados/ciclo'
@@ -11,7 +12,7 @@ import { carregarEstudo } from '@/dados/desempenho'
 import { ajustarMetaDaSemana, definirMetaLivre, definirModo, escolherDia } from '@/dados/livre'
 import { corDe, fmtH, todasMaterias } from '@/dominio/ciclo'
 import { fmtData, idxDia, NOMES_DIA, NOMES_DIA_LONGO } from '@/dominio/datas'
-import { diaDe, escolherNoDia, materiasDoDia, resumoLivre, sugerirMaterias, type ModoEstudo } from '@/dominio/livre'
+import { diaDe, escolherNoDia, materiasDoDia, resumoLivre, sugerirMaterias, type ModoEstudo, type PapelNoDia } from '@/dominio/livre'
 import { useCronometro } from '@/estado/cronometro'
 import { useUi } from '@/estado/ui'
 import { Constancia } from '@/telas/PainelSemana'
@@ -21,6 +22,7 @@ import { cn } from '@/lib/utils'
 const card = 'rounded-xl border bg-card p-3.5 shadow-sm'
 const mudo = 'text-xs text-muted-foreground'
 const rotulo = 'flex flex-col gap-1 text-[0.7rem] font-bold tracking-wide text-muted-foreground uppercase'
+const OUTRA = '__outra'
 
 /** Ciclo de passos ou modo Livre. Trocar não apaga nada; o relógio da barra lateral acompanha a escolha. */
 export function SeletorModo({ modo, className = 'ml-auto' }: { modo: ModoEstudo; className?: string }) {
@@ -55,6 +57,7 @@ export function SeletorModo({ modo, className = 'ml-auto' }: { modo: ModoEstudo;
 export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
   const estudo = useLiveQuery(() => carregarEstudo(db), [])
   const ocupado = useCronometro((s) => s.rodando || s.seg > 0)
+  const [abrirExtra, setAbrirExtra] = useState(false)
   const { preferencias: p, config, cores } = ciclo
   const dia = diaDe(p.diaLivre, hojeISO)
   const doDia = materiasDoDia(dia)
@@ -65,7 +68,15 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
   const ajustada = p.metaLivre.ajustes[r.segunda] !== undefined
   const extras = r.hoje.materias.filter((x) => !doDia.includes(x.materia))
 
-  const escolher = (papel: 'principal' | 'secundaria', m: string) => void escolherDia(db, escolherNoDia(dia, papel, m || null))
+  const escolher = (papel: PapelNoDia, m: string) => void escolherDia(db, escolherNoDia(dia, papel, m || null))
+  // a extra pode ser uma matéria fora da lista (ex.: Redação), digitada na hora
+  const opcoesExtra = [...new Set([...(dia.extra ? [dia.extra] : []), ...materias])].filter((x) => x !== dia.principal && x !== dia.secundaria)
+
+  async function escolherExtra(valor: string) {
+    if (valor !== OUTRA) return escolher('extra', valor)
+    const nome = (await pedirTexto('Matéria extra', 'Nome da matéria', '', { placeholder: 'Ex.: Redação', ok: 'Usar hoje' }))?.trim()
+    if (nome) escolher('extra', nome)
+  }
 
   async function mudarPadrao(base: number, estendida: number) {
     const erro = await definirMetaLivre(db, base, estendida)
@@ -165,6 +176,49 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
               )
             })}
           </div>
+          {dia.principal && (dia.extra || abrirExtra) ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-dashed px-2.5 py-1.5" style={dia.extra ? { borderLeft: `4px solid ${corDe(cores, dia.extra)}` } : undefined}>
+              <span className="text-[0.7rem] font-bold tracking-wide text-muted-foreground uppercase">Extra</span>
+              <Selecao
+                aria-label="Matéria extra"
+                autoFocus={!dia.extra}
+                className="h-7 w-auto min-w-40 py-0 text-xs"
+                value={dia.extra ?? ''}
+                onChange={(e) => void escolherExtra(e.target.value)}
+              >
+                <option value="">— escolha —</option>
+                {opcoesExtra.map((x) => (
+                  <option key={x} value={x}>{x}</option>
+                ))}
+                <option value={OUTRA}>＋ Outra matéria…</option>
+              </Selecao>
+              {dia.extra && (
+                <>
+                  <span className="text-xs"><b>{fmtH(r.hoje.materias.find((x) => x.materia === dia.extra)?.horas ?? 0)}</b> <span className="text-muted-foreground">hoje</span></span>
+                  <Button size="sm" variant="outline" className="h-7" disabled={ocupado} title={ocupado ? 'Já há um cronômetro em andamento na barra lateral' : `Ligar o cronômetro livre em ${dia.extra}`} onClick={() => dia.extra && void estudarMateria(dia.extra)}>
+                    <Play className="size-3.5" /> Estudar
+                  </Button>
+                </>
+              )}
+              <button
+                className="ml-auto cursor-pointer rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                title="Tirar a extra de hoje"
+                aria-label="Tirar a extra de hoje"
+                onClick={() => {
+                  escolher('extra', '')
+                  setAbrirExtra(false)
+                }}
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          ) : (
+            dia.principal && (
+              <button className="mt-2 cursor-pointer text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" onClick={() => setAbrirExtra(true)}>
+                ＋ Extra do dia (ex.: Redação)
+              </button>
+            )
+          )}
           <p className={cn(mudo, 'm-0 mt-2')}>
             {doDia.length ? 'As matérias de hoje aparecem primeiro ao iniciar o cronômetro.' : 'A lista mostra primeiro as matérias estudadas há mais tempo.'}
             {extras.length > 0 && ` Hoje também: ${extras.map((x) => `${x.materia} (${fmtH(x.horas)})`).join(', ')}.`}

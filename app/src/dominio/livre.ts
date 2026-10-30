@@ -17,11 +17,12 @@ export interface MetaLivre {
 
 export const META_LIVRE_PADRAO: MetaLivre = { base: 28, estendida: 32, ajustes: {} }
 
-/** As matérias escolhidas para um dia: a principal e, se der, a secundária. */
+/** As matérias escolhidas para um dia: a principal e, se der, a secundária (e, num dia bom, uma extra, como Redação). */
 export interface DiaLivre {
   data: DataISO
   principal: string | null
   secundaria: string | null
+  extra: string | null
 }
 
 /** Meta da semana que começa em `segunda` (o ajuste daquela semana, senão a base). */
@@ -126,18 +127,25 @@ export function resumoLivre(sessoes: Sessao[], questoes: Questoes[], meta: MetaL
 
 /** O dia escolhido vale só para a data em que foi escolhido; num dia novo, começa vazio. */
 export const diaDe = (d: DiaLivre | null, hojeISO: DataISO): DiaLivre =>
-  d && d.data === hojeISO ? d : { data: hojeISO, principal: null, secundaria: null }
+  d && d.data === hojeISO ? d : { data: hojeISO, principal: null, secundaria: null, extra: null }
 
-/** Escolhe a principal ou a secundária. Escolher na outra posição a matéria que já está numa delas troca as duas de lugar. */
-export function escolherNoDia(d: DiaLivre, papel: 'principal' | 'secundaria', materia: string | null): DiaLivre {
+export type PapelNoDia = 'principal' | 'secundaria' | 'extra'
+
+/**
+ * Escolhe a principal, a secundária ou a extra. Escolher na outra posição a matéria que já está na principal ou na secundária
+ * troca as duas de lugar. A extra nunca repete uma das duas (se repetir, não muda nada).
+ */
+export function escolherNoDia(d: DiaLivre, papel: PapelNoDia, materia: string | null): DiaLivre {
+  if (papel === 'extra') return materia && (materia === d.principal || materia === d.secundaria) ? d : { ...d, extra: materia }
   const novo = { ...d, [papel]: materia }
   if (novo.principal && novo.principal === novo.secundaria) novo[papel === 'principal' ? 'secundaria' : 'principal'] = d[papel]
-  if (!novo.principal && novo.secundaria) return { ...novo, principal: novo.secundaria, secundaria: null }
+  if (!novo.principal && novo.secundaria) Object.assign(novo, { principal: novo.secundaria, secundaria: null })
+  if (novo.extra && (novo.extra === novo.principal || novo.extra === novo.secundaria)) novo.extra = null
   return novo
 }
 
-/** Matérias do dia (principal primeiro), sem repetir. */
-export const materiasDoDia = (d: DiaLivre): string[] => [d.principal, d.secundaria].filter((m): m is string => !!m)
+/** Matérias do dia (principal, secundária e extra), sem repetir. */
+export const materiasDoDia = (d: DiaLivre): string[] => [d.principal, d.secundaria, d.extra].filter((m): m is string => !!m)
 
 /**
  * Ordem para sugerir a escolha do dia: primeiro as que nunca foram estudadas, depois as estudadas há mais tempo.
