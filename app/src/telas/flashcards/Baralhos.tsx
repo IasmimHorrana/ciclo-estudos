@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronDown, ChevronRight, Plus, Settings, Trash2, Upload } from 'lucide-react'
+import { ChevronDown, ChevronRight, FolderPlus, Plus, Settings, Trash2, Upload, X } from 'lucide-react'
 import { avisar } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
 import { Entrada } from '@/componentes/ui/entrada'
@@ -8,14 +8,18 @@ import { importarArquivoApkg } from '@/dados/apkg-navegador'
 import { db } from '@/dados/db'
 import { carregarContexto, criarBaralho, excluirBaralho, filaDe } from '@/dados/flashcards'
 import { linhasDaArvore, nomesComFilhos } from '@/dominio/arvore'
+import { dentroDe } from '@/dominio/fila'
 import { useFc, useFcArvore } from '@/estado/flashcards'
 import { CalendarioCalor } from '@/telas/flashcards/CalendarioCalor'
 
 export function Baralhos() {
   const ir = useFc((s) => s.ir)
   const [tick, setTick] = useState(0)
-  const [novo, setNovo] = useState<string | null>(null)
+  // caixa de criação: `pai` é o baralho onde o novo entra como subbaralho (null = baralho solto)
+  const [novo, setNovo] = useState<{ pai: string | null; nome: string } | null>(null)
   const [erro, setErro] = useState('')
+  const [criado, setCriado] = useState('')
+  const campoNovo = useRef<HTMLInputElement>(null)
   const [importando, setImportando] = useState(false)
   const entradaApkg = useRef<HTMLInputElement>(null)
   // recalcula de vez em quando: cartões em aprendizado vencem com o passar dos minutos
@@ -38,15 +42,29 @@ export function Baralhos() {
   }))
   const comFilhos = nomesComFilhos(ctx.baralhos.map((b) => b.nome))
 
+  function abrirCaixa(pai: string | null) {
+    setNovo({ pai, nome: '' })
+    setErro('')
+    setCriado('')
+    campoNovo.current?.focus()
+  }
+
+  // cria e deixa a caixa aberta no mesmo lugar, para digitar o próximo assunto em seguida
   async function criar() {
+    if (!novo) return
+    const { pai, nome } = novo
+    setNovo({ pai, nome: '' }) // limpa já, para o que for digitado em seguida não grudar neste nome
     try {
-      const b = await criarBaralho(db, novo ?? '')
-      setNovo(null)
+      await criarBaralho(db, pai && nome.trim() ? `${pai}::${nome}` : nome)
+      if (pai) definirRecolhidos(recolhidos.filter((r) => !dentroDe(pai, r)))
       setErro('')
-      ir('adicionar', b.id)
+      setCriado(nome.trim())
     } catch (e) {
+      setNovo((n) => (n && !n.nome ? { ...n, nome } : n)) // devolve o nome para corrigir
       setErro(e instanceof Error ? e.message : 'Não foi possível criar.')
+      setCriado('')
     }
+    campoNovo.current?.focus()
   }
 
   async function importarApkg(arquivo: File) {
@@ -100,7 +118,7 @@ export function Baralhos() {
               if (f) void importarApkg(f)
             }}
           />
-          <Button variant="outline" size="sm" onClick={() => setNovo(novo === null ? '' : null)}>
+          <Button variant="outline" size="sm" onClick={() => (novo !== null && novo.pai === null ? setNovo(null) : abrirCaixa(null))}>
             <Plus className="size-4" /> Baralho
           </Button>
           <Button size="sm" onClick={() => ir('adicionar', null)}>
@@ -111,25 +129,46 @@ export function Baralhos() {
 
       {novo !== null && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3">
+          {novo.pai !== null && (
+            <span className="flex items-center gap-1 rounded-lg bg-accent px-2 py-1 text-sm">
+              Dentro de <strong>{novo.pai.split('::').join(' › ')}</strong>
+              <button
+                className="flex size-5 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-background"
+                title="Criar um baralho solto, fora deste"
+                aria-label="Criar um baralho solto, fora deste"
+                onClick={() => abrirCaixa(null)}
+              >
+                <X className="size-3.5" />
+              </button>
+            </span>
+          )}
           <Entrada
+            ref={campoNovo}
             autoFocus
             className="max-w-sm"
-            placeholder='Nome do baralho (use "::" para subbaralho, ex.: Direito::Penal)'
-            value={novo}
-            onChange={(e) => setNovo(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void criar()}
+            placeholder={novo.pai !== null ? 'Nome do subbaralho (ex.: Lei 8.112/1990)' : 'Nome do baralho (ex.: Administração Pública)'}
+            value={novo.nome}
+            onChange={(e) => setNovo({ ...novo, nome: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void criar()
+              if (e.key === 'Escape') setNovo(null)
+            }}
           />
           <Button size="sm" onClick={() => void criar()}>
             Criar
           </Button>
+          <Button variant="ghost" size="sm" onClick={() => setNovo(null)}>
+            Fechar
+          </Button>
           {erro && <span className="text-sm text-erro">{erro}</span>}
+          {!erro && criado && <span className="text-sm text-muted-foreground">Criado: {criado}. Digite o próximo ou feche.</span>}
         </div>
       )}
 
       <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-card shadow-sm">
         {linhas.length === 0 ? (
           <p className="m-0 p-6 text-center text-sm text-muted-foreground">
-            Nenhum baralho ainda. Importe o backup do app em HTML (aba "Dados") para criar um baralho por matéria e assunto, ou crie um à mão.
+            Nenhum baralho ainda. Crie um no botão "Baralho" (ex.: Administração Pública) e depois use o botão de pasta com + na linha dele para criar os subbaralhos dentro (uma lei ou um assunto em cada). Também dá para importar do Anki.
           </p>
         ) : (
           <table className="w-full border-collapse text-sm">
@@ -139,7 +178,7 @@ export function Baralhos() {
                 <th className="w-20 px-2 py-2 text-right font-bold">Novos</th>
                 <th className="w-20 px-2 py-2 text-right font-bold">Aprender</th>
                 <th className="w-20 px-2 py-2 text-right font-bold">Revisar</th>
-                <th className="w-24 px-2 py-2" />
+                <th className="w-32 px-2 py-2" />
               </tr>
             </thead>
             <tbody>
@@ -169,6 +208,9 @@ export function Baralhos() {
                   <td className="px-2 text-right font-bold tabular-nums">{num(c.aprendendo, 'text-red-500')}</td>
                   <td className="px-2 text-right font-bold tabular-nums">{num(c.revisao, 'text-green-600')}</td>
                   <td className="px-2 text-right whitespace-nowrap">
+                    <Button variant="ghost" size="icon" title="Novo subbaralho dentro deste" aria-label={`Novo subbaralho dentro de ${b.nome}`} onClick={() => abrirCaixa(b.nome)}>
+                      <FolderPlus className="size-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" title="Opções do baralho" aria-label={`Opções de ${b.nome}`} onClick={() => ir('opcoes', b.id)}>
                       <Settings className="size-4" />
                     </Button>

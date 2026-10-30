@@ -1,6 +1,5 @@
 import type { BancoCiclo } from '@/dados/db'
 import { novoIdFc } from '@/dados/ids'
-import { carregarDados } from '@/dados/repositorio'
 import type { Controle } from '@/dados/esquemas'
 import type { Baralho, CartaoFc, GrupoOpcoes, NotaFc, RegistroRevisao, TipoNota } from '@/dados/flashcards-tipos'
 import {
@@ -39,38 +38,23 @@ export async function garantirPadroes(db: BancoCiclo, agora = Date.now()): Promi
 }
 
 /**
- * Cria os baralhos das matérias e dos assuntos do ciclo ("Matéria" e "Matéria::Assunto"). Só acrescenta:
- * não renomeia nem recria o que foi excluído de propósito. Devolve quantos baralhos criou.
+ * Os baralhos não são mais criados sozinhos a partir das matérias e assuntos do ciclo. Este passo exclui
+ * (logicamente) os que foram criados assim e continuam vazios: sem nota nele nem nos filhos. Devolve quantos excluiu.
  */
-export async function sincronizarBaralhos(db: BancoCiclo, agora = Date.now()): Promise<number> {
-  const d = await carregarDados(db)
-  if (!d) return 0
-  const materias = new Set<string>()
-  for (const m of d.config.mats) materias.add(m.nome)
-  for (const m of d.config.custom) materias.add(m)
-  for (const x of [...d.assuntos, ...d.notas]) if (x.materia) materias.add(x.materia)
-
-  const precisa: { id: string; nome: string; origem: Baralho['origem'] }[] = []
-  for (const m of materias) {
-    const nm = limparNivel(m)
-    if (nm) precisa.push({ id: `mat:${m}`, nome: nm, origem: 'materia' })
-  }
-  for (const a of d.assuntos) {
-    const nm = limparNivel(a.materia)
-    const na = limparNivel(a.nome)
-    if (nm && na) precisa.push({ id: `ass:${a.id}`, nome: `${nm}::${na}`, origem: 'assunto' })
-  }
-
-  let criados = 0
-  await db.transaction('rw', db.baralhos, async () => {
-    const existentes = new Set((await db.baralhos.toArray()).map((b) => b.id)) // inclui os excluídos
-    for (const p of precisa) {
-      if (existentes.has(p.id)) continue
-      await db.baralhos.put({ ...p, grupoId: GRUPO_PADRAO, criadoEm: agora, ...novo(agora) })
-      criados++
+export async function limparBaralhosAutomaticosVazios(db: BancoCiclo, agora = Date.now()): Promise<number> {
+  let excluidos = 0
+  await db.transaction('rw', [db.baralhos, db.notasFc], async () => {
+    const todos = (await db.baralhos.toArray()).filter((b) => b.excluidoEm === null)
+    const comNota = new Set((await db.notasFc.toArray()).filter((n) => n.excluidoEm === null).map((n) => n.baralhoId))
+    const nomesComNota = todos.filter((b) => comNota.has(b.id)).map((b) => b.nome)
+    for (const b of todos) {
+      if (b.origem === 'manual') continue
+      if (nomesComNota.some((n) => dentroDe(n, b.nome))) continue
+      await db.baralhos.put({ ...b, excluidoEm: agora, atualizadoEm: agora, sujo: 1 })
+      excluidos++
     }
   })
-  return criados
+  return excluidos
 }
 
 export async function criarBaralho(db: BancoCiclo, nome: string, agora = Date.now()): Promise<Baralho> {
