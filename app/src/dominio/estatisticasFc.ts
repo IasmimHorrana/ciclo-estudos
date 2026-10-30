@@ -10,7 +10,7 @@ export const MIN_RESPOSTAS = 10
 /** A partir deste intervalo (em dias) o cartão é "maduro", como no Anki. */
 export const DIAS_MADURO = 21
 
-export type PeriodoFc = '7' | '30' | 'tudo'
+export type PeriodoFc = 'hoje' | '7' | '30' | 'tudo'
 
 /** O que importa de uma linha do histórico (`RegistroRevisao`). */
 export interface Resposta {
@@ -29,8 +29,8 @@ export interface Acertos {
 
 export const acertou = (botao: Botao) => botao >= 2
 
-/** Primeiro dia do período (inclusive); `tudo` pega o histórico inteiro. */
-export const inicioDoPeriodoFc = (p: PeriodoFc, hoje: number): number => (p === 'tudo' ? -Infinity : hoje - Number(p) + 1)
+/** Primeiro dia do período (inclusive); `tudo` pega o histórico inteiro. O dia de estudo vira às 4h, como no Anki. */
+export const inicioDoPeriodoFc = (p: PeriodoFc, hoje: number): number => (p === 'tudo' ? -Infinity : p === 'hoje' ? hoje : hoje - Number(p) + 1)
 
 export const nivelFc = (a: Acertos, faixas: Faixas = FAIXAS_PADRAO): Nivel => nivelDe(a.respostas, a.acertos, faixas, MIN_RESPOSTAS)
 

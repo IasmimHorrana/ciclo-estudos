@@ -19,7 +19,7 @@ const card = 'rounded-xl border bg-card p-3.5 shadow-sm'
 const mudo = 'text-xs text-muted-foreground'
 const titulo = 'm-0 mb-2 text-sm font-bold'
 
-const PERIODOS: [PeriodoFc, string][] = [['7', '7 dias'], ['30', '30 dias'], ['tudo', 'Tudo']]
+const PERIODOS: [PeriodoFc, string][] = [['hoje', 'Hoje'], ['7', '7 dias'], ['30', '30 dias'], ['tudo', 'Tudo']]
 const BOTOES = [
   { nome: 'Errei', cor: 'bg-red-500' },
   { nome: 'Difícil', cor: 'bg-amber-500' },
@@ -39,7 +39,7 @@ export function Estatisticas() {
   const ir = useFc((s) => s.ir)
   const baralhoId = useFc((s) => s.baralhoId)
   const faixas = useFaixas()
-  const [periodo, setPeriodo] = useState<PeriodoFc>('30')
+  const [periodo, setPeriodo] = useState<PeriodoFc>('hoje')
   const dados = useLiveQuery(async () => {
     const b = baralhoId ? await db.baralhos.get(baralhoId) : undefined
     return { nome: b?.nome ?? 'Todos os baralhos', e: await estatisticasDoBaralho(db, b ? b.id : null, periodo) }
@@ -85,7 +85,7 @@ export function Estatisticas() {
 
       {respostas === 0 && (
         <p className="m-0 rounded-xl border bg-card p-3 text-sm text-muted-foreground">
-          Nenhuma resposta neste período. Estude o baralho e os números aparecem aqui.
+          {periodo === 'hoje' ? 'Nenhuma resposta hoje ainda. Estude o baralho e os números do dia aparecem aqui.' : 'Nenhuma resposta neste período. Estude o baralho e os números aparecem aqui.'}
         </p>
       )}
       {respostas > 0 && respostas < MIN_RESPOSTAS && (
