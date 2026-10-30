@@ -42,8 +42,8 @@ export interface Faixas {
 export const FAIXAS_PADRAO: Faixas = { fraco: 60, medio: 75, bom: 90 }
 
 /** Nível pelo % de acertos (padrão: abaixo de 60 Fraco, até 74 Médio, até 89 Bom, 90 ou mais Dominado). */
-export function nivelDe(feitas: number, acertos: number, faixas: Faixas = FAIXAS_PADRAO): Nivel {
-  if (feitas < MIN_QUESTOES) return 'na'
+export function nivelDe(feitas: number, acertos: number, faixas: Faixas = FAIXAS_PADRAO, minimo = MIN_QUESTOES): Nivel {
+  if (feitas < minimo) return 'na'
   const p = (acertos / feitas) * 100
   return p < faixas.fraco ? 'fraco' : p < faixas.medio ? 'medio' : p < faixas.bom ? 'bom' : 'dom'
 }
