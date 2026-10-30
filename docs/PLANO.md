@@ -68,7 +68,7 @@ ciclo-estudos/            (repo Git)
 1. **Esqueleto ⏸:** `app/` com Vite + React + TS + Tailwind + shadcn/ui, tema verde-menta claro/escuro, **layout de tela única** (barra lateral com menu, calendário, hoje, Pomodoro e status de backup; área principal), PWA instalável, Vitest e ESLint, CI.
 2. **Dados:** Dexie v1 (entidades atuais: config, semana, semanas fechadas, modelos, notas, assuntos, questões, sessões), esquemas Zod, **importador do JSON do app atual** (o "Exportar backup completo"), exportar JSON/.zip, backup em pasta portado.
 3. **Flashcards no Anki ⏸ (depois da 2ª e da 4ª sub-etapa):**
-   1. Modelo de dados no Dexie (decks, grupos de opções, tipos de nota de fábrica, notas, cartões, revlog, mídia) + `fcSincronizarDecks()` (matéria e assunto viram deck e subdeck, a partir do que foi importado do app atual).
+   1. Modelo de dados no Dexie (decks, grupos de opções, tipos de nota de fábrica, notas, cartões, revlog, mídia) + `fcSincronizarDecks()` (matéria e assunto viram deck e subdeck, a partir do que foi importado do app atual). *Revisto em 2026-10-30: os decks não são mais criados sozinhos; só quando a pessoa cria ou importa do Anki, e os automáticos vazios são excluídos.*
    2. **Agendador SM-2** (`sm2.ts`, puro e testado) + fila e limites do dia + **estudo** (4 botões com intervalos, atalhos do Anki, desfazer) + **Baralhos** + opções do deck.
    3. **Adicionar/Editar** (Tiptap, cloze, digitar resposta, imagens, tags, sanitização).
    4. **Navegar** (busca estilo Anki, ações em massa) e **Estatísticas**.
