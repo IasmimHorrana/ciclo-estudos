@@ -5,10 +5,12 @@ import { BancoCiclo } from '@/dados/db'
 import {
   adicionarNota, atualizarNota, carregarContexto, criarBaralho, desfazerResposta, excluirBaralho, excluirNota, filaDe,
   garantirPadroes, limparBaralhosAutomaticosVazios, renomearBaralho, responderCartao, salvarOpcoes, GRUPO_PADRAO,
-  suspender, enterrar, alternarMarca, definirBandeira,
+  suspender, enterrar, alternarMarca, definirBandeira, acertosPorBaralho, estatisticasDoBaralho,
 } from '@/dados/flashcards'
 import { substituirDados } from '@/dados/repositorio'
+import { acertosNaArvore } from '@/dominio/estatisticasFc'
 import { OPCOES_BARALHO_PADRAO, proximoCartao } from '@/dominio/fila'
+import { numeroDoDia } from '@/dominio/sm2'
 
 const T0 = new Date(2026, 9, 9, 10, 0).getTime()
 const MIN = 60_000
@@ -245,5 +247,38 @@ describe('ações rápidas', () => {
     expect((await db.cartoes.get(a))?.flag).toBe(2)
     await definirBandeira(db, a, 2, T0)
     expect((await db.cartoes.get(a))?.flag).toBe(0)
+  })
+})
+
+describe('estatísticas', () => {
+  it('soma o subbaralho no pai, mostra os cartões mais errados e ignora baralho excluído', async () => {
+    const db = await banco()
+    const pai = await criarBaralho(db, 'Adm', T0)
+    const filho = await criarBaralho(db, 'Adm::Lei 8.112', T0)
+    const outro = await criarBaralho(db, 'Outro', T0)
+    const a = (await adicionarNota(db, { tipoId: 'basico', baralhoId: pai.id, campos: { Frente: '<b>Quem</b> nomeia?', Verso: 'R' } }, T0)).cartoes[0]!.id
+    const f = (await adicionarNota(db, { tipoId: 'basico', baralhoId: filho.id, campos: { Frente: 'Prazo de posse?', Verso: '30 dias' } }, T0)).cartoes[0]!.id
+    const o = (await adicionarNota(db, { tipoId: 'basico', baralhoId: outro.id, campos: { Frente: 'X', Verso: 'Y' } }, T0)).cartoes[0]!.id
+    await responderCartao(db, a, 3, 4000, T0, null)
+    await responderCartao(db, f, 1, 6000, T0, null)
+    await responderCartao(db, f, 1, 6000, T0 + MIN, null)
+    await responderCartao(db, o, 1, 1000, T0, null)
+
+    const e = await estatisticasDoBaralho(db, pai.id, '30', T0 + 2 * MIN)
+    expect(e.resumo.total).toEqual({ respostas: 3, acertos: 1 })
+    expect(e.resumo.cartoes).toBe(2)
+    expect(e.totalCartoes).toBe(2)
+    expect(e.situacao).toMatchObject({ novos: 0, aprendendo: 2 })
+    expect(e.dificeis).toEqual([{ cartaoId: f, frente: 'Prazo de posse?', erros: 2, respostas: 2 }])
+    expect(e.semanas.at(-1)).toMatchObject({ respostas: 3, acertos: 1 })
+
+    const ctx = await carregarContexto(db, T0)
+    const arvore = acertosNaArvore(ctx.baralhos, await acertosPorBaralho(db, numeroDoDia(T0) - 29))
+    expect(arvore.get(pai.id)).toEqual({ respostas: 3, acertos: 1 })
+    expect(arvore.get(filho.id)).toEqual({ respostas: 2, acertos: 0 })
+
+    await excluirBaralho(db, filho.id, T0)
+    expect((await estatisticasDoBaralho(db, pai.id, 'tudo', T0)).resumo.total).toEqual({ respostas: 1, acertos: 1 })
+    expect((await estatisticasDoBaralho(db, null, 'tudo', T0)).resumo.total.respostas).toBe(2)
   })
 })
