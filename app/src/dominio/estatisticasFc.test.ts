@@ -26,6 +26,7 @@ describe('resumoRespostas', () => {
 
   it('respeita o início do período', () => {
     const rs = [r(HOJE - 30, 3), r(HOJE - 29, 1), r(HOJE - 6, 3), r(HOJE, 3)]
+    expect(resumoRespostas(rs, inicioDoPeriodoFc('hoje', HOJE)).total).toEqual({ respostas: 1, acertos: 1 })
     expect(resumoRespostas(rs, inicioDoPeriodoFc('7', HOJE)).total).toEqual({ respostas: 2, acertos: 2 })
     expect(resumoRespostas(rs, inicioDoPeriodoFc('30', HOJE)).total).toEqual({ respostas: 3, acertos: 2 })
     expect(resumoRespostas(rs, inicioDoPeriodoFc('tudo', HOJE)).total.respostas).toBe(4)
