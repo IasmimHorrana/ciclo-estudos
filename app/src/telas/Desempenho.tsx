@@ -84,7 +84,7 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
   return (
     <>
       <div className="grid grid-cols-4 gap-3 max-[700px]:grid-cols-2">
-        <Kpi rotulo="Horas (Pomodoro)" valor={fmtH(d.horas)} />
+        <Kpi rotulo="Horas estudadas" valor={fmtH(d.horas)} />
         <Kpi rotulo="Questões feitas" valor={String(d.feitas)} />
         <Kpi rotulo="Acertos" valor={d.feitas ? `${pctDe(d.acertos, d.feitas)}%` : '—'} />
         <Kpi rotulo="Dias com estudo" valor={String(d.dias)} />
@@ -324,7 +324,7 @@ function VisaoSemanas({ ciclo }: { ciclo: Ciclo }) {
           </section>
           <section className={card}>
             <h2 className="m-0 mb-1 text-sm font-bold">Sobre estas horas</h2>
-            <p className={cn(mudo, 'm-0')}>Nas semanas fechadas, as horas somam o que foi marcado nos passos (focos do Pomodoro e horas digitadas à mão). Na visão <b>Estudo</b>, as horas vêm só dos focos do Pomodoro.</p>
+            <p className={cn(mudo, 'm-0')}>Nas semanas fechadas, as horas somam o que foi marcado nos passos (focos do Pomodoro e horas digitadas à mão). Na visão <b>Estudo</b>, as horas vêm das sessões registradas (Pomodoro, cronômetro livre e registro manual).</p>
           </section>
         </div>
       </div>
