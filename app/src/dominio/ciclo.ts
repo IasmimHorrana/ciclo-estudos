@@ -29,16 +29,6 @@ export function fmtH(h: number): string {
   return `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`
 }
 
-/** Horas com os segundos, no estilo do app: "2min 20s", "45min", "1h05 20s", "28h00". */
-export function fmtHs(h: number): string {
-  const s = Math.max(0, Math.round((h || 0) * 3600))
-  const hh = Math.floor(s / 3600)
-  const mm = Math.floor((s % 3600) / 60)
-  const ss = s % 60
-  const base = hh ? `${hh}h${String(mm).padStart(2, '0')}` : `${mm}min`
-  return ss ? `${base} ${String(ss).padStart(2, '0')}s` : base
-}
-
 // ---------------------------------------------------------------- configuração
 
 export const configPadrao = (): ConfigCiclo => ({

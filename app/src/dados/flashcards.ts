@@ -6,7 +6,11 @@ import {
   dentroDe, irmaosParaEnterrar, montarFila, OPCOES_BARALHO_PADRAO, usoDoDia,
   type BaralhoFila, type CartaoNaFila, type Fila, type OpcoesBaralho,
 } from '@/dominio/fila'
-import { indicesDeCartoes, TIPOS_DE_FABRICA, type Campos } from '@/dominio/modelo'
+import {
+  acertosPorSemana, cartoesMaisErrados, idsDaArvore, inicioDoPeriodoFc, resumoRespostas, situacaoCartoes,
+  type Acertos, type PeriodoFc, type ResumoRespostas, type SemanaFc, type SituacaoCartoes,
+} from '@/dominio/estatisticasFc'
+import { indicesDeCartoes, renderizarCartao, textoPuro, TIPOS_DE_FABRICA, type Campos } from '@/dominio/modelo'
 import { novoCartao, numeroDoDia, responder, type Botao, type EstadoCartao } from '@/dominio/sm2'
 
 export const GRUPO_PADRAO = 'padrao'
@@ -354,4 +358,56 @@ export async function estudoPorDia(db: BancoCiclo): Promise<{ cartoes: Map<numbe
     tempoMs.set(r.dia, (tempoMs.get(r.dia) ?? 0) + r.tempoMs)
   })
   return { cartoes, tempoMs }
+}
+
+/** Respostas e acertos por baralho (sem somar os subbaralhos) a partir de `desdeDia`, para a coluna "Acertos". */
+export async function acertosPorBaralho(db: BancoCiclo, desdeDia: number): Promise<Map<string, Acertos>> {
+  const m = new Map<string, Acertos>()
+  await db.revlog.where('dia').aboveOrEqual(desdeDia).each((r) => {
+    const a = m.get(r.baralhoId) ?? { respostas: 0, acertos: 0 }
+    a.respostas++
+    if (r.botao >= 2) a.acertos++
+    m.set(r.baralhoId, a)
+  })
+  return m
+}
+
+export interface EstatisticasBaralho {
+  resumo: ResumoRespostas
+  situacao: SituacaoCartoes
+  semanas: SemanaFc[]
+  /** Cartões que mais erro no período, com a frente em texto puro. */
+  dificeis: { cartaoId: string; frente: string; erros: number; respostas: number }[]
+  totalCartoes: number
+}
+
+/** Estatísticas de um baralho com os subbaralhos (`null` = todos os baralhos). */
+export async function estatisticasDoBaralho(db: BancoCiclo, raizId: string | null, periodo: PeriodoFc, agora = Date.now(), virada = 4): Promise<EstatisticasBaralho> {
+  const hoje = numeroDoDia(agora, virada)
+  const baralhos = (await db.baralhos.toArray()).filter((b) => b.excluidoEm === null)
+  const ids = idsDaArvore(baralhos, raizId)
+  const [registros, cartoes] = await Promise.all([
+    db.revlog.where('baralhoId').anyOf(ids).toArray(),
+    db.cartoes.where('baralhoId').anyOf(ids).filter((c) => c.excluidoEm === null).toArray(),
+  ])
+  const desde = inicioDoPeriodoFc(periodo, hoje)
+  const vivos = new Set(cartoes.map((c) => c.id))
+  const errados = cartoesMaisErrados(registros.filter((r) => vivos.has(r.cartaoId)), 10, desde)
+  const porId = new Map(cartoes.map((c) => [c.id, c]))
+  const dificeis = await Promise.all(
+    errados.map(async (e) => {
+      const c = porId.get(e.cartaoId)
+      const nota = c && (await db.notasFc.get(c.notaId))
+      const tipo = nota && (await db.tiposNota.get(nota.tipoId))
+      const frente = c && nota && tipo ? textoPuro(renderizarCartao(tipo, nota.campos, c.indice).frente.html) : ''
+      return { ...e, frente: frente || '(cartão sem texto na frente)' }
+    }),
+  )
+  return {
+    resumo: resumoRespostas(registros, desde),
+    situacao: situacaoCartoes(cartoes),
+    semanas: acertosPorSemana(registros, hoje, 10),
+    dificeis,
+    totalCartoes: cartoes.length,
+  }
 }

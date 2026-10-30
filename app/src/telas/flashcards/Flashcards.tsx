@@ -4,6 +4,7 @@ import { garantirPadroes, limparBaralhosAutomaticosVazios } from '@/dados/flashc
 import { useFc } from '@/estado/flashcards'
 import { Adicionar } from '@/telas/flashcards/Adicionar'
 import { Baralhos } from '@/telas/flashcards/Baralhos'
+import { Estatisticas } from '@/telas/flashcards/Estatisticas'
 import { Estudo } from '@/telas/flashcards/Estudo'
 import { OpcoesDoBaralho } from '@/telas/flashcards/OpcoesDoBaralho'
 
@@ -21,6 +22,7 @@ export function Flashcards() {
       {vista === 'estudo' && <Estudo />}
       {vista === 'adicionar' && <Adicionar />}
       {vista === 'opcoes' && <OpcoesDoBaralho />}
+      {vista === 'estatisticas' && <Estatisticas />}
     </div>
   )
 }

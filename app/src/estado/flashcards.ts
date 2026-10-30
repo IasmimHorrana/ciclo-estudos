@@ -1,11 +1,11 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type VistaFc = 'baralhos' | 'estudo' | 'adicionar' | 'opcoes'
+export type VistaFc = 'baralhos' | 'estudo' | 'adicionar' | 'opcoes' | 'estatisticas'
 
 interface FcState {
   vista: VistaFc
-  /** Baralho do estudo/opções/adicionar (null = todos, só no estudo). */
+  /** Baralho do estudo/opções/adicionar/estatísticas (null = todos, no estudo e nas estatísticas). */
   baralhoId: string | null
   ir: (vista: VistaFc, baralhoId?: string | null) => void
 }
