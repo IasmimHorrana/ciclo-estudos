@@ -236,10 +236,16 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
                   {NOMES_DIA[idxDia(d.data)]} {fmtData(d.data)}
                 </span>
                 <b className="text-base">{d.horas ? fmtHs(d.horas) : '—'}</b>
+                {/* nome inteiro (quebra a linha em vez de cortar) e o tempo embaixo, com a cor da matéria na borda */}
                 {d.materias.map((m) => (
-                  <span key={m.materia} className="truncate rounded px-1.5 py-0.5 text-[0.7rem]" style={{ background: `${corDe(cores, m.materia)}40` }} title={`${m.materia}: ${fmtHs(m.horas)}`}>
-                    {m.materia} · {fmtHs(m.horas)}
-                  </span>
+                  <div
+                    key={m.materia}
+                    className="flex flex-col gap-0.5 rounded-md border-l-4 px-2 py-1 text-[0.72rem] leading-snug"
+                    style={{ borderLeftColor: corDe(cores, m.materia), background: `${corDe(cores, m.materia)}1f` }}
+                  >
+                    <span className="break-words hyphens-auto" lang="pt-BR">{m.materia}</span>
+                    <b className="whitespace-nowrap tabular-nums">{fmtHs(m.horas)}</b>
+                  </div>
                 ))}
               </div>
             ))}
@@ -287,7 +293,7 @@ function Estat({ rotulo: r, valor, sub }: { rotulo: string; valor: string; sub?:
       <span className={mudo}>{r}</span>
       <b className="text-xl leading-tight">{valor}</b>
       {sub && (
-        <span className={cn(mudo, 'truncate')} title={sub}>
+        <span className={cn(mudo, 'break-words')}>
           {sub}
         </span>
       )}
