@@ -9,6 +9,7 @@ import { hoje, type DataISO } from '@/dominio/datas'
 import { diaDe, materiasDoDia } from '@/dominio/livre'
 import { abrirDialogo } from '@/estado/dialogo'
 import { useCronometro } from '@/estado/cronometro'
+import { useUi } from '@/estado/ui'
 import { iniciarGravacaoCronometro, lerCronometroGravado } from '@/lib/cronometroSalvo'
 
 /** Matérias para escolher: as do dia (modo Livre) e todas as outras (do ciclo e da semana). */
@@ -27,6 +28,15 @@ export async function escolherAlvoLivre(): Promise<boolean> {
   if (!a) return false
   useCronometro.getState().definirAlvo(a)
   return true
+}
+
+/** "Estudar agora" do painel do modo Livre: escolhe a matéria (confirmando tipo e assunto) e liga o cronômetro livre. */
+export async function estudarMateria(materia: string): Promise<void> {
+  const s = useCronometro.getState()
+  if (s.rodando || s.seg > 0) return
+  useUi.getState().escolherRelogio('livre')
+  s.definirAlvo({ materia, tipo: s.ultimoAlvo?.materia === materia ? s.ultimoAlvo.tipo : 'Teoria', assuntoId: null })
+  if (await escolherAlvoLivre()) useCronometro.getState().alternar()
 }
 
 /** Botão Iniciar/Pausar: para começar, precisa saber a matéria. */

@@ -13,6 +13,7 @@ import { useUi } from '@/estado/ui'
 import { Constancia } from '@/telas/PainelSemana'
 import { QuadroSemana } from '@/telas/QuadroSemana'
 import { RegistroManual } from '@/telas/RegistroManual'
+import { SemanaLivre, SeletorModo } from '@/telas/SemanaLivre'
 import { cn } from '@/lib/utils'
 
 const card = 'rounded-xl border bg-card p-3.5 shadow-sm'
@@ -44,6 +45,7 @@ export function Semana() {
   const ciclo = useCiclo()
   const hojeISO = useHojeISO()
   if (!ciclo) return <p className="text-sm text-muted-foreground">Carregando…</p>
+  if (ciclo.preferencias.modoEstudo === 'livre') return <SemanaLivre ciclo={ciclo} hojeISO={hojeISO} />
   return ciclo.semana ? <SemanaTela ciclo={ciclo} hojeISO={hojeISO} /> : <SemSemana />
 }
 
@@ -52,8 +54,11 @@ function SemSemana() {
   return (
     <div className="m-auto max-w-md rounded-xl border bg-card p-8 text-center shadow-sm">
       <h1 className="mb-2 text-xl font-bold">Nenhuma semana em andamento</h1>
-      <p className="mb-4 text-sm text-muted-foreground">Monte um ciclo para começar a acompanhar a semana.</p>
-      <Button onClick={() => irParaAba('montar')}>Montar ciclo</Button>
+      <p className="mb-4 text-sm text-muted-foreground">Monte um ciclo para começar a acompanhar a semana, ou passe para o modo Livre (duas matérias por dia e meta semanal em horas).</p>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <Button onClick={() => irParaAba('montar')}>Montar ciclo</Button>
+        <SeletorModo modo="ciclo" className="" />
+      </div>
     </div>
   )
 }
@@ -114,11 +119,12 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-wrap items-baseline gap-2 text-sm font-bold">
+      <div className="flex flex-wrap items-center gap-2 text-sm font-bold">
         📅 Hoje: {NOMES_DIA_LONGO[idxDia(hojeISO)]}, {fmtData(hojeISO)}
         <span className="text-xs font-normal text-muted-foreground">
           · Semana {fmtData(s.seg)} → {fmtData(s.dom)}{fora}
         </span>
+        <SeletorModo modo="ciclo" />
       </div>
 
       <div className={cn(card, 'grid grid-cols-[repeat(5,minmax(0,1fr))] items-start gap-4 max-[900px]:grid-cols-2')}>
