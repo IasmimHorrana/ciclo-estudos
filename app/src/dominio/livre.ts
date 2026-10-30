@@ -2,10 +2,23 @@
 // As horas saem das sessões (não dos passos do ciclo), então o Pomodoro, o cronômetro livre e o registro manual contam igual.
 
 import { addDias, idxDia, segundaDe, type DataISO } from '@/dominio/datas'
-import { round2, soma } from '@/dominio/ciclo'
-import { horasDe, pctDe, type Questoes, type Sessao } from '@/dominio/desempenho'
+import { soma } from '@/dominio/ciclo'
+import { pctDe, type Questoes, type Sessao } from '@/dominio/desempenho'
 
 export type ModoEstudo = 'ciclo' | 'livre'
+
+/** Horas exatas das sessões, sem arredondar (as do cronômetro livre têm segundos). */
+const horasExatas = (ss: Sessao[]) => soma(ss, (x) => x.minutos) / 60
+
+/** Horas com os segundos, no estilo do app: "2min 20s", "45min", "1h05 20s", "28h00". */
+export function fmtHs(h: number): string {
+  const s = Math.max(0, Math.round((h || 0) * 3600))
+  const hh = Math.floor(s / 3600)
+  const mm = Math.floor((s % 3600) / 60)
+  const ss = s % 60
+  const base = hh ? `${hh}h${String(mm).padStart(2, '0')}` : `${mm}min`
+  return ss ? `${base} ${String(ss).padStart(2, '0')}s` : base
+}
 
 /** Meta em horas por semana: a base é o compromisso; a estendida, o bônus de uma semana boa. */
 export interface MetaLivre {
@@ -64,13 +77,13 @@ export function progressoMeta(horas: number, meta: number, estendidaCfg: number)
   const estendida = Math.max(meta, estendidaCfg)
   const pct = (x: number) => (x > 0 ? Math.min(100, Math.round((horas / x) * 100)) : 100)
   return {
-    horas: round2(horas),
+    horas,
     meta,
     estendida,
     pctMeta: pct(meta),
     pctEstendida: pct(estendida),
-    faltaMeta: Math.max(0, round2(meta - horas)),
-    faltaEstendida: Math.max(0, round2(estendida - horas)),
+    faltaMeta: Math.max(0, meta - horas),
+    faltaEstendida: Math.max(0, estendida - horas),
     situacao: horas >= estendida && estendida > meta ? 'estendida' : horas >= meta ? 'base' : 'abaixo',
   }
 }
@@ -85,7 +98,7 @@ export interface DiaDaSemanaLivre {
 const porMateria = (ss: Sessao[]) => {
   const m = new Map<string, number>()
   for (const s of ss) m.set(s.materia, (m.get(s.materia) ?? 0) + s.minutos)
-  return [...m].map(([materia, min]) => ({ materia, horas: round2(min / 60) })).sort((a, b) => b.horas - a.horas || a.materia.localeCompare(b.materia))
+  return [...m].map(([materia, min]) => ({ materia, horas: min / 60 })).sort((a, b) => b.horas - a.horas || a.materia.localeCompare(b.materia))
 }
 
 export interface ResumoLivre {
@@ -111,9 +124,9 @@ export function resumoLivre(sessoes: Sessao[], questoes: Questoes[], meta: MetaL
   const dias = Array.from({ length: 7 }, (_, i) => {
     const data = addDias(segunda, i)
     const doDia = naSemana.filter((s) => s.data === data)
-    return { data, horas: horasDe(doDia), materias: porMateria(doDia) }
+    return { data, horas: horasExatas(doDia), materias: porMateria(doDia) }
   })
-  const horasSemana = horasDe(naSemana)
+  const horasSemana = horasExatas(naSemana)
   const qHoje = questoes.filter((q) => q.data === hojeISO)
   const feitas = soma(qHoje, (q) => q.feitas)
   const acertos = soma(qHoje, (q) => q.acertos)

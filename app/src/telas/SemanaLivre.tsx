@@ -12,7 +12,7 @@ import { carregarEstudo } from '@/dados/desempenho'
 import { ajustarMetaDaSemana, definirMetaLivre, definirModo, escolherDia } from '@/dados/livre'
 import { corDe, fmtH, todasMaterias } from '@/dominio/ciclo'
 import { fmtData, idxDia, NOMES_DIA, NOMES_DIA_LONGO } from '@/dominio/datas'
-import { diaDe, escolherNoDia, materiasDoDia, resumoLivre, sugerirMaterias, type ModoEstudo, type PapelNoDia } from '@/dominio/livre'
+import { diaDe, escolherNoDia, fmtHs, materiasDoDia, resumoLivre, sugerirMaterias, type ModoEstudo, type PapelNoDia } from '@/dominio/livre'
 import { useCronometro } from '@/estado/cronometro'
 import { useUi } from '@/estado/ui'
 import { Constancia } from '@/telas/PainelSemana'
@@ -92,19 +92,19 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
       </div>
 
       <div className={cn(card, 'grid grid-cols-[repeat(5,minmax(0,1fr))] items-start gap-4 max-[900px]:grid-cols-2')}>
-        <Estat rotulo="Hoje" valor={fmtH(r.hoje.horas)} sub={r.hoje.materias.length ? r.hoje.materias.map((m) => m.materia).join(' · ') : 'nada registrado ainda'} />
+        <Estat rotulo="Hoje" valor={fmtHs(r.hoje.horas)} sub={r.hoje.materias.length ? r.hoje.materias.map((m) => m.materia).join(' · ') : 'nada registrado ainda'} />
         <div className="col-span-2 flex min-w-0 flex-col gap-0.5">
           <span className={mudo}>Horas na semana</span>
           <b className="text-xl leading-tight">
-            {fmtH(g.horas)} <span className="text-sm font-normal text-muted-foreground">de {fmtH(g.meta)}{g.estendida > g.meta ? ` · estendida ${fmtH(g.estendida)}` : ''}</span>
+            {fmtHs(g.horas)} <span className="text-sm font-normal text-muted-foreground">de {fmtH(g.meta)}{g.estendida > g.meta ? ` · estendida ${fmtH(g.estendida)}` : ''}</span>
           </b>
           <BarraMeta horas={g.horas} meta={g.meta} estendida={g.estendida} />
           <span className={mudo}>
             {g.situacao === 'estendida'
               ? '🏆 Meta estendida batida!'
               : g.situacao === 'base'
-                ? `✅ Meta batida${g.faltaEstendida ? ` · ${fmtH(g.faltaEstendida)} para a estendida` : ''}`
-                : `Faltam ${fmtH(g.faltaMeta)} para a meta`}
+                ? `✅ Meta batida${g.faltaEstendida ? ` · ${fmtHs(g.faltaEstendida)} para a estendida` : ''}`
+                : `Faltam ${fmtHs(g.faltaMeta)} para a meta`}
           </span>
         </div>
         <div className="flex flex-col gap-1">
@@ -160,7 +160,7 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
                   {m && (
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm">
-                        <b>{fmtH(horas)}</b> <span className={mudo}>hoje</span>
+                        <b>{fmtHs(horas)}</b> <span className={mudo}>hoje</span>
                       </span>
                       <Button
                         size="sm"
@@ -194,7 +194,7 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
               </Selecao>
               {dia.extra && (
                 <>
-                  <span className="text-xs"><b>{fmtH(r.hoje.materias.find((x) => x.materia === dia.extra)?.horas ?? 0)}</b> <span className="text-muted-foreground">hoje</span></span>
+                  <span className="text-xs"><b>{fmtHs(r.hoje.materias.find((x) => x.materia === dia.extra)?.horas ?? 0)}</b> <span className="text-muted-foreground">hoje</span></span>
                   <Button size="sm" variant="outline" className="h-7" disabled={ocupado} title={ocupado ? 'Já há um cronômetro em andamento na barra lateral' : `Ligar o cronômetro livre em ${dia.extra}`} onClick={() => dia.extra && void estudarMateria(dia.extra)}>
                     <Play className="size-3.5" /> Estudar
                   </Button>
@@ -221,7 +221,7 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
           )}
           <p className={cn(mudo, 'm-0 mt-2')}>
             {doDia.length ? 'As matérias de hoje aparecem primeiro ao iniciar o cronômetro.' : 'A lista mostra primeiro as matérias estudadas há mais tempo.'}
-            {extras.length > 0 && ` Hoje também: ${extras.map((x) => `${x.materia} (${fmtH(x.horas)})`).join(', ')}.`}
+            {extras.length > 0 && ` Hoje também: ${extras.map((x) => `${x.materia} (${fmtHs(x.horas)})`).join(', ')}.`}
           </p>
         </section>
 
@@ -235,10 +235,10 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
                 <span className={mudo}>
                   {NOMES_DIA[idxDia(d.data)]} {fmtData(d.data)}
                 </span>
-                <b className="text-base">{d.horas ? fmtH(d.horas) : '—'}</b>
+                <b className="text-base">{d.horas ? fmtHs(d.horas) : '—'}</b>
                 {d.materias.map((m) => (
-                  <span key={m.materia} className="truncate rounded px-1.5 py-0.5 text-[0.7rem]" style={{ background: `${corDe(cores, m.materia)}40` }} title={`${m.materia}: ${fmtH(m.horas)}`}>
-                    {m.materia} · {fmtH(m.horas)}
+                  <span key={m.materia} className="truncate rounded px-1.5 py-0.5 text-[0.7rem]" style={{ background: `${corDe(cores, m.materia)}40` }} title={`${m.materia}: ${fmtHs(m.horas)}`}>
+                    {m.materia} · {fmtHs(m.horas)}
                   </span>
                 ))}
               </div>
@@ -273,7 +273,7 @@ function BarraMeta({ horas, meta, estendida }: { horas: number; meta: number; es
   const escala = Math.max(estendida, horas, 1)
   const pct = (x: number) => `${Math.min(100, (x / escala) * 100)}%`
   return (
-    <div className="relative mt-1 h-2.5 rounded bg-muted" role="img" aria-label={`${fmtH(horas)} de ${fmtH(meta)}`}>
+    <div className="relative mt-1 h-2.5 rounded bg-muted" role="img" aria-label={`${fmtHs(horas)} de ${fmtH(meta)}`}>
       <i className={cn('absolute inset-y-0 left-0 block rounded', horas >= meta ? 'bg-ok' : 'bg-primary')} style={{ width: pct(horas) }} />
       <span className="absolute -inset-y-1 w-0.5 bg-foreground/70" style={{ left: pct(meta) }} title={`Meta: ${fmtH(meta)}`} />
       {estendida > meta && <span className="absolute -inset-y-1 w-0.5 bg-foreground/35" style={{ left: `calc(${pct(estendida)} - 2px)` }} title={`Estendida: ${fmtH(estendida)}`} />}

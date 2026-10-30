@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Questoes, Sessao } from './desempenho'
 import {
-  META_LIVRE_PADRAO, ajustarSemana, diaDe, escolherNoDia, materiasDoDia, metaDaSemana, progressoMeta, resumoLivre, sugerirMaterias, validarMeta,
+  META_LIVRE_PADRAO, ajustarSemana, diaDe, escolherNoDia, fmtHs, materiasDoDia, metaDaSemana, progressoMeta, resumoLivre, sugerirMaterias, validarMeta,
 } from './livre'
 
 const QUINTA = '2026-10-29'
@@ -36,6 +36,16 @@ describe('meta semanal', () => {
     expect(progressoMeta(33, 28, 32)).toMatchObject({ pctEstendida: 100, faltaEstendida: 0, situacao: 'estendida' })
     // semana ajustada acima da estendida: a estendida acompanha
     expect(progressoMeta(35, 36, 32)).toMatchObject({ estendida: 36, situacao: 'abaixo' })
+  })
+})
+
+describe('fmtHs', () => {
+  it('mostra os segundos só quando há', () => {
+    expect(fmtHs(0)).toBe('0min')
+    expect(fmtHs(140 / 3600)).toBe('2min 20s')
+    expect(fmtHs(0.75)).toBe('45min')
+    expect(fmtHs(1 + 5 / 60 + 7 / 3600)).toBe('1h05 07s')
+    expect(fmtHs(28)).toBe('28h00')
   })
 })
 
