@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { FAIXAS_PADRAO, validarFaixas } from '@/dominio/desempenho'
+import { META_LIVRE_PADRAO, validarMeta } from '@/dominio/livre'
 import { INTERVALOS_PADRAO, lerIntervalos } from '@/dominio/revisaoAssuntos'
 
 /**
@@ -122,7 +123,8 @@ const Sessao = z.object({
   tipo: txt,
 })
 
-/** Preferências de estudo (faixas de acerto, intervalos da revisão dos assuntos). Valores fora do lugar voltam ao padrão. */
+/** Preferências de estudo (faixas de acerto, intervalos da revisão dos assuntos, modo Livre). Valores fora do lugar voltam ao padrão. */
+
 const Faixas = z
   .object({ fraco: z.coerce.number().catch(FAIXAS_PADRAO.fraco), medio: z.coerce.number().catch(FAIXAS_PADRAO.medio), bom: z.coerce.number().catch(FAIXAS_PADRAO.bom) })
   .catch(FAIXAS_PADRAO)
@@ -131,9 +133,29 @@ const Intervalos = z
   .array(z.coerce.number())
   .catch([...INTERVALOS_PADRAO])
   .transform((l) => lerIntervalos(l.join(' ')) ?? [...INTERVALOS_PADRAO])
+/** Modo Livre: meta semanal (base, estendida e ajustes por semana) e as matérias escolhidas para o dia. */
+const MetaLivre = z
+  .object({
+    base: z.coerce.number().catch(META_LIVRE_PADRAO.base),
+    estendida: z.coerce.number().catch(META_LIVRE_PADRAO.estendida),
+    ajustes: z.record(z.string(), z.coerce.number().catch(META_LIVRE_PADRAO.base)).catch({}),
+  })
+  .catch({ ...META_LIVRE_PADRAO, ajustes: {} })
+  .transform((m) => (validarMeta(m.base, m.estendida) ? { ...m, base: META_LIVRE_PADRAO.base, estendida: META_LIVRE_PADRAO.estendida } : m))
+const DiaLivre = z
+  .object({ data: z.string(), principal: z.string().nullable().catch(null), secundaria: z.string().nullable().catch(null) })
+  .nullable()
+  .catch(null)
 export const Preferencias = z
-  .object({ faixas: Faixas, intervalosRevisao: Intervalos })
-  .catch({ faixas: FAIXAS_PADRAO, intervalosRevisao: [...INTERVALOS_PADRAO] })
+  .object({
+    faixas: Faixas,
+    intervalosRevisao: Intervalos,
+    modoEstudo: z.enum(['ciclo', 'livre']).catch('ciclo'),
+    metaLivre: MetaLivre,
+    diaLivre: DiaLivre,
+  })
+  .catch({ faixas: FAIXAS_PADRAO, intervalosRevisao: [...INTERVALOS_PADRAO], modoEstudo: 'ciclo', metaLivre: { ...META_LIVRE_PADRAO, ajustes: {} }, diaLivre: null })
+
 export type Preferencias = z.infer<typeof Preferencias>
 export const preferenciasPadrao = (): Preferencias => Preferencias.parse({})
 

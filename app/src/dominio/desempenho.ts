@@ -213,7 +213,7 @@ export interface EstudoManual {
   tipo: string
   /** Minutos estudados (0 se só quer registrar questões). */
   minutos: number
-  /** Só para o tipo Questões. */
+  /** Questões resolvidas (em qualquer tipo; no tipo Questões podem ser o único registro). */
   feitas: number
   acertos: number
 }
@@ -225,11 +225,8 @@ export function validarEstudoManual(d: EstudoManual, hojeISO: DataISO): string |
   if (!d.materia) return 'Escolha a matéria.'
   if (!(TIPOS_ESTUDO as readonly string[]).includes(d.tipo)) return 'Escolha o tipo de estudo.'
   if (!(d.minutos >= 0) || d.minutos > 24 * 60) return 'O tempo precisa estar entre 0 e 24 horas.'
-  if (d.tipo === 'Questões') {
-    if (!(d.feitas >= 0) || !(d.acertos >= 0) || d.acertos > d.feitas) return 'Os acertos precisam estar entre 0 e o número de questões feitas.'
-    if (d.feitas < 1 && d.minutos < 1) return 'Informe as questões feitas ou o tempo estudado.'
-    return null
-  }
+  if (!(d.feitas >= 0) || !(d.acertos >= 0) || d.acertos > d.feitas) return 'Os acertos precisam estar entre 0 e o número de questões feitas.'
+  if (d.tipo === 'Questões') return d.feitas < 1 && d.minutos < 1 ? 'Informe as questões feitas ou o tempo estudado.' : null
   if (d.minutos < 1) return 'Informe o tempo estudado (mínimo 1 minuto).'
   return null
 }
