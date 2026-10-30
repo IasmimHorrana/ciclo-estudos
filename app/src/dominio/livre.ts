@@ -10,16 +10,6 @@ export type ModoEstudo = 'ciclo' | 'livre'
 /** Horas exatas das sessões, sem arredondar (as do cronômetro livre têm segundos). */
 const horasExatas = (ss: Sessao[]) => soma(ss, (x) => x.minutos) / 60
 
-/** Horas com os segundos, no estilo do app: "2min 20s", "45min", "1h05 20s", "28h00". */
-export function fmtHs(h: number): string {
-  const s = Math.max(0, Math.round((h || 0) * 3600))
-  const hh = Math.floor(s / 3600)
-  const mm = Math.floor((s % 3600) / 60)
-  const ss = s % 60
-  const base = hh ? `${hh}h${String(mm).padStart(2, '0')}` : `${mm}min`
-  return ss ? `${base} ${String(ss).padStart(2, '0')}s` : base
-}
-
 /** Meta em horas por semana: a base é o compromisso; a estendida, o bônus de uma semana boa. */
 export interface MetaLivre {
   base: number

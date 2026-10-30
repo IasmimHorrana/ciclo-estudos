@@ -57,7 +57,8 @@ export function validarFaixas(f: Faixas): string | null {
 }
 
 export const pctDe = (acertos: number, feitas: number) => (feitas ? Math.round((acertos / feitas) * 100) : 0)
-export const horasDe = (ss: Sessao[]) => round2(soma(ss, (x) => x.minutos) / 60)
+/** Horas exatas das sessões, sem arredondar (as do cronômetro livre têm segundos). */
+export const horasDe = (ss: Sessao[]) => soma(ss, (x) => x.minutos) / 60
 
 /** Primeiro dia do período (inclusive). */
 export const inicioDoPeriodo = (p: Periodo, hojeISO: DataISO): DataISO =>

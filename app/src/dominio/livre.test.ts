@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import { fmtHs } from './ciclo'
 import type { Questoes, Sessao } from './desempenho'
 import {
-  META_LIVRE_PADRAO, ajustarSemana, diaDe, escolherNoDia, fmtHs, materiasDoDia, metaDaSemana, progressoMeta, resumoLivre, sugerirMaterias, validarMeta,
+  META_LIVRE_PADRAO, ajustarSemana, diaDe, escolherNoDia, materiasDoDia, metaDaSemana, progressoMeta, resumoLivre, sugerirMaterias, validarMeta,
 } from './livre'
 
 const QUINTA = '2026-10-29'
