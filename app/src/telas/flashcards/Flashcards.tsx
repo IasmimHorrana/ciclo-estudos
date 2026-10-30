@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { db } from '@/dados/db'
-import { garantirPadroes, sincronizarBaralhos } from '@/dados/flashcards'
+import { garantirPadroes, limparBaralhosAutomaticosVazios } from '@/dados/flashcards'
 import { useFc } from '@/estado/flashcards'
 import { Adicionar } from '@/telas/flashcards/Adicionar'
 import { Baralhos } from '@/telas/flashcards/Baralhos'
@@ -10,9 +10,9 @@ import { OpcoesDoBaralho } from '@/telas/flashcards/OpcoesDoBaralho'
 export function Flashcards() {
   const vista = useFc((s) => s.vista)
 
-  // garante os padrões e cria os baralhos das matérias/assuntos do ciclo que ainda não existem
+  // garante os padrões e tira os baralhos vazios que antes eram criados sozinhos das matérias/assuntos
   useEffect(() => {
-    void garantirPadroes(db).then(() => sincronizarBaralhos(db))
+    void garantirPadroes(db).then(() => limparBaralhosAutomaticosVazios(db))
   }, [])
 
   return (

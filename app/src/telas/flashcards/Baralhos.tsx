@@ -129,7 +129,7 @@ export function Baralhos() {
       <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-card shadow-sm">
         {linhas.length === 0 ? (
           <p className="m-0 p-6 text-center text-sm text-muted-foreground">
-            Nenhum baralho ainda. Importe o backup do app em HTML (aba "Dados") para criar um baralho por matéria e assunto, ou crie um à mão.
+            Nenhum baralho ainda. Crie um no botão "Baralho" (use "Matéria::Assunto" para fazer um subbaralho) ou importe do Anki.
           </p>
         ) : (
           <table className="w-full border-collapse text-sm">

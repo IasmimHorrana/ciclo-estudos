@@ -4,7 +4,7 @@ import { lerArquivo } from '@/dados/converter'
 import { BancoCiclo } from '@/dados/db'
 import {
   adicionarNota, atualizarNota, carregarContexto, criarBaralho, desfazerResposta, excluirBaralho, excluirNota, filaDe,
-  garantirPadroes, renomearBaralho, responderCartao, salvarOpcoes, sincronizarBaralhos, GRUPO_PADRAO,
+  garantirPadroes, limparBaralhosAutomaticosVazios, renomearBaralho, responderCartao, salvarOpcoes, GRUPO_PADRAO,
   suspender, enterrar, alternarMarca, definirBandeira,
 } from '@/dados/flashcards'
 import { substituirDados } from '@/dados/repositorio'
@@ -38,27 +38,32 @@ describe('padrões e baralhos', () => {
     expect(await db.tiposNota.count()).toBe(5)
   })
 
-  it('matérias e assuntos viram baralho e subbaralho, uma vez só', async () => {
+  it('matérias e assuntos do ciclo não viram baralho sozinhos', async () => {
     const db = await banco()
     await comCiclo(db)
-    expect(await sincronizarBaralhos(db, T0)).toBe(5)
-    expect((await db.baralhos.toArray()).map((b) => b.nome).sort()).toEqual([
-      'Estatística', 'Informática', 'Informática::Redes', 'Informática::Segurança', 'Língua Portuguesa',
-    ])
-    expect(await sincronizarBaralhos(db, T0 + 1)).toBe(0)
+    expect(await limparBaralhosAutomaticosVazios(db, T0)).toBe(0)
+    expect(await db.baralhos.count()).toBe(0)
   })
 
-  it('baralho excluído de propósito não é recriado pela sincronização', async () => {
+  it('os baralhos automáticos antigos que estão vazios saem; os com notas e os manuais ficam', async () => {
     const db = await banco()
-    await comCiclo(db)
-    await sincronizarBaralhos(db, T0)
-    await excluirBaralho(db, 'mat:Estatística', T0 + 1)
-    expect(await sincronizarBaralhos(db, T0 + 2)).toBe(0)
+    const auto = (id: string, nome: string, origem: 'materia' | 'assunto') =>
+      db.baralhos.put({ id, nome, origem, grupoId: GRUPO_PADRAO, criadoEm: T0, atualizadoEm: T0, excluidoEm: null, sujo: 0 })
+    await auto('mat:Informática', 'Informática', 'materia')
+    await auto('ass:a1', 'Informática::Redes', 'assunto')
+    await auto('ass:a2', 'Informática::Segurança', 'assunto')
+    await auto('mat:Estatística', 'Estatística', 'materia')
+    await auto('mat:Direito', 'Direito', 'materia')
+    const penal = await criarBaralho(db, 'Direito::Penal', T0) // manual, com nota: o pai automático fica
+    const vazio = await criarBaralho(db, 'Vazio manual', T0)
+    await adicionarNota(db, { tipoId: 'basico', baralhoId: 'ass:a1', campos: { Frente: 'Q', Verso: 'R' } }, T0)
+    await adicionarNota(db, { tipoId: 'basico', baralhoId: penal.id, campos: { Frente: 'Q', Verso: 'R' } }, T0)
+
+    expect(await limparBaralhosAutomaticosVazios(db, T0 + 1)).toBe(2)
+    const vivos = (await db.baralhos.toArray()).filter((b) => b.excluidoEm === null).map((b) => b.nome).sort()
+    expect(vivos).toEqual(['Direito', 'Direito::Penal', 'Informática', 'Informática::Redes', vazio.nome])
     expect((await db.baralhos.get('mat:Estatística'))?.excluidoEm).toBe(T0 + 1)
-  })
-
-  it('sem backup importado, não cria baralho nenhum', async () => {
-    expect(await sincronizarBaralhos(await banco())).toBe(0)
+    expect(await limparBaralhosAutomaticosVazios(db, T0 + 2)).toBe(0)
   })
 
   it('criar manual, recusar nome repetido e renomear leva os filhos junto', async () => {
