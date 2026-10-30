@@ -124,7 +124,6 @@ const Sessao = z.object({
 })
 
 /** Preferências de estudo (faixas de acerto, intervalos da revisão dos assuntos, modo Livre). Valores fora do lugar voltam ao padrão. */
-
 const Faixas = z
   .object({ fraco: z.coerce.number().catch(FAIXAS_PADRAO.fraco), medio: z.coerce.number().catch(FAIXAS_PADRAO.medio), bom: z.coerce.number().catch(FAIXAS_PADRAO.bom) })
   .catch(FAIXAS_PADRAO)
@@ -155,7 +154,6 @@ export const Preferencias = z
     diaLivre: DiaLivre,
   })
   .catch({ faixas: FAIXAS_PADRAO, intervalosRevisao: [...INTERVALOS_PADRAO], modoEstudo: 'ciclo', metaLivre: { ...META_LIVRE_PADRAO, ajustes: {} }, diaLivre: null })
-
 export type Preferencias = z.infer<typeof Preferencias>
 export const preferenciasPadrao = (): Preferencias => Preferencias.parse({})
 

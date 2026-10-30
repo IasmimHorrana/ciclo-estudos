@@ -81,7 +81,6 @@ describe('registrarEstudoManual', () => {
   })
 
   it('questões sem tempo não cria sessão; registro inválido não grava nada', async () => {
-
     const db = await bancoComSemana()
     await registrarEstudoManual(db, { ...base, tipo: 'Questões', minutos: 0, feitas: 10, acertos: 7 }, AGORA)
     expect((await carregarEstudo(db)).sessoes).toHaveLength(0)
