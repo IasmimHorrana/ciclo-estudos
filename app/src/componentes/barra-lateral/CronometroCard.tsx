@@ -43,7 +43,6 @@ export function CronometroCard() {
           📖 {alvo.materia} · {alvo.tipo}
         </button>
       )}
-      <p className="m-0 text-xs text-muted-foreground">Sem blocos fixos: pause quando precisar e encerre ao terminar.</p>
     </div>
   )
 }

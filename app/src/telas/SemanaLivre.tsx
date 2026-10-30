@@ -118,23 +118,19 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
               void ajustarMetaDaSemana(db, hojeISO, v === p.metaLivre.base ? null : v)
             }}
           />
-          <span className={mudo}>
-            {ajustada ? (
-              <>
-                só nesta semana ·{' '}
-                <button className="cursor-pointer underline" onClick={() => void ajustarMetaDaSemana(db, hojeISO, null)}>
-                  voltar a {fmtH(p.metaLivre.base)}
-                </button>
-              </>
-            ) : (
-              'o que faltar não passa para a próxima'
-            )}
-          </span>
+          {ajustada && (
+            <span className={mudo}>
+              só nesta semana ·{' '}
+              <button className="cursor-pointer underline" onClick={() => void ajustarMetaDaSemana(db, hojeISO, null)}>
+                voltar a {fmtH(p.metaLivre.base)}
+              </button>
+            </span>
+          )}
         </div>
         <Estat
           rotulo="Questões hoje"
           valor={r.hoje.feitas ? `${r.hoje.acertos}/${r.hoje.feitas}` : '—'}
-          sub={r.hoje.feitas ? `${r.hoje.pct}% de acertos` : 'lance ao fechar a sessão'}
+          sub={r.hoje.feitas ? `${r.hoje.pct}% de acertos` : undefined}
         />
       </div>
 
@@ -219,10 +215,7 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
               </button>
             )
           )}
-          <p className={cn(mudo, 'm-0 mt-2')}>
-            {doDia.length ? 'As matérias de hoje aparecem primeiro ao iniciar o cronômetro.' : 'A lista mostra primeiro as matérias estudadas há mais tempo.'}
-            {extras.length > 0 && ` Hoje também: ${extras.map((x) => `${x.materia} (${fmtHs(x.horas)})`).join(', ')}.`}
-          </p>
+          {extras.length > 0 && <p className={cn(mudo, 'm-0 mt-2')}>Hoje também: {extras.map((x) => `${x.materia} (${fmtHs(x.horas)})`).join(', ')}</p>}
         </section>
 
         <Constancia s={ciclo.semana} diasDeEstudo={config.dias} hojeISO={hojeISO} />
@@ -254,8 +247,7 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
 
         <div className="col-start-2 row-span-3 row-start-1 flex min-h-0 flex-col gap-3 overflow-auto max-[1100px]:col-start-1 max-[1100px]:row-span-1 max-[1100px]:row-start-auto max-[1100px]:overflow-visible">
           <section className={card}>
-            <h2 className="m-0 mb-1 text-sm font-bold">Meta semanal</h2>
-            <p className={cn(mudo, 'm-0 mb-2')}>A base é o compromisso; a estendida, o bônus de uma semana boa. Numa semana apertada, baixe só a meta dela: a seguinte volta à base.</p>
+            <h2 className="m-0 mb-2 text-sm font-bold">Meta semanal</h2>
             <div className="grid grid-cols-2 gap-2">
               <label className={rotulo}>
                 Base (h)

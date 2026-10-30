@@ -72,8 +72,7 @@ export function RegistroManual({ s, config, hojeISO, primeiras = [] }: { s: Sema
 
   return (
     <section className="rounded-xl border bg-card p-3.5 shadow-sm">
-      <h2 className="m-0 mb-0.5 text-sm font-bold">Registrar estudo manual</h2>
-      <p className="m-0 mb-2 text-xs text-muted-foreground">Para o que você estudou fora do app (outro lugar, sem o Pomodoro nem o cronômetro).</p>
+      <h2 className="m-0 mb-2 text-sm font-bold">Registrar estudo manual</h2>
       <div className="flex flex-col gap-2">
         <div className="grid grid-cols-2 gap-2">
           <label className={rotulo}>
