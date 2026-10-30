@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ChevronDown, ChevronRight, FolderPlus, Plus, Settings, Trash2, Upload, X } from 'lucide-react'
+import { BarChart3, ChevronDown, ChevronRight, FolderPlus, Plus, Settings, Trash2, Upload, X } from 'lucide-react'
 import { avisar } from '@/componentes/dialogos-api'
+import { useFaixas } from '@/componentes/faixas-contexto'
+import { COR_NIVEL } from '@/componentes/nivel-cores'
 import { Button } from '@/componentes/ui/button'
 import { Entrada } from '@/componentes/ui/entrada'
 import { importarArquivoApkg } from '@/dados/apkg-navegador'
 import { db } from '@/dados/db'
-import { carregarContexto, criarBaralho, excluirBaralho, filaDe } from '@/dados/flashcards'
+import { acertosPorBaralho, carregarContexto, criarBaralho, excluirBaralho, filaDe } from '@/dados/flashcards'
 import { linhasDaArvore, nomesComFilhos } from '@/dominio/arvore'
+import { NOMES_NIVEL, pctDe, type Nivel } from '@/dominio/desempenho'
+import { acertosNaArvore, nivelFc } from '@/dominio/estatisticasFc'
 import { dentroDe } from '@/dominio/fila'
 import { useFc, useFcArvore } from '@/estado/flashcards'
 import { CalendarioCalor } from '@/telas/flashcards/CalendarioCalor'
@@ -28,6 +32,9 @@ export function Baralhos() {
     return () => clearInterval(id)
   }, [])
   const ctx = useLiveQuery(() => carregarContexto(db), [tick])
+  // acertos dos últimos 30 dias por baralho (o pai soma os subbaralhos)
+  const acertos = useLiveQuery(async () => (ctx ? acertosNaArvore(ctx.baralhos, await acertosPorBaralho(db, ctx.hoje - 29)) : null), [ctx])
+  const faixas = useFaixas()
   const recolhidos = useFcArvore((s) => s.recolhidos)
   const alternarRecolhido = useFcArvore((s) => s.alternar)
   const definirRecolhidos = useFcArvore((s) => s.definir)
@@ -39,6 +46,7 @@ export function Baralhos() {
     rotulo: l.rotulo,
     temFilhos: l.temFilhos,
     c: filaDe(ctx, l.item.id).contagem,
+    a: acertos?.get(l.item.id) ?? { respostas: 0, acertos: 0 },
   }))
   const comFilhos = nomesComFilhos(ctx.baralhos.map((b) => b.nome))
 
@@ -121,6 +129,9 @@ export function Baralhos() {
           <Button variant="outline" size="sm" onClick={() => (novo !== null && novo.pai === null ? setNovo(null) : abrirCaixa(null))}>
             <Plus className="size-4" /> Baralho
           </Button>
+          <Button variant="outline" size="sm" disabled={linhas.length === 0} onClick={() => ir('estatisticas', null)} title="Acertos e evolução de todos os baralhos juntos">
+            <BarChart3 className="size-4" /> Estatísticas
+          </Button>
           <Button size="sm" onClick={() => ir('adicionar', null)}>
             <Plus className="size-4" /> Adicionar cartões
           </Button>
@@ -178,11 +189,12 @@ export function Baralhos() {
                 <th className="w-20 px-2 py-2 text-right font-bold">Novos</th>
                 <th className="w-20 px-2 py-2 text-right font-bold">Aprender</th>
                 <th className="w-20 px-2 py-2 text-right font-bold">Revisar</th>
-                <th className="w-32 px-2 py-2" />
+                <th className="w-24 px-2 py-2 text-right font-bold" title="Acertos nos últimos 30 dias (tudo menos Errei), com os subbaralhos">Acertos</th>
+                <th className="w-40 px-2 py-2" />
               </tr>
             </thead>
             <tbody>
-              {linhas.map(({ b, nivel, rotulo, temFilhos, c }) => (
+              {linhas.map(({ b, nivel, rotulo, temFilhos, c, a }) => (
                 <tr key={b.id} className="border-b last:border-b-0 hover:bg-accent/40">
                   <td className="px-3 py-1.5" style={{ paddingLeft: `${0.75 + nivel * 1.5}rem` }}>
                     <span className="flex items-center gap-1">
@@ -207,9 +219,15 @@ export function Baralhos() {
                   <td className="px-2 text-right font-bold tabular-nums">{num(c.novos, 'text-blue-500')}</td>
                   <td className="px-2 text-right font-bold tabular-nums">{num(c.aprendendo, 'text-red-500')}</td>
                   <td className="px-2 text-right font-bold tabular-nums">{num(c.revisao, 'text-green-600')}</td>
+                  <td className="px-2 text-right tabular-nums">
+                    <SeloAcertos respostas={a.respostas} acertos={a.acertos} nivel={nivelFc(a, faixas)} />
+                  </td>
                   <td className="px-2 text-right whitespace-nowrap">
                     <Button variant="ghost" size="icon" title="Novo subbaralho dentro deste" aria-label={`Novo subbaralho dentro de ${b.nome}`} onClick={() => abrirCaixa(b.nome)}>
                       <FolderPlus className="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" title="Estatísticas do baralho" aria-label={`Estatísticas de ${b.nome}`} onClick={() => ir('estatisticas', b.id)}>
+                      <BarChart3 className="size-4" />
                     </Button>
                     <Button variant="ghost" size="icon" title="Opções do baralho" aria-label={`Opções de ${b.nome}`} onClick={() => ir('opcoes', b.id)}>
                       <Settings className="size-4" />
@@ -227,8 +245,22 @@ export function Baralhos() {
       <CalendarioCalor />
 
       <p className="m-0 text-xs text-muted-foreground">
-        Clique no nome do baralho para estudar. Azul = novos, vermelho = em aprendizado, verde = revisões de hoje. Os números de um baralho incluem os subbaralhos.
+        Clique no nome do baralho para estudar. Azul = novos, vermelho = em aprendizado, verde = revisões de hoje. Acertos = % dos últimos 30 dias (tudo menos "Errei"), com a cor do nível; "—" enquanto há menos de 10 respostas. O gráfico na linha abre as estatísticas. Os números de um baralho incluem os subbaralhos.
       </p>
     </div>
+  )
+}
+
+/** % de acertos com a bolinha do nível; "—" com poucos dados. */
+function SeloAcertos({ respostas, acertos, nivel }: { respostas: number; acertos: number; nivel: Nivel }) {
+  if (nivel === 'na') {
+    const dica = respostas ? `Poucos dados: ${acertos} de ${respostas} respostas certas nos últimos 30 dias` : 'Sem respostas nos últimos 30 dias'
+    return <span className="text-muted-foreground/60" title={dica}>—</span>
+  }
+  return (
+    <span className="inline-flex items-center justify-end gap-1.5 font-bold" title={`${NOMES_NIVEL[nivel]}: ${acertos} de ${respostas} respostas certas nos últimos 30 dias`}>
+      <i className="inline-block size-2 rounded-full" style={{ background: COR_NIVEL[nivel] }} />
+      {pctDe(acertos, respostas)}%
+    </span>
   )
 }
