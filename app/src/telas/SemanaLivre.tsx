@@ -74,7 +74,7 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
 
   async function escolherExtra(valor: string) {
     if (valor !== OUTRA) return escolher('extra', valor)
-    const nome = (await pedirTexto('Matéria extra', 'Nome da matéria', '', { placeholder: 'Ex.: Redação', ok: 'Usar hoje' }))?.trim()
+    const nome = (await pedirTexto('Matéria extra', 'Nome da matéria', '', { ok: 'Usar hoje' }))?.trim()
     if (nome) escolher('extra', nome)
   }
 
@@ -215,7 +215,7 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
           ) : (
             dia.principal && (
               <button className="mt-2 cursor-pointer text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline" onClick={() => setAbrirExtra(true)}>
-                ＋ Extra do dia (ex.: Redação)
+                ＋ Extra do dia
               </button>
             )
           )}

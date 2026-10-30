@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  CRONOMETRO_ZERADO, decorridoSeg, fmtHHMMSS, iniciar, lerCronometroSalvo, minutosDe, pausar, restaurarCronometro, zerar,
+  CRONOMETRO_ZERADO, decorridoSeg, fmtDuracao, fmtHHMMSS, iniciar, lerCronometroSalvo, minutosDe, pausar, restaurarCronometro, zerar,
   type CronometroSalvo,
 } from './cronometro'
 
@@ -31,6 +31,14 @@ describe('cronômetro livre', () => {
     expect(fmtHHMMSS(-5)).toBe('00:00')
     expect(minutosDe(89)).toBe(1)
     expect(minutosDe(29)).toBe(0)
+  })
+
+  it('mostra a sessão com os segundos', () => {
+    expect(fmtDuracao(30 + 20 / 60)).toBe('30 min 20 s')
+    expect(fmtDuracao(45)).toBe('45 min')
+    expect(fmtDuracao(65 + 7 / 60)).toBe('1 h 05 min 07 s')
+    expect(fmtDuracao(6 / 60)).toBe('0 min 06 s')
+    expect(fmtDuracao(120)).toBe('2 h 00 min')
   })
 })
 

@@ -10,6 +10,7 @@ import { excluirSemanaFechada, repetirSemanaFechada, type Ciclo } from '@/dados/
 import { adicionarAssuntos, carregarEstudo, excluirAssunto, excluirRegistroQuestoes, excluirSessao, renomearAssunto, type Estudo } from '@/dados/desempenho'
 import { db } from '@/dados/db'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
+import { fmtDuracao } from '@/dominio/cronometro'
 import { corDe, fmtH, todasMaterias } from '@/dominio/ciclo'
 import { fmtData } from '@/dominio/datas'
 import { calcularDesempenho, MIN_QUESTOES, nivelDe, pctDe, resumoDasSemanas, type Periodo } from '@/dominio/desempenho'
@@ -180,7 +181,7 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
               <div key={x.id} className="flex items-center gap-2 border-b py-1 text-sm last:border-b-0">
                 <span className={mudo}>{fmtData(x.data)}</span>
                 <span className="min-w-0 flex-1 truncate">{x.materia}{nomeAssunto(x.assuntoId) ? ` › ${nomeAssunto(x.assuntoId)}` : ''} <span className={mudo}>· {x.tipo || 'Teoria'}</span></span>
-                <b>{x.minutos} min</b>
+                <b className="whitespace-nowrap">{fmtDuracao(x.minutos)}</b>
                 <Button size="sm" variant="outline" title="Apagar este registro de tempo" aria-label="Apagar registro de tempo" onClick={() => void apagarSessao(x.id, x.minutos)}>🗑</Button>
               </div>
             ))}
@@ -201,7 +202,7 @@ async function excluir(id: string, nome: string) {
   if (await confirmar(`Excluir o assunto "${nome}"? Os registros de questões e horas dele continuam, mas passam a contar como "sem assunto".`, 'Excluir', true)) await excluirAssunto(db, id)
 }
 async function apagarSessao(id: string, minutos: number) {
-  const msg = `Apagar este registro de ${minutos} min? Ele sai do Desempenho e do Edital. Se o tempo também foi somado a um passo da semana, corrija as horas do passo na aba Semana.`
+  const msg = `Apagar este registro de ${fmtDuracao(minutos)}? Ele sai do Desempenho e do Edital. Se o tempo também foi somado a um passo da semana, corrija as horas do passo na aba Semana.`
   if (await confirmar(msg, 'Apagar', true)) await excluirSessao(db, id)
 }
 async function apagarRegistro(id: string) {

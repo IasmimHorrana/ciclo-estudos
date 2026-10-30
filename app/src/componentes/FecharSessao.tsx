@@ -10,6 +10,7 @@ import type { Semana } from '@/dados/esquemas'
 import { registrarEstudoManual } from '@/dados/manual'
 import { useAssuntosDe } from '@/dados/useAssuntosDe'
 import { passoAutomatico } from '@/dominio/ciclo'
+import { fmtDuracao } from '@/dominio/cronometro'
 import { fmtData, hoje, type DataISO } from '@/dominio/datas'
 import { TIPOS_ESTUDO } from '@/dominio/desempenho'
 
@@ -22,7 +23,8 @@ export interface SessaoAberta {
   materia: string
   tipo: string
   assuntoId: string | null
-  minutos: number
+  /** Tempo contado, em segundos (a sessão é gravada com os segundos). */
+  segundos: number
   data: DataISO
 }
 
@@ -41,7 +43,8 @@ export function FecharSessao({ inicial, doDia, outras, passos, fechar }: {
   const [tipo, setTipo] = useState(inicial.tipo)
   const [assuntoId, setAssuntoId] = useState(inicial.assuntoId ?? '')
   const [nomeNovo, setNomeNovo] = useState('')
-  const [minutos, setMinutos] = useState(String(inicial.minutos))
+  const [minutos, setMinutos] = useState(String(Math.floor(inicial.segundos / 60)))
+  const [segundos, setSegundos] = useState(String(Math.round(inicial.segundos) % 60))
   const [feitas, setFeitas] = useState('')
   const [acertos, setAcertos] = useState('')
   const [passoEscolhido, setPasso] = useState<number | null>(null)
@@ -53,6 +56,7 @@ export function FecharSessao({ inicial, doDia, outras, passos, fechar }: {
 
   const passosDaMateria = passos.filter((p) => p.materia === materia)
   const passoId = passoEscolhido ?? passoAutomatico(passos, materia, h)?.id ?? 0
+  const total = Math.max(0, Math.trunc(Number(minutos) || 0)) + Math.min(59, Math.max(0, Math.trunc(Number(segundos) || 0))) / 60
 
   async function salvar() {
     setGravando(true)
@@ -60,7 +64,7 @@ export function FecharSessao({ inicial, doDia, outras, passos, fechar }: {
       let id = assuntoId && assuntoId !== NOVO ? assuntoId : null
       if (assuntoId === NOVO && nomeNovo.trim()) id = await criarAssunto(db, materia, nomeNovo)
       const e = await registrarEstudoManual(db, {
-        data: inicial.data, materia, tipo, minutos: Math.round(Number(minutos) || 0), feitas: Number(feitas) || 0, acertos: Number(acertos) || 0,
+        data: inicial.data, materia, tipo, minutos: total, feitas: Number(feitas) || 0, acertos: Number(acertos) || 0,
         assuntoId: id, passoId: passoId || null,
       })
       if (e) return setErro(e)
@@ -79,10 +83,13 @@ export function FecharSessao({ inicial, doDia, outras, passos, fechar }: {
             Matéria
             <SelecaoMateria doDia={doDia} outras={outras} valor={materia} aoMudar={(m) => { setMateria(m); setAssuntoId(''); setPasso(null) }} />
           </label>
-          <label className={rotulo}>
-            Minutos
-            <Entrada type="number" min={0} max={24 * 60} inputMode="numeric" className="w-20 px-1.5 text-center" value={minutos} onChange={(e) => setMinutos(e.target.value)} />
-          </label>
+          <div className={rotulo}>
+            Tempo
+            <span className="flex items-center gap-1 text-sm font-normal tracking-normal normal-case">
+              <Entrada type="number" min={0} max={24 * 60} inputMode="numeric" className="w-16 px-1.5 text-center" value={minutos} onChange={(e) => setMinutos(e.target.value)} aria-label="Minutos" /> min
+              <Entrada type="number" min={0} max={59} inputMode="numeric" className="w-14 px-1.5 text-center" value={segundos} onChange={(e) => setSegundos(e.target.value)} aria-label="Segundos" /> s
+            </span>
+          </div>
         </div>
         <label className={rotulo}>
           Tipo de estudo
@@ -109,7 +116,7 @@ export function FecharSessao({ inicial, doDia, outras, passos, fechar }: {
       {erro && <p className="mt-2 mb-0 text-xs text-erro" role="alert">{erro}</p>}
       {descartando ? (
         <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-          <span className="mr-auto text-sm">Descartar {minutos || 0} min sem registrar?</span>
+          <span className="mr-auto text-sm">Descartar {fmtDuracao(total)} sem registrar?</span>
           <Button variant="outline" onClick={() => setDescartando(false)}>Não</Button>
           <Button variant="destructive" autoFocus onClick={() => fechar('descartado')}>Descartar</Button>
         </div>

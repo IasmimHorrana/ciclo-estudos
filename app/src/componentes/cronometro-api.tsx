@@ -4,7 +4,7 @@ import { Button } from '@/componentes/ui/button'
 import { carregarCiclo, type Ciclo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
 import { todasMaterias } from '@/dominio/ciclo'
-import { fmtHHMMSS, minutosDe, restaurarCronometro, type AlvoLivre } from '@/dominio/cronometro'
+import { fmtHHMMSS, restaurarCronometro, type AlvoLivre } from '@/dominio/cronometro'
 import { hoje, type DataISO } from '@/dominio/datas'
 import { diaDe, materiasDoDia } from '@/dominio/livre'
 import { abrirDialogo } from '@/estado/dialogo'
@@ -61,7 +61,7 @@ export async function encerrarLivre(data: DataISO = hoje()): Promise<void> {
   const { doDia, outras } = materiasDe(c)
   const passos = c.preferencias.modoEstudo === 'ciclo' ? (c.semana?.passos ?? []) : []
   const r = await abrirDialogo<FimDaSessao>(`Fechar sessão · ${fmtHHMMSS(seg)}`, (fechar) => (
-    <FecharSessao inicial={{ ...a, minutos: minutosDe(seg), data }} doDia={doDia} outras={outras} passos={passos} fechar={fechar} />
+    <FecharSessao inicial={{ ...a, segundos: seg, data }} doDia={doDia} outras={outras} passos={passos} fechar={fechar} />
   ))
   if (r) useCronometro.getState().zerar()
 }

@@ -37,8 +37,21 @@ export function pausar(c: Cronometro, agora: number): Cronometro {
 /** Volta a 00:00, mantendo a matéria escolhida para a próxima vez. */
 export const zerar = (c: Cronometro): Cronometro => ({ ...CRONOMETRO_ZERADO, alvo: c.alvo })
 
-/** Minutos inteiros (arredondados) para registrar. */
+/** Minutos inteiros (arredondados), para avisos. */
 export const minutosDe = (seg: number): number => Math.round(seg / 60)
+
+/**
+ * "30 min 20 s", "45 min", "1 h 05 min 07 s". Para mostrar uma sessão: as do cronômetro livre são gravadas com os segundos
+ * (minutos fracionados, ex.: 30 min 20 s = 30,333…); os totais continuam em horas e minutos.
+ */
+export function fmtDuracao(minutos: number): string {
+  const s = Math.max(0, Math.round((minutos || 0) * 60))
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const seg = s % 60
+  const partes = [h ? `${h} h` : '', h ? `${String(m).padStart(2, '0')} min` : `${m} min`, seg ? `${String(seg).padStart(2, '0')} s` : '']
+  return partes.filter(Boolean).join(' ')
+}
 
 /** "05:07" ou, passando de uma hora, "1:05:07". */
 export function fmtHHMMSS(seg: number): string {
