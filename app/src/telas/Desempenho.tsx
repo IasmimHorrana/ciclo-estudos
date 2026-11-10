@@ -107,6 +107,9 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
                   <span className={mudo}>{b.feitas ? `${b.acertos}/${b.feitas} · ${pctDe(b.acertos, b.feitas)}%` : 'sem questões'} · {fmtH(b.horas)}</span>
                   <Etiqueta nivel={b.nivel} />
                 </summary>
+                {/* as linhas mudam de ordem (com questões e por nível): ficam numa div fixa, porque o Chrome não volta a
+                    desenhar um filho do <details> que o React move de lugar */}
+                <div>
                 {b.assuntos.map((a) => (
                   // colunas de largura fixa para a etiqueta (cabe "Poucos dados") e os 3 botões: assim todas as linhas ficam alinhadas
                   <div key={a.id ?? 'sem'} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem_6.75rem] items-center gap-2 py-1 pl-6 text-sm">
@@ -127,6 +130,7 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
                     </span>
                   </div>
                 ))}
+                </div>
                 {!b.temAssuntos && <p className={cn(mudo, 'm-0 mb-2 pl-6')}>Nenhum assunto ainda. Adicione acima.</p>}
               </details>
             ))}
