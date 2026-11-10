@@ -136,7 +136,9 @@ export function calcularDesempenho(e: EntradaDesempenho) {
     const f = soma(qm, (q) => q.feitas)
     const a = soma(qm, (q) => q.acertos)
     const as = e.assuntos.filter((x) => x.materia === m)
-    const linhas = [...as.map((x) => linha(qm, sm, x.id, x.nome)), linha(qm, sm, null, '(sem assunto)')].filter((l): l is LinhaAssunto => l !== null)
+    const todas = [...as.map((x) => linha(qm, sm, x.id, x.nome)), linha(qm, sm, null, '(sem assunto)')].filter((l): l is LinhaAssunto => l !== null)
+    // assuntos com questões no período primeiro; cada grupo mantém a ordem de antes
+    const linhas = [...todas.filter((l) => l.feitas > 0), ...todas.filter((l) => l.feitas === 0)]
     return { materia: m, feitas: f, acertos: a, horas: horasDe(sm), nivel: nivelDe(f, a, e.faixas), assuntos: linhas, temAssuntos: as.length > 0 }
   })
 
