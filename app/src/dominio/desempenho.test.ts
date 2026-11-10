@@ -91,6 +91,21 @@ describe('calcularDesempenho', () => {
     expect(nomes({ ...antiga, periodo: '30' })).toEqual(['C', 'A', 'B', 'D'])
   })
 
+  it('com questões: do Dominado ao Fraco, Poucos dados por último; no mesmo nível, maior % primeiro', () => {
+    const ns = ['Pouco', 'Fraco', 'Medio', 'Bom', 'Dom', 'Dom2', 'Vazio']
+    const lista = ns.map((n) => ({ id: n, materia: 'Info', nome: n }))
+    const questoes = [
+      q('1', HOJE, 'Info', 3, 3, 'Pouco'), // 100%, mas menos de 5 questões
+      q('2', HOJE, 'Info', 10, 5, 'Fraco'),
+      q('3', HOJE, 'Info', 10, 7, 'Medio'),
+      q('4', HOJE, 'Info', 10, 8, 'Bom'),
+      q('5', HOJE, 'Info', 10, 9, 'Dom'), // 90%
+      q('6', HOJE, 'Info', 10, 10, 'Dom2'), // 100%
+    ]
+    const r = calcularDesempenho(base({ assuntos: lista, questoes })).blocos[0]?.assuntos.map((a) => a.nome)
+    expect(r).toEqual(['Dom2', 'Dom', 'Bom', 'Medio', 'Fraco', 'Pouco', 'Vazio'])
+  })
+
   it('matérias: as da lista na ordem dela, depois as outras', () => {
     const d = calcularDesempenho(base({ questoes: [q('1', HOJE, 'Zeta Própria', 1, 1), q('2', HOJE, 'Informática', 1, 1), q('3', HOJE, 'Língua Portuguesa', 1, 1)], materiasDaSemana: ['Estatística'] }))
     expect(d.mats).toEqual(['Língua Portuguesa', 'Estatística', 'Informática', 'Zeta Própria'])
