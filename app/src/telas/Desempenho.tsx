@@ -108,13 +108,14 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
                   <Etiqueta nivel={b.nivel} />
                 </summary>
                 {b.assuntos.map((a) => (
-                  <div key={a.id ?? 'sem'} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] items-center gap-2 py-1 pl-6 text-sm">
+                  // colunas de largura fixa para a etiqueta (cabe "Poucos dados") e os 3 botões: assim todas as linhas ficam alinhadas
+                  <div key={a.id ?? 'sem'} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5.5rem_6.75rem] items-center gap-2 py-1 pl-6 text-sm">
                     <span className="truncate" title={a.nome}>{a.nome}</span>
                     <div>
                       <div className="h-1 overflow-hidden rounded bg-muted"><i className="block h-full" style={{ width: `${pctDe(a.acertos, a.feitas)}%`, background: COR_NIVEL[a.nivel] }} /></div>
                       <div className={mudo}>{a.feitas ? `${a.acertos}/${a.feitas} · ${pctDe(a.acertos, a.feitas)}%` : 'sem questões'}{a.horas ? ` · ${fmtH(a.horas)}` : ''}</div>
                     </div>
-                    <Etiqueta nivel={a.nivel} />
+                    <span className="justify-self-end"><Etiqueta nivel={a.nivel} /></span>
                     <span className="flex gap-1">
                       <Button size="sm" variant="outline" title="Registrar questões" onClick={() => void abrirQuestoes({ materia: b.materia, assuntoId: a.id ?? '' })}>＋</Button>
                       {a.id && (
