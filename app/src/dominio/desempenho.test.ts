@@ -75,9 +75,20 @@ describe('calcularDesempenho', () => {
     expect(info).toMatchObject({ feitas: 15, acertos: 10, horas: 1, temAssuntos: true })
     const redes = info.assuntos.find((a) => a.nome === 'Redes')!
     expect(redes).toMatchObject({ feitas: 10, acertos: 9, horas: 1, nivel: 'dom' })
-    expect(info.assuntos.map((a) => a.nome)).toEqual(['Redes', 'Segurança', '(sem assunto)'])
+    expect(info.assuntos.map((a) => a.nome)).toEqual(['Redes', '(sem assunto)', 'Segurança'])
     const limpo = calcularDesempenho(base({ assuntos }))
     expect(limpo.blocos[0]?.assuntos.map((a) => a.nome)).toEqual(['Redes', 'Segurança'])
+  })
+
+  it('assuntos com questões no período vêm primeiro; cada grupo mantém a ordem de antes', () => {
+    const abc = ['A', 'B', 'C', 'D'].map((n) => ({ id: n, materia: 'Info', nome: n }))
+    const nomes = (o: Partial<EntradaDesempenho>) => calcularDesempenho(base({ assuntos: abc, ...o })).blocos[0]?.assuntos.map((a) => a.nome)
+    // só horas (D) não conta como questão
+    expect(nomes({ questoes: [q('1', HOJE, 'Info', 5, 3, 'C'), q('2', HOJE, 'Info', 5, 4, 'A')], sessoes: [s('1', HOJE, 'Info', 30, 'D')] })).toEqual(['A', 'C', 'B', 'D'])
+    // questão de 10 dias atrás: fora de "7 dias", dentro de "30 dias"
+    const antiga = { questoes: [q('1', '2026-09-29', 'Info', 5, 3, 'C')] }
+    expect(nomes({ ...antiga, periodo: '7' })).toEqual(['A', 'B', 'C', 'D'])
+    expect(nomes({ ...antiga, periodo: '30' })).toEqual(['C', 'A', 'B', 'D'])
   })
 
   it('matérias: as da lista na ordem dela, depois as outras', () => {
