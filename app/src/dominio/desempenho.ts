@@ -8,6 +8,8 @@ export const MIN_QUESTOES = 5
 
 export type Nivel = 'na' | 'fraco' | 'medio' | 'bom' | 'dom'
 export const NOMES_NIVEL: Record<Nivel, string> = { na: 'Poucos dados', fraco: 'Fraco', medio: 'Médio', bom: 'Bom', dom: 'Dominado' }
+/** Ordem de exibição dos assuntos com questões no Desempenho: do mais dominado ao mais fraco, e "Poucos dados" por último. */
+export const ORDEM_NIVEL: Nivel[] = ['dom', 'bom', 'medio', 'fraco', 'na']
 
 export type Periodo = 'hoje' | '7' | '30' | 'tudo'
 
@@ -137,8 +139,12 @@ export function calcularDesempenho(e: EntradaDesempenho) {
     const a = soma(qm, (q) => q.acertos)
     const as = e.assuntos.filter((x) => x.materia === m)
     const todas = [...as.map((x) => linha(qm, sm, x.id, x.nome)), linha(qm, sm, null, '(sem assunto)')].filter((l): l is LinhaAssunto => l !== null)
-    // assuntos com questões no período primeiro; cada grupo mantém a ordem de antes
-    const linhas = [...todas.filter((l) => l.feitas > 0), ...todas.filter((l) => l.feitas === 0)]
+    // assuntos com questões no período primeiro, do nível mais alto ao mais baixo (Poucos dados por último)
+    // e, no mesmo nível, da maior para a menor % de acerto; os sem questões vêm embaixo, na ordem de antes
+    const comQuestoes = todas
+      .filter((l) => l.feitas > 0)
+      .sort((x, y) => ORDEM_NIVEL.indexOf(x.nivel) - ORDEM_NIVEL.indexOf(y.nivel) || y.acertos / y.feitas - x.acertos / x.feitas)
+    const linhas = [...comQuestoes, ...todas.filter((l) => l.feitas === 0)]
     return { materia: m, feitas: f, acertos: a, horas: horasDe(sm), nivel: nivelDe(f, a, e.faixas), assuntos: linhas, temAssuntos: as.length > 0 }
   })
 
