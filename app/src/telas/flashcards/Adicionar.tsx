@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ArrowLeft } from 'lucide-react'
+import { EscolherAssunto } from '@/componentes/EscolherAssunto'
 import { Button } from '@/componentes/ui/button'
 import { AreaTexto, Entrada, Selecao } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
@@ -86,13 +87,7 @@ export function Adicionar() {
             </label>
             <label className="flex flex-col gap-1 text-xs font-bold text-muted-foreground uppercase">
               Baralho
-              <Selecao value={escolhido} onChange={(e) => setBaralhoId(e.target.value)}>
-                {baralhos.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.nome}
-                  </option>
-                ))}
-              </Selecao>
+              <EscolherAssunto assuntos={baralhos} valor={escolhido} aoMudar={setBaralhoId} rotulo="Baralho" semVazio />
             </label>
           </div>
 
