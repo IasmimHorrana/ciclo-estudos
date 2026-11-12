@@ -23,16 +23,20 @@ const normalizar = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLo
  * Escolha do assunto. A lista nativa do navegador não quebra linha, e os nomes vindos do edital são longos (ficavam cortados):
  * aqui o nome aparece inteiro, em várias linhas, e dá para filtrar digitando. Valor `''` = sem assunto.
  */
-export function EscolherAssunto({ assuntos, valor, aoMudar, valorNovo, rotulo = 'Assunto' }: {
+export function EscolherAssunto({ assuntos, valor, aoMudar, valorNovo, rotulo = 'Assunto', semVazio = false }: {
   assuntos: readonly { id: string; nome: string }[]
   valor: string
   aoMudar: (valor: string) => void
   /** Se vier, aparece a opção "＋ Novo assunto…" com este valor. */
   valorNovo?: string
+  /** Nome do que se escolhe (assunto, baralho…): vai no campo de busca e nos avisos. */
   rotulo?: string
+  /** Sem a opção "— sem assunto —" (ex.: baralho, que é obrigatório). */
+  semVazio?: boolean
 }) {
   const novo: Opcao[] = valorNovo ? [{ valor: valorNovo, rotulo: '＋ Novo assunto…', extra: true }] : []
-  const opcoes: Opcao[] = [{ valor: '', rotulo: '— sem assunto —', extra: true }, ...assuntos.map((a) => ({ valor: a.id, rotulo: a.nome })), ...novo]
+  const vazio: Opcao[] = semVazio ? [] : [{ valor: '', rotulo: '— sem assunto —', extra: true }]
+  const opcoes: Opcao[] = [...vazio, ...assuntos.map((a) => ({ valor: a.id, rotulo: a.nome })), ...novo]
   const [aberto, setAberto] = useState(false)
   const [busca, setBusca] = useState('')
   const [ativo, setAtivo] = useState(0)
@@ -42,8 +46,11 @@ export function EscolherAssunto({ assuntos, valor, aoMudar, valorNovo, rotulo = 
   const lista = useRef<HTMLDivElement>(null)
 
   const atual = opcoes.find((o) => o.valor === valor) ?? opcoes[0]!
-  const termo = normalizar(busca.trim())
-  const visiveis = termo ? [...opcoes.filter((o) => !o.extra && normalizar(o.rotulo).includes(termo)), ...novo] : opcoes
+  // cada palavra digitada precisa aparecer no nome, em qualquer ordem ("seguranca ataques")
+  const palavras = normalizar(busca).split(/\s+/).filter(Boolean)
+  const visiveis = palavras.length
+    ? [...opcoes.filter((o) => !o.extra && palavras.every((p) => normalizar(o.rotulo).includes(p))), ...novo]
+    : opcoes
 
   function abrir() {
     setBusca('')
@@ -105,6 +112,7 @@ export function EscolherAssunto({ assuntos, valor, aoMudar, valorNovo, rotulo = 
       setAtivo((i) => Math.max(0, Math.min(visiveis.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1))))
     } else if (e.key === 'Enter') {
       e.preventDefault()
+      e.stopPropagation() // o Enter só escolhe; não aciona atalhos do formulário (ex.: Ctrl+Enter)
       escolher(visiveis[ativo])
     } else if (e.key === 'Escape') {
       e.stopPropagation() // fecha só a lista, não o diálogo
@@ -140,7 +148,7 @@ export function EscolherAssunto({ assuntos, valor, aoMudar, valorNovo, rotulo = 
               <div className="border-b p-2">
                 <Entrada
                   autoFocus
-                  placeholder="Buscar assunto…"
+                  placeholder={`Buscar ${rotulo.toLowerCase()}…`}
                   aria-label={`Buscar ${rotulo.toLowerCase()}`}
                   value={busca}
                   onChange={(e) => {
@@ -159,7 +167,7 @@ export function EscolherAssunto({ assuntos, valor, aoMudar, valorNovo, rotulo = 
               onKeyDown={teclas}
               className="min-h-0 flex-1 overflow-auto py-1 outline-none"
             >
-              {visiveis.length === 0 && <p className="m-0 px-3 py-2 text-xs text-muted-foreground">Nenhum assunto com esse nome.</p>}
+              {visiveis.length === 0 && <p className="m-0 px-3 py-2 text-xs text-muted-foreground">Nenhum {rotulo.toLowerCase()} com esse nome.</p>}
               {visiveis.map((o, i) => (
                 <div
                   key={o.valor}
