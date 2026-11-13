@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { BarChart3, ChevronDown, ChevronRight, FolderPlus, Plus, Settings, Trash2, Upload, X } from 'lucide-react'
+import { BarChart3, ChevronDown, ChevronRight, ChevronsDownUp, FolderPlus, Plus, Settings, Trash2, Upload, X } from 'lucide-react'
 import { avisar } from '@/componentes/dialogos-api'
+import { Menu } from '@/componentes/Menu'
 import { useFaixas } from '@/componentes/faixas-contexto'
 import { COR_NIVEL } from '@/componentes/nivel-cores'
 import { Button } from '@/componentes/ui/button'
@@ -49,6 +50,8 @@ export function Baralhos() {
     a: acertos?.get(l.item.id) ?? { respostas: 0, acertos: 0 },
   }))
   const comFilhos = nomesComFilhos(ctx.baralhos.map((b) => b.nome))
+  const tudoRecolhido = recolhidos.length >= comFilhos.length
+  const alternarTudo = () => definirRecolhidos(tudoRecolhido ? [] : comFilhos)
 
   function abrirCaixa(pai: string | null) {
     setNovo({ pai, nome: '' })
@@ -106,13 +109,13 @@ export function Baralhos() {
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="m-0 text-xl font-bold">Flashcards</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {comFilhos.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => definirRecolhidos(recolhidos.length >= comFilhos.length ? [] : comFilhos)} title="Fechar ou abrir todos os baralhos que têm subbaralhos">
-              {recolhidos.length >= comFilhos.length ? 'Abrir tudo' : 'Recolher tudo'}
+            <Button variant="outline" size="sm" className="max-[900px]:hidden" onClick={alternarTudo} title="Fechar ou abrir todos os baralhos que têm subbaralhos">
+              {tudoRecolhido ? 'Abrir tudo' : 'Recolher tudo'}
             </Button>
           )}
-          <Button variant="outline" size="sm" disabled={importando} onClick={() => entradaApkg.current?.click()} title="Importa um baralho pronto do Anki (.apkg)">
+          <Button variant="outline" size="sm" className="max-[900px]:hidden" disabled={importando} onClick={() => entradaApkg.current?.click()} title="Importa um baralho pronto do Anki (.apkg)">
             <Upload className="size-4" /> {importando ? 'Importando…' : 'Importar do Anki'}
           </Button>
           <input
@@ -129,12 +132,22 @@ export function Baralhos() {
           <Button variant="outline" size="sm" onClick={() => (novo !== null && novo.pai === null ? setNovo(null) : abrirCaixa(null))}>
             <Plus className="size-4" /> Baralho
           </Button>
-          <Button variant="outline" size="sm" disabled={linhas.length === 0} onClick={() => ir('estatisticas', null)} title="Acertos e evolução de todos os baralhos juntos">
+          <Button variant="outline" size="sm" className="max-[900px]:hidden" disabled={linhas.length === 0} onClick={() => ir('estatisticas', null)} title="Acertos e evolução de todos os baralhos juntos">
             <BarChart3 className="size-4" /> Estatísticas
           </Button>
           <Button size="sm" onClick={() => ir('adicionar', null)}>
             <Plus className="size-4" /> Adicionar cartões
           </Button>
+          {/* no celular, as ações menos usadas ficam neste menu */}
+          <Menu
+            className="min-[901px]:hidden"
+            rotulo="Mais ações"
+            itens={[
+              { rotulo: 'Estatísticas', icone: <BarChart3 className="size-4" />, acao: () => ir('estatisticas', null), desativado: linhas.length === 0 },
+              { rotulo: importando ? 'Importando…' : 'Importar do Anki', icone: <Upload className="size-4" />, acao: () => entradaApkg.current?.click(), desativado: importando },
+              ...(comFilhos.length > 0 ? [{ rotulo: tudoRecolhido ? 'Abrir tudo' : 'Recolher tudo', icone: <ChevronsDownUp className="size-4" />, acao: alternarTudo }] : []),
+            ]}
+          />
         </div>
       </div>
 
@@ -176,27 +189,27 @@ export function Baralhos() {
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-card shadow-sm">
+      <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-card shadow-sm max-[900px]:overflow-visible">
         {linhas.length === 0 ? (
           <p className="m-0 p-6 text-center text-sm text-muted-foreground">
             Nenhum baralho ainda. Crie um no botão "Baralho" (ex.: Administração Pública) e depois use o botão de pasta com + na linha dele para criar os subbaralhos dentro (uma lei ou um assunto em cada). Também dá para importar do Anki.
           </p>
         ) : (
           <table className="w-full border-collapse text-sm">
-            <thead className="sticky top-0 bg-card text-xs text-muted-foreground uppercase">
+            <thead className="sticky top-0 bg-card text-xs text-muted-foreground uppercase max-[900px]:hidden">
               <tr className="border-b">
                 <th className="px-3 py-2 text-left font-bold">Baralho</th>
                 <th className="w-20 px-2 py-2 text-right font-bold">Novos</th>
                 <th className="w-20 px-2 py-2 text-right font-bold">Aprender</th>
                 <th className="w-20 px-2 py-2 text-right font-bold">Revisar</th>
-                <th className="w-24 px-2 py-2 text-right font-bold" title="Acertos nos últimos 30 dias (tudo menos Errei), com os subbaralhos">Acertos</th>
+                <th className="w-24 px-2 py-2 text-right font-bold max-[900px]:hidden" title="Acertos nos últimos 30 dias (tudo menos Errei), com os subbaralhos">Acertos</th>
                 <th className="w-40 px-2 py-2" />
               </tr>
             </thead>
             <tbody>
               {linhas.map(({ b, nivel, rotulo, temFilhos, c, a }) => (
                 <tr key={b.id} className="border-b last:border-b-0 hover:bg-accent/40">
-                  <td className="px-3 py-1.5" style={{ paddingLeft: `${0.75 + nivel * 1.5}rem` }}>
+                  <td className="py-1.5 pr-3 pl-[calc(0.75rem+var(--nivel)*1.5rem)] max-[900px]:py-2.5 max-[900px]:pr-1 max-[900px]:pl-[calc(0.5rem+var(--nivel)*0.75rem)]" style={{ '--nivel': nivel } as CSSProperties}>
                     <span className="flex items-center gap-1">
                       {temFilhos ? (
                         <button
@@ -216,25 +229,37 @@ export function Baralhos() {
                       </button>
                     </span>
                   </td>
-                  <td className="px-2 text-right font-bold tabular-nums">{num(c.novos, 'text-blue-500')}</td>
-                  <td className="px-2 text-right font-bold tabular-nums">{num(c.aprendendo, 'text-red-500')}</td>
-                  <td className="px-2 text-right font-bold tabular-nums">{num(c.revisao, 'text-green-600')}</td>
-                  <td className="px-2 text-right tabular-nums">
+                  <td className="px-2 text-right font-bold tabular-nums max-[900px]:px-1">{num(c.novos, 'text-blue-500')}</td>
+                  <td className="px-2 text-right font-bold tabular-nums max-[900px]:px-1">{num(c.aprendendo, 'text-red-500')}</td>
+                  <td className="px-2 text-right font-bold tabular-nums max-[900px]:px-1">{num(c.revisao, 'text-green-600')}</td>
+                  <td className="px-2 text-right tabular-nums max-[900px]:hidden">
                     <SeloAcertos respostas={a.respostas} acertos={a.acertos} nivel={nivelFc(a, faixas)} />
                   </td>
-                  <td className="px-2 text-right whitespace-nowrap">
-                    <Button variant="ghost" size="icon" title="Novo subbaralho dentro deste" aria-label={`Novo subbaralho dentro de ${b.nome}`} onClick={() => abrirCaixa(b.nome)}>
-                      <FolderPlus className="size-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" title="Estatísticas do baralho" aria-label={`Estatísticas de ${b.nome}`} onClick={() => ir('estatisticas', b.id)}>
-                      <BarChart3 className="size-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" title="Opções do baralho" aria-label={`Opções de ${b.nome}`} onClick={() => ir('opcoes', b.id)}>
-                      <Settings className="size-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" title="Excluir baralho" aria-label={`Excluir ${b.nome}`} onClick={() => void excluir(b.id, b.nome)}>
-                      <Trash2 className="size-4" />
-                    </Button>
+                  <td className="px-2 text-right whitespace-nowrap max-[900px]:px-1">
+                    <Menu
+                      className="inline-block min-[901px]:hidden"
+                      rotulo={`Ações de ${rotulo}`}
+                      itens={[
+                        { rotulo: 'Novo subbaralho', icone: <FolderPlus className="size-4" />, acao: () => abrirCaixa(b.nome) },
+                        { rotulo: 'Estatísticas', icone: <BarChart3 className="size-4" />, acao: () => ir('estatisticas', b.id) },
+                        { rotulo: 'Opções', icone: <Settings className="size-4" />, acao: () => ir('opcoes', b.id) },
+                        { rotulo: 'Excluir', icone: <Trash2 className="size-4" />, acao: () => void excluir(b.id, b.nome), perigo: true },
+                      ]}
+                    />
+                    <span className="max-[900px]:hidden">
+                      <Button variant="ghost" size="icon" title="Novo subbaralho dentro deste" aria-label={`Novo subbaralho dentro de ${b.nome}`} onClick={() => abrirCaixa(b.nome)}>
+                        <FolderPlus className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" title="Estatísticas do baralho" aria-label={`Estatísticas de ${b.nome}`} onClick={() => ir('estatisticas', b.id)}>
+                        <BarChart3 className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" title="Opções do baralho" aria-label={`Opções de ${b.nome}`} onClick={() => ir('opcoes', b.id)}>
+                        <Settings className="size-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" title="Excluir baralho" aria-label={`Excluir ${b.nome}`} onClick={() => void excluir(b.id, b.nome)}>
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </span>
                   </td>
                 </tr>
               ))}
@@ -245,7 +270,7 @@ export function Baralhos() {
       <CalendarioCalor />
 
       <p className="m-0 text-xs text-muted-foreground">
-        Clique no nome do baralho para estudar. Azul = novos, vermelho = em aprendizado, verde = revisões de hoje. Acertos = % dos últimos 30 dias (tudo menos "Errei"), com a cor do nível; "—" enquanto há menos de 10 respostas. O gráfico na linha abre as estatísticas. Os números de um baralho incluem os subbaralhos.
+        Clique (ou toque) no nome do baralho para estudar. Azul = novos, vermelho = em aprendizado, verde = revisões de hoje. Acertos = % dos últimos 30 dias (tudo menos "Errei"), com a cor do nível; "—" enquanto há menos de 10 respostas. O gráfico na linha abre as estatísticas. Os números de um baralho incluem os subbaralhos.
       </p>
     </div>
   )

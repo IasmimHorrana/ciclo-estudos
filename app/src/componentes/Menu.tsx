@@ -30,7 +30,7 @@ export function Menu({ itens, rotulo, className }: { itens: ItemMenu[]; rotulo: 
 
   return (
     <div ref={caixa} className={cn('relative', className)}>
-      <Button size="icon" variant="ghost" className="size-7" aria-label={rotulo} title={rotulo} aria-expanded={aberto} onClick={() => setAberto((a) => !a)}>
+      <Button size="icon" variant="ghost" className="size-7 pointer-coarse:size-10" aria-label={rotulo} title={rotulo} aria-expanded={aberto} onClick={() => setAberto((a) => !a)}>
         <MoreHorizontal className="size-4" />
       </Button>
       {aberto && (
@@ -40,7 +40,7 @@ export function Menu({ itens, rotulo, className }: { itens: ItemMenu[]; rotulo: 
               key={i.rotulo}
               role="menuitem"
               disabled={i.desativado}
-              className={cn('flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent disabled:cursor-default disabled:opacity-45', i.perigo && 'text-destructive')}
+              className={cn('flex w-full cursor-pointer items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent pointer-coarse:py-2.5 pointer-coarse:text-base disabled:cursor-default disabled:opacity-45', i.perigo && 'text-destructive')}
               onClick={() => {
                 setAberto(false)
                 i.acao()
