@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { envolverCloze, indicesCloze, renderizarCloze } from '@/dominio/cloze'
-import { indicesDeCartoes, renderizarCartao, textoPuro, TIPOS_DE_FABRICA } from '@/dominio/modelo'
+import { indicesDeCartoes, renderizarCartao, temConteudo, textoPuro, TIPOS_DE_FABRICA } from '@/dominio/modelo'
 
 const tipo = (id: string) => TIPOS_DE_FABRICA.find((t) => t.id === id)!
 
@@ -77,5 +77,13 @@ describe('tipos de nota e modelos', () => {
   it('campo inexistente vira vazio e textoPuro tira tags e entidades', () => {
     expect(renderizarCartao(tipo('basico'), { Frente: 'Q' }, 0).verso.html).toBe('Q<hr id="resposta">')
     expect(textoPuro('<p>a&nbsp;&amp; <b>b</b></p><br>c')).toBe('a & b c')
+  })
+
+  it('campo só com imagem conta como preenchido', () => {
+    const img = '<img src="data:image/webp;base64,AAAA">'
+    expect(temConteudo(img)).toBe(true)
+    expect(temConteudo('<br>&nbsp;')).toBe(false)
+    expect(indicesDeCartoes(tipo('basico'), { Frente: img, Verso: 'R' })).toEqual([0])
+    expect(indicesDeCartoes(tipo('basico-invertido-opcional'), { Frente: 'Q', Verso: 'R', 'Adicionar invertido': img })).toEqual([0, 1])
   })
 })
