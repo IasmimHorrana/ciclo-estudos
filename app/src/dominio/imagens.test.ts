@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { inserirMarcador, numerosNoTexto, proximoNumero, removerMarcador, trocarMarcadores } from '@/dominio/imagens'
+import { campoParaEdicao, inserirMarcador, numerosNoTexto, proximoNumero, removerMarcador, trocarMarcadores } from '@/dominio/imagens'
 import { textoParaHtml } from '@/lib/sanitizar'
 
 const PNG = 'data:image/png;base64,iVBORw0KGgo='
@@ -21,6 +21,19 @@ describe('imagens nos campos', () => {
     expect(proximoNumero({})).toBe(1)
     expect(proximoNumero({ 1: PNG, 4: PNG })).toBe(5)
     expect(removerMarcador('Pergunta\n[imagem 2]\nfim', 2)).toBe('Pergunta\nfim')
+  })
+
+  it('campo salvo volta para a caixa com marcadores (ida e volta)', () => {
+    const salvo = trocarMarcadores(textoParaHtml('[imagem 1]\nQue órgão é <este>?'), { 1: PNG })
+    const e = campoParaEdicao(salvo, 3)
+    expect(e).toEqual({ texto: '[imagem 3]\nQue órgão é <este>?', imagens: { 3: PNG }, temFormatacao: false })
+    expect(trocarMarcadores(textoParaHtml(e.texto), e.imagens)).toBe(salvo)
+  })
+
+  it('divs do Anki viram linhas e formatação é avisada', () => {
+    expect(campoParaEdicao('<div>a</div><div>b&nbsp;&amp; c</div>')).toEqual({ texto: 'a\nb & c', imagens: {}, temFormatacao: false })
+    expect(campoParaEdicao('<b>negrito</b>').temFormatacao).toBe(true)
+    expect(campoParaEdicao('<img src="foto.jpg">x')).toEqual({ texto: 'x', imagens: {}, temFormatacao: true })
   })
 
   it('insere o marcador em linha própria no lugar do cursor', () => {

@@ -36,6 +36,45 @@ export function removerMarcador(texto: string, n: number): string {
   return texto.replace(new RegExp(`\\n?\\[imagem ${n}\\]`, 'g'), '')
 }
 
+export interface CampoEmEdicao {
+  /** Texto para a caixa simples, com `[imagem N]` no lugar de cada imagem. */
+  texto: string
+  imagens: Imagens
+  /** O campo tem formatação que a caixa simples não mostra (negrito, cores, links…): ela se perde se o texto mudar. */
+  temFormatacao: boolean
+}
+
+const ENTIDADES: Record<string, string> = { nbsp: ' ', lt: '<', gt: '>', quot: '"', apos: "'", amp: '&' }
+
+/**
+ * O caminho inverso de salvar: HTML do campo → texto da caixa simples. Cada `<img>` embutida vira `[imagem N]`
+ * (numerando a partir de `inicio`); `<br>`, `<div>` e `<p>` viram quebras de linha; o resto das tags sai.
+ */
+export function campoParaEdicao(html: string, inicio = 1): CampoEmEdicao {
+  const imagens: Imagens = {}
+  let n = inicio
+  let temFormatacao = false
+  let t = html.replace(/<img\b[^>]*>/gi, (tag) => {
+    const src = /\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag)
+    const valor = src?.[1] ?? src?.[2] ?? ''
+    if (!dataUrlValida(valor)) {
+      temFormatacao = true // imagem por endereço: a caixa simples não a guarda
+      return ''
+    }
+    imagens[n] = valor
+    return marcador(n++)
+  })
+  if (/<(?!\/?(?:br|div|p)\b)[a-z/][^>]*>/i.test(t)) temFormatacao = true
+  t = t
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:div|p)>\s*/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&(nbsp|lt|gt|quot|apos|amp);/gi, (_m, e: string) => ENTIDADES[e.toLowerCase()] ?? '')
+    .replace(/&#(\d+);/g, (_m, d: string) => String.fromCodePoint(Number(d)))
+    .replace(/\n+$/, '')
+  return { texto: t, imagens, temFormatacao }
+}
+
 /** Insere o marcador entre `ini` e `fim` (substitui a seleção), em linha própria. Devolve o texto e onde fica o cursor. */
 export function inserirMarcador(texto: string, ini: number, fim: number, n: number): { texto: string; cursor: number } {
   const antes = texto.slice(0, ini)
