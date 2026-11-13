@@ -1,21 +1,16 @@
-import { useRef, useState, type ClipboardEvent, type DragEvent } from 'react'
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, ImagePlus, X } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { EscolherAssunto } from '@/componentes/EscolherAssunto'
 import { Button } from '@/componentes/ui/button'
-import { AreaTexto, Entrada, Selecao } from '@/componentes/ui/entrada'
+import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
 import { adicionarNota } from '@/dados/flashcards'
-import { envolverCloze } from '@/dominio/cloze'
-import { inserirMarcador, marcador, numerosNoTexto, removerMarcador, trocarMarcadores, type Imagens } from '@/dominio/imagens'
 import { useFc } from '@/estado/flashcards'
-import { comprimirImagem } from '@/lib/imagem'
-import { textoParaHtml } from '@/lib/sanitizar'
+import { CamposNota } from '@/telas/flashcards/CamposNota'
+import { useCamposNota } from '@/telas/flashcards/useCamposNota'
 
 type Aviso = { tipo: 'ok' | 'erro'; texto: string }
-
-/** Primeira imagem de uma lista de arquivos (colar ou arrastar). */
-const imagemDe = (arquivos: Iterable<File | null>): File | null => [...arquivos].find((f) => f?.type.startsWith('image/')) ?? null
 
 export function Adicionar() {
   const { baralhoId: inicial, ir } = useFc()
@@ -23,80 +18,27 @@ export function Adicionar() {
   const baralhos = useLiveQuery(async () => (await db.baralhos.toArray()).filter((b) => b.excluidoEm === null).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')), [])
   const [tipoId, setTipoId] = useState('basico')
   const [baralhoId, setBaralhoId] = useState<string>(inicial ?? '')
-  const [valores, setValores] = useState<Record<string, string>>({})
-  const [imagens, setImagens] = useState<Imagens>({})
   const [tags, setTags] = useState('')
   const [aviso, setAviso] = useState<Aviso | null>(null)
-  const caixas = useRef<Record<string, HTMLTextAreaElement | null>>({})
-  const seletor = useRef<HTMLInputElement>(null)
-  const campoDoSeletor = useRef('')
-  const proxima = useRef(1) // número da próxima imagem desta nota
+  const ed = useCamposNota((texto) => setAviso({ tipo: 'erro', texto }))
 
   const tipo = tipos?.find((t) => t.id === tipoId)
   const escolhido = baralhoId || baralhos?.[0]?.id || ''
   const primeiroCampo = tipo?.campos[0] ?? ''
 
   function omissao() {
-    const el = caixas.current[primeiroCampo]
-    if (!el || !tipo?.cloze) return
-    const texto = valores[primeiroCampo] ?? ''
-    if (el.selectionStart === el.selectionEnd) return setAviso({ tipo: 'erro', texto: 'Selecione o trecho que será escondido e clique em "Omissão".' })
-    setValores({ ...valores, [primeiroCampo]: envolverCloze(texto, el.selectionStart, el.selectionEnd) })
-  }
-
-  async function porImagem(campo: string, arquivo: Blob) {
-    const el = caixas.current[campo]
-    const ini = el?.selectionStart ?? (valores[campo] ?? '').length
-    const fim = el?.selectionEnd ?? ini
-    const n = proxima.current++
-    try {
-      const src = await comprimirImagem(arquivo)
-      // a caixa mostra o texto mais recente (a pessoa pode ter digitado enquanto a imagem era comprimida)
-      const atual = el?.value ?? valores[campo] ?? ''
-      const r = inserirMarcador(atual, Math.min(ini, atual.length), Math.min(fim, atual.length), n)
-      setImagens((im) => ({ ...im, [n]: src }))
-      setValores((v) => ({ ...v, [campo]: r.texto }))
-      setAviso(null)
-      requestAnimationFrame(() => {
-        el?.focus()
-        el?.setSelectionRange(r.cursor, r.cursor)
-      })
-    } catch (e) {
-      setAviso({ tipo: 'erro', texto: e instanceof Error ? e.message : 'Não foi possível pôr a imagem.' })
-    }
-  }
-
-  function aoColar(campo: string, e: ClipboardEvent<HTMLTextAreaElement>) {
-    const img = imagemDe([...e.clipboardData.items].map((i) => (i.kind === 'file' ? i.getAsFile() : null)))
-    if (!img) return // texto comum: cola normal
-    e.preventDefault()
-    void porImagem(campo, img)
-  }
-
-  function aoSoltar(campo: string, e: DragEvent<HTMLTextAreaElement>) {
-    const img = imagemDe(e.dataTransfer.files)
-    if (!img) return
-    e.preventDefault()
-    void porImagem(campo, img)
-  }
-
-  function tirarImagem(n: number) {
-    setValores((v) => Object.fromEntries(Object.entries(v).map(([c, t]) => [c, removerMarcador(t, n)])))
-    setImagens(({ [n]: _fora, ...resto }) => resto)
+    if (tipo?.cloze) ed.omissao(primeiroCampo)
   }
 
   async function salvar() {
     if (!tipo) return
     try {
-      const campos = Object.fromEntries(tipo.campos.map((c) => [c, trocarMarcadores(textoParaHtml(valores[c] ?? ''), imagens)]))
       const r = await adicionarNota(db, {
-        tipoId, baralhoId: escolhido, campos, tags: tags.split(/[\s,]+/).filter(Boolean),
+        tipoId, baralhoId: escolhido, campos: ed.paraHtml(tipo.campos), tags: tags.split(/[\s,]+/).filter(Boolean),
       })
-      setValores({})
-      setImagens({})
-      proxima.current = 1
+      ed.limpar()
       setAviso({ tipo: 'ok', texto: `Adicionado: ${r.cartoes.length} cartão(ões).` })
-      caixas.current[primeiroCampo]?.focus()
+      ed.caixas.current[primeiroCampo]?.focus()
     } catch (e) {
       setAviso({ tipo: 'erro', texto: e instanceof Error ? e.message : 'Não foi possível adicionar.' })
     }
@@ -143,77 +85,9 @@ export function Adicionar() {
             </label>
           </div>
 
-          <input
-            ref={seletor}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              e.target.value = ''
-              if (f) void porImagem(campoDoSeletor.current, f)
-            }}
-          />
+          {tipo && <CamposNota ed={ed} campos={tipo.campos} cloze={tipo.cloze} />}
 
-          {tipo?.campos.map((campo, i) => {
-            const desteCampo = numerosNoTexto(valores[campo] ?? '').filter((n) => imagens[n])
-            return (
-              <div key={campo} className="flex flex-col gap-1">
-                <label className="flex flex-col gap-1 text-xs font-bold text-muted-foreground uppercase">
-                  {campo}
-                  <AreaTexto
-                    ref={(el) => { caixas.current[campo] = el }}
-                    value={valores[campo] ?? ''}
-                    placeholder={tipo.cloze && i === 0 ? 'Ex.: A capital do Brasil é {{c1::Brasília}}.' : ''}
-                    onChange={(e) => setValores({ ...valores, [campo]: e.target.value })}
-                    onPaste={(e) => aoColar(campo, e)}
-                    onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) e.preventDefault() }}
-                    onDrop={(e) => aoSoltar(campo, e)}
-                  />
-                </label>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground"
-                    onClick={() => {
-                      campoDoSeletor.current = campo
-                      seletor.current?.click()
-                    }}
-                  >
-                    <ImagePlus className="size-4" /> Imagem
-                  </Button>
-                  {desteCampo.length === 0 && i === 0 && (
-                    <span className="text-xs text-muted-foreground">ou cole um print (Ctrl+V) / arraste uma imagem para a caixa</span>
-                  )}
-                  {desteCampo.map((n) => (
-                    <span key={n} className="flex items-center gap-1.5 rounded-lg border bg-background p-1 pr-1.5 text-xs text-muted-foreground">
-                      <img src={imagens[n]} alt={marcador(n)} className="h-10 max-w-20 rounded object-contain" />
-                      {marcador(n)}
-                      <button
-                        type="button"
-                        className="rounded p-0.5 hover:bg-accent hover:text-foreground"
-                        aria-label={`Tirar ${marcador(n)}`}
-                        title="Tirar a imagem"
-                        onClick={() => tirarImagem(n)}
-                      >
-                        <X className="size-3.5" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-
-          {tipo?.cloze && (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={omissao}>
-                Omissão [...] <span className="ml-1 text-xs opacity-60">Ctrl+Shift+C</span>
-              </Button>
-              <span className="text-xs text-muted-foreground">Selecione um trecho e clique. Cada número (c1, c2…) vira um cartão.</span>
-            </div>
-          )}
+          {tipo?.cloze && <BotaoOmissao onClick={omissao} />}
 
           <label className="flex flex-col gap-1 text-xs font-bold text-muted-foreground uppercase">
             Tags (separadas por espaço)
@@ -228,6 +102,17 @@ export function Adicionar() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+export function BotaoOmissao({ onClick }: { onClick: () => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" onClick={onClick}>
+        Omissão [...] <span className="ml-1 text-xs opacity-60">Ctrl+Shift+C</span>
+      </Button>
+      <span className="text-xs text-muted-foreground">Selecione um trecho e clique. Cada número (c1, c2…) vira um cartão.</span>
     </div>
   )
 }
