@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, Undo2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Undo2 } from 'lucide-react'
 import { Button } from '@/componentes/ui/button'
 import { Entrada } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
@@ -13,6 +13,7 @@ import { previsaoDeBotoes, type Botao } from '@/dominio/sm2'
 import { useFc } from '@/estado/flashcards'
 import { sanitizarHtml } from '@/lib/sanitizar'
 import { cn } from '@/lib/utils'
+import { EditarNota } from '@/telas/flashcards/EditarNota'
 
 const BOTOES: { botao: Botao; nome: string; cor: string }[] = [
   { botao: 1, nome: 'Errei', cor: 'bg-red-500/15 text-red-600 hover:bg-red-500/25 dark:text-red-400' },
@@ -105,6 +106,7 @@ function CartaoEmEstudo({
   const [mostrando, setMostrando] = useState(false)
   const [digitado, setDigitado] = useState('')
   const [aviso, setAviso] = useState('')
+  const [editando, setEditando] = useState(false)
   const inicio = useRef(0)
   const ocupado = useRef(false)
 
@@ -138,6 +140,7 @@ function CartaoEmEstudo({
   // atalhos de teclado (os mesmos do Anki). O efeito é refeito a cada render para sempre ver o estado atual.
   useEffect(() => {
     const teclas = (e: KeyboardEvent) => {
+      if (editando) return // no editor, as teclas são do formulário (Enter, Ctrl+Z, espaço…)
       const alvo = e.target as HTMLElement
       const digitando = alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA'
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
@@ -158,7 +161,10 @@ function CartaoEmEstudo({
       }
       if (digitando) return
       if (mostrando && /^[1-4]$/.test(e.key)) return void responder(Number(e.key) as Botao)
-      if (e.key === '*') void acao(async () => ((await alternarMarca(db, dados.nota.id)) ? 'Nota marcada.' : 'Marca removida.'), '')
+      if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault()
+        setEditando(true)
+      } else if (e.key === '*') void acao(async () => ((await alternarMarca(db, dados.nota.id)) ? 'Nota marcada.' : 'Marca removida.'), '')
       else if (e.key === '-') void acao(() => enterrar(db, cartaoId, 'cartao'), 'Cartão escondido até amanhã.')
       else if (e.key === '=') void acao(() => enterrar(db, cartaoId, 'nota'), 'Nota escondida até amanhã.')
       else if (e.key === '@') void acao(() => suspender(db, cartaoId, 'cartao'), 'Cartão suspenso.')
@@ -173,9 +179,26 @@ function CartaoEmEstudo({
   const digitar = renderizado.frente.digitar
   const acertou = digitar ? textoPuro(digitado) === textoPuro(dados.nota.campos[digitar] ?? '') : false
 
+  if (editando) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col overflow-auto p-4">
+        <EditarNota
+          notaId={dados.nota.id}
+          aoFechar={() => {
+            setEditando(false)
+            setAviso('')
+          }}
+        />
+      </div>
+    )
+  }
+
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-auto p-6">
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-auto p-6">
+        <Button variant="ghost" size="sm" className="absolute top-2 right-2 text-muted-foreground" title="Editar este cartão (E)" onClick={() => setEditando(true)}>
+          <Pencil className="size-4" /> Editar <span className="text-xs opacity-60">(E)</span>
+        </Button>
         <div
           className="cartao-conteudo w-full max-w-3xl"
           dangerouslySetInnerHTML={{ __html: sanitizarHtml(mostrando ? renderizado.verso.html : renderizado.frente.html) }}

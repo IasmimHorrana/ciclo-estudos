@@ -171,6 +171,9 @@ export async function atualizarNota(db: BancoCiclo, id: string, mudancas: Partia
     const nota: NotaFc = { ...atual, ...mudancas, atualizadoEm: agora, sujo: 1 }
     const tipo = await db.tiposNota.get(nota.tipoId)
     if (!tipo) throw new Error('Tipo de nota não encontrado.')
+    if (mudancas.campos && indicesDeCartoes(tipo, nota.campos).length === 0) {
+      throw new Error(tipo.cloze ? 'Coloque ao menos uma omissão {{c1::texto}}.' : 'Preencha a frente do cartão.')
+    }
     const meus = await db.cartoes.where('notaId').equals(id).toArray()
     await db.notasFc.put(nota)
     if (mudancas.baralhoId && mudancas.baralhoId !== atual.baralhoId) {
