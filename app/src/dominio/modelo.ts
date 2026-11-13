@@ -65,7 +65,10 @@ export const textoPuro = (html: string): string =>
     .replace(/\s+/g, ' ')
     .trim()
 
-const vazio = (v: string | undefined) => !v || textoPuro(v) === ''
+/** O campo tem algo para mostrar: texto ou uma imagem. */
+export const temConteudo = (html: string): boolean => textoPuro(html) !== '' || /<img\b/i.test(html)
+
+const vazio = (v: string | undefined) => !v || !temConteudo(v)
 
 export interface Renderizado {
   html: string
@@ -129,7 +132,7 @@ export function indicesDeCartoes(tipo: TipoNotaBase, campos: Campos): number[] {
   const r: number[] = []
   tipo.modelos.forEach((_m, i) => {
     const { frente } = renderizarCartao(tipo, campos, i)
-    if (textoPuro(frente.html) !== '') r.push(i)
+    if (temConteudo(frente.html)) r.push(i)
   })
   return r
 }
