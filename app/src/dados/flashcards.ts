@@ -399,7 +399,8 @@ export async function estatisticasDoBaralho(db: BancoCiclo, raizId: string | nul
       const c = porId.get(e.cartaoId)
       const nota = c && (await db.notasFc.get(c.notaId))
       const tipo = nota && (await db.tiposNota.get(nota.tipoId))
-      const frente = c && nota && tipo ? textoPuro(renderizarCartao(tipo, nota.campos, c.indice).frente.html) : ''
+      const html = c && nota && tipo ? renderizarCartao(tipo, nota.campos, c.indice).frente.html : ''
+      const frente = textoPuro(html) || (/<img\b/i.test(html) ? '(imagem)' : '')
       return { ...e, frente: frente || '(cartão sem texto na frente)' }
     }),
   )
