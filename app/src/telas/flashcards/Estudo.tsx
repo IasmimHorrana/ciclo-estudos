@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowLeft, Pencil, Undo2 } from 'lucide-react'
+import { ArrowLeft, EyeOff, Pause, Pencil, Star, Undo2 } from 'lucide-react'
+import { Menu } from '@/componentes/Menu'
 import { Button } from '@/componentes/ui/button'
 import { Entrada } from '@/componentes/ui/entrada'
 import { db } from '@/dados/db'
@@ -41,6 +42,7 @@ export function Estudo() {
   const c = fila?.contagem
   const origem = prox?.origem
   const nomeBaralho = ctx?.baralhos.find((b) => b.id === baralhoId)?.nome ?? 'Todos os baralhos'
+  const partesNome = nomeBaralho.split('::')
 
   async function desfazer() {
     const d = pilha[pilha.length - 1]
@@ -52,18 +54,21 @@ export function Estudo() {
 
   const contador = (rotulo: string, n: number | undefined, cor: string, ativo: boolean) => (
     <span className={cn('font-bold tabular-nums', cor, ativo && 'underline underline-offset-4')}>
-      {n ?? 0} <span className="text-xs font-semibold text-muted-foreground">{rotulo}</span>
+      {n ?? 0} <span className="text-xs font-semibold text-muted-foreground max-[900px]:hidden">{rotulo}</span>
     </span>
   )
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button variant="outline" size="sm" onClick={() => ir('baralhos')}>
-          <ArrowLeft className="size-4" /> Baralhos
+      <div className="flex flex-wrap items-center justify-between gap-2 max-[900px]:flex-nowrap">
+        <Button variant="outline" size="sm" className="max-[900px]:size-9 max-[900px]:px-0" onClick={() => ir('baralhos')} aria-label="Voltar aos baralhos">
+          <ArrowLeft className="size-4" /> <span className="max-[900px]:hidden">Baralhos</span>
         </Button>
-        <h1 className="m-0 text-base font-bold">{nomeBaralho}</h1>
-        <div className="flex items-center gap-3 text-sm">
+        <h1 className="m-0 text-base font-bold max-[900px]:min-w-0 max-[900px]:flex-1 max-[900px]:truncate" title={partesNome.join(' › ')}>
+          <span className="max-[900px]:hidden">{partesNome.join(' › ')}</span>
+          <span className="min-[901px]:hidden">{partesNome[partesNome.length - 1]}</span>
+        </h1>
+        <div className="flex shrink-0 items-center gap-3 text-sm max-[900px]:gap-2">
           {contador('novos', c?.novos, 'text-blue-500', origem === 'novo')}
           {contador('aprender', c?.aprendendo, 'text-red-500', origem === 'aprendendo' || origem === 'antecipado')}
           {contador('revisar', c?.revisao, 'text-green-600', origem === 'revisao')}
@@ -195,10 +200,22 @@ function CartaoEmEstudo({
 
   return (
     <>
-      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-auto p-6">
-        <Button variant="ghost" size="sm" className="absolute top-2 right-2 text-muted-foreground" title="Editar este cartão (E)" onClick={() => setEditando(true)}>
-          <Pencil className="size-4" /> Editar <span className="text-xs opacity-60">(E)</span>
-        </Button>
+      <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-auto p-6 max-[900px]:justify-start max-[900px]:p-4 max-[900px]:pb-8">
+        <div className="absolute top-2 right-2 flex items-center gap-1 text-muted-foreground max-[900px]:static max-[900px]:-mt-3 max-[900px]:-mr-3 max-[900px]:self-end">
+          <Button variant="ghost" size="sm" className="pointer-coarse:h-10" title="Editar este cartão (E)" onClick={() => setEditando(true)}>
+            <Pencil className="size-4" /> Editar <span className="text-xs opacity-60 pointer-coarse:hidden">(E)</span>
+          </Button>
+          <Menu
+            rotulo="Mais ações do cartão"
+            itens={[
+              { rotulo: 'Marcar ou desmarcar a nota (*)', icone: <Star className="size-4" />, acao: () => void acao(async () => ((await alternarMarca(db, dados.nota.id)) ? 'Nota marcada.' : 'Marca removida.'), '') },
+              { rotulo: 'Esconder o cartão até amanhã (-)', icone: <EyeOff className="size-4" />, acao: () => void acao(() => enterrar(db, cartaoId, 'cartao'), 'Cartão escondido até amanhã.') },
+              { rotulo: 'Esconder a nota até amanhã (=)', icone: <EyeOff className="size-4" />, acao: () => void acao(() => enterrar(db, cartaoId, 'nota'), 'Nota escondida até amanhã.') },
+              { rotulo: 'Suspender o cartão (@)', icone: <Pause className="size-4" />, acao: () => void acao(() => suspender(db, cartaoId, 'cartao'), 'Cartão suspenso.') },
+              { rotulo: 'Suspender a nota (!)', icone: <Pause className="size-4" />, acao: () => void acao(() => suspender(db, cartaoId, 'nota'), 'Nota suspensa.') },
+            ]}
+          />
+        </div>
         <div
           className="cartao-conteudo w-full max-w-3xl"
           dangerouslySetInnerHTML={{ __html: sanitizarHtml(mostrando ? renderizado.verso.html : renderizado.frente.html) }}
@@ -218,21 +235,24 @@ function CartaoEmEstudo({
         )}
       </div>
       {aviso && <p className="m-0 px-4 pb-1 text-center text-xs text-muted-foreground">{aviso}</p>}
-      <div className="border-t p-3">
+      {/* no celular a página rola: os botões ficam presos embaixo da tela, ao alcance do polegar */}
+      <div className="border-t p-3 max-[900px]:sticky max-[900px]:bottom-0 max-[900px]:rounded-b-xl max-[900px]:bg-card max-[900px]:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {!mostrando ? (
           <Button className="w-full" size="lg" onClick={() => setMostrando(true)}>
-            Mostrar resposta <span className="ml-2 text-xs opacity-70">(espaço)</span>
+            Mostrar resposta <span className="ml-2 text-xs opacity-70 pointer-coarse:hidden">(espaço)</span>
           </Button>
         ) : (
-          <div className="grid grid-cols-4 gap-2 max-[600px]:grid-cols-2">
+          <div className="grid grid-cols-4 gap-2 max-[900px]:gap-1.5">
             {BOTOES.map(({ botao, nome, cor }) => (
               <button
                 key={botao}
                 onClick={() => void responder(botao)}
-                className={cn('flex cursor-pointer flex-col items-center rounded-lg px-2 py-2 text-sm font-bold transition-colors', cor)}
+                className={cn('flex min-h-12 cursor-pointer flex-col items-center justify-center rounded-lg px-1 py-2 text-sm font-bold transition-colors', cor)}
               >
                 <span className="text-xs font-semibold opacity-80">{previsao.find((p) => p.botao === botao)?.texto}</span>
-                {nome} <span className="text-[0.65rem] font-normal opacity-60">({botao})</span>
+                <span>
+                  {nome} <span className="text-[0.65rem] font-normal opacity-60 pointer-coarse:hidden">({botao})</span>
+                </span>
               </button>
             ))}
           </div>
