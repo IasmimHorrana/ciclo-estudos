@@ -118,6 +118,16 @@ describe('notas e cartões', () => {
     expect((await db.cartoes.where('notaId').equals(nota.id).toArray()).map((c) => c.indice).sort()).toEqual([0, 1, 2])
   })
 
+  it('editar a nota: guarda os campos novos e recusa apagar a frente', async () => {
+    const db = await banco()
+    const b = await criarBaralho(db, 'Teste', T0)
+    const { nota } = await adicionarNota(db, { tipoId: 'basico', baralhoId: b.id, campos: { Frente: 'Q', Verso: 'R' } }, T0)
+    await atualizarNota(db, nota.id, { campos: { Frente: 'Q2', Verso: 'R2' }, tags: ['lei'] }, T0 + 1)
+    expect(await db.notasFc.get(nota.id)).toMatchObject({ campos: { Frente: 'Q2', Verso: 'R2' }, tags: ['lei'], atualizadoEm: T0 + 1, sujo: 1 })
+    await expect(atualizarNota(db, nota.id, { campos: { Frente: '', Verso: 'R2' } }, T0 + 2)).rejects.toThrow('Preencha a frente')
+    expect((await db.notasFc.get(nota.id))?.campos.Frente).toBe('Q2')
+  })
+
   it('excluir a nota marca os cartões e eles somem da fila', async () => {
     const db = await banco()
     const b = await criarBaralho(db, 'Teste', T0)
