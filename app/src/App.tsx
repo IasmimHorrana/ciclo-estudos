@@ -1,8 +1,9 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { AvisoSemana } from '@/componentes/AvisoSemana'
 import { Dialogos } from '@/componentes/Dialogos'
 import { FaixasContexto } from '@/componentes/faixas-contexto'
 import { BarraLateral } from '@/componentes/barra-lateral/BarraLateral'
+import { TopoCelular } from '@/componentes/TopoCelular'
 import { Dados } from '@/telas/Dados'
 import { Desempenho } from '@/telas/Desempenho'
 import { Edital } from '@/telas/Edital'
@@ -39,10 +40,48 @@ function atualizarTitulo() {
   document.title = p.rodando ? `(${fmtMMSS(p.restaSeg)}) ${NOMES_FASE[p.fase]}` : c.rodando ? `(${fmtHHMMSS(c.seg)}) Livre` : 'Ciclo de Estudos'
 }
 
+/** Gaveta do menu no celular: Esc e o botão "voltar" do aparelho fecham; a página de trás não rola. */
+function useGaveta() {
+  const [aberta, setAberta] = useState(false)
+  const comEntrada = () => (history.state as { gaveta?: boolean } | null)?.gaveta === true
+  const abrir = () => {
+    if (!comEntrada()) history.pushState({ gaveta: true }, '') // o "voltar" do aparelho fecha a gaveta em vez de sair do app
+    setAberta(true)
+  }
+  // fechar pelo app também consome a entrada do histórico (o popstate então fecha)
+  const fechar = () => (comEntrada() ? history.back() : setAberta(false))
+
+  useEffect(() => {
+    const voltar = () => setAberta(comEntrada())
+    addEventListener('popstate', voltar)
+    return () => removeEventListener('popstate', voltar)
+  }, [])
+
+  useEffect(() => {
+    if (!aberta) return
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') if (comEntrada()) history.back(); else setAberta(false)
+    }
+    addEventListener('keydown', esc)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      removeEventListener('keydown', esc)
+      document.body.style.overflow = ''
+    }
+  }, [aberta])
+  return { aberta, abrir, fechar }
+}
+
 export default function App() {
   const { aba, tema, paleta } = useUi()
   const ciclo = useCiclo()
   const pomoSalvo = ciclo?.pomo
+  const gaveta = useGaveta()
+
+  // no celular a página rola inteira: trocar de aba volta ao topo
+  useEffect(() => {
+    if (matchMedia('(max-width: 900px)').matches) scrollTo(0, 0)
+  }, [aba])
 
   // tempos do Pomodoro guardados no banco (valem em qualquer aparelho depois da sincronização)
   useEffect(() => {
@@ -95,9 +134,11 @@ export default function App() {
 
   return (
     <FaixasContexto.Provider value={ciclo?.preferencias.faixas ?? FAIXAS_PADRAO}>
-      <div className="grid h-dvh grid-cols-[276px_minmax(0,1fr)] overflow-hidden max-[900px]:h-auto max-[900px]:min-h-dvh max-[900px]:grid-cols-1 max-[900px]:overflow-visible">
-        <BarraLateral />
-        <main className="flex min-h-0 min-w-0 flex-col overflow-hidden px-5 py-3.5 max-[900px]:overflow-visible max-[900px]:p-4">
+      <div className="grid h-dvh grid-cols-[276px_minmax(0,1fr)] overflow-hidden max-[900px]:flex max-[900px]:h-auto max-[900px]:min-h-dvh max-[900px]:flex-col max-[900px]:overflow-visible">
+        <TopoCelular aoAbrirMenu={gaveta.abrir} />
+        <BarraLateral aberta={gaveta.aberta} aoNavegar={() => gaveta.aberta && gaveta.fechar()} />
+        {gaveta.aberta && <div className="fixed inset-0 z-40 bg-black/50 min-[901px]:hidden" aria-hidden onClick={gaveta.fechar} />}
+        <main className="flex min-h-0 min-w-0 flex-col overflow-hidden px-5 py-3.5 max-[900px]:flex-1 max-[900px]:overflow-visible max-[900px]:p-3">
           <AvisoSemana />
           {TELAS[aba]}
         </main>
