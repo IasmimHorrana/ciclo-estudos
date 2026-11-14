@@ -11,6 +11,7 @@ import { cartoesDaMateria, corDe, fmtH, soma, type CartaoDaMateria } from '@/dom
 import { addDias, fmtData, NOMES_DIA, NOMES_DIA_LONGO } from '@/dominio/datas'
 import { abrirDialogo } from '@/estado/dialogo'
 import { abrirNota } from '@/lib/abrirNota'
+import { telaDeToque } from '@/lib/toque'
 import { cn } from '@/lib/utils'
 
 type SemanaAtual = NonNullable<Ciclo['semana']>
@@ -53,7 +54,7 @@ function EditarCartao({ ids, fechar }: { ids: number[]; fechar: () => void }) {
             Anotação
             <Entrada
               key={`nt${p.nota}`}
-              autoFocus={i === 0}
+              autoFocus={i === 0 && !telaDeToque()}
               placeholder="Tópico, questões, acertos…"
               defaultValue={p.nota}
               onBlur={(e) => e.target.value !== p.nota && void editarPasso(db, p.id, { nota: e.target.value })}
@@ -135,7 +136,7 @@ function CartaoMateria({ c, cores, arrasto }: { c: CartaoDaMateria; cores: Recor
           aria-label={c.feito ? 'Desmarcar' : 'Concluir'}
           aria-pressed={c.feito}
           title={c.feito ? 'Desmarcar' : 'Concluir'}
-          className={cn('flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-foreground/40 bg-card/70', c.feito && 'border-primary bg-primary text-primary-foreground')}
+          className={cn('flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-foreground/40 bg-card/70 pointer-coarse:size-8', c.feito && 'border-primary bg-primary text-primary-foreground')}
         >
           {c.feito && <Check className="size-3" strokeWidth={3} />}
         </button>
@@ -149,7 +150,11 @@ function CartaoMateria({ c, cores, arrasto }: { c: CartaoDaMateria; cores: Recor
   )
 }
 
-/** O ciclo da semana como um calendário: uma coluna por dia (do cabeçalho ao rodapé do quadro), um cartão colorido por passo. */
+/**
+ * O ciclo da semana como um calendário: uma coluna por dia (do cabeçalho ao rodapé do quadro), um cartão colorido por passo.
+ * No celular (até 900 px) vira uma lista de dias, um embaixo do outro, sem os dias que já passaram vazios.
+ * Arrastar não funciona no toque: lá o dia se muda pela edição do cartão.
+ */
 export function QuadroSemana({ s, cores, diasDeEstudo, hojeISO }: { s: SemanaAtual; cores: Record<string, number>; diasDeEstudo: boolean[]; hojeISO: string }) {
   const colunas: { chave: string; dia: string | null; i: number; itens: CartaoDaMateria[] }[] = Array.from({ length: 7 }, (_, i) => {
     const d = addDias(s.seg, i)
@@ -171,17 +176,24 @@ export function QuadroSemana({ s, cores, diasDeEstudo, hojeISO }: { s: SemanaAtu
   if (semDia.length) colunas.push({ chave: 'sem', dia: null, i: -1, itens: cartoesDaMateria(semDia) })
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto rounded-md border">
-      <div className="grid min-h-full auto-cols-[minmax(8.5rem,1fr)] grid-flow-col">
+    <div className="min-h-0 flex-1 overflow-auto rounded-md border max-[900px]:overflow-visible">
+      <div className="grid min-h-full auto-cols-[minmax(8.5rem,1fr)] grid-flow-col max-[900px]:grid-flow-row max-[900px]:auto-cols-auto max-[900px]:grid-cols-1">
         {colunas.map(({ chave, dia, i, itens }, k) => {
           const hoje = dia === hojeISO
           const fe = itens.filter((c) => c.feito).length
           const pend = itens.length - fe
           const folga = dia !== null && !diasDeEstudo[i] && !itens.length
+          const passouVazio = dia !== null && dia < hojeISO && !itens.length
           return (
             <section
               key={chave}
-              className={cn('flex min-w-0 flex-col', k > 0 && 'border-l', hoje && 'bg-primary/5', arrastando !== null && alvo?.chave === chave && 'bg-primary/10')}
+              className={cn(
+                'flex min-w-0 flex-col',
+                k > 0 && 'border-l max-[900px]:border-t max-[900px]:border-l-0',
+                passouVazio && 'max-[900px]:hidden',
+                hoje && 'bg-primary/5',
+                arrastando !== null && alvo?.chave === chave && 'bg-primary/10',
+              )}
               onDragOver={(e) => {
                 if (arrastando === null) return
                 e.preventDefault()
@@ -194,7 +206,7 @@ export function QuadroSemana({ s, cores, diasDeEstudo, hojeISO }: { s: SemanaAtu
             >
               <header
                 id={dia ? `dia-${dia}` : undefined}
-                className={cn('sticky top-0 z-10 border-b px-2 py-2 text-center', hoje ? 'bg-primary text-primary-foreground' : 'bg-card')}
+                className={cn('sticky top-0 z-10 border-b px-2 py-2 text-center max-[900px]:static max-[900px]:flex max-[900px]:items-baseline max-[900px]:justify-between max-[900px]:gap-2 max-[900px]:text-left', hoje ? 'bg-primary text-primary-foreground' : 'bg-card')}
               >
                 <b className="block text-sm">{dia ? `${NOMES_DIA[i]}, ${fmtData(dia).slice(0, 2)}` : 'Sem dia'}</b>
                 <span className={cn('block text-[0.68rem]', hoje ? 'text-primary-foreground/85' : 'text-muted-foreground')}>
@@ -233,7 +245,7 @@ export function QuadroSemana({ s, cores, diasDeEstudo, hojeISO }: { s: SemanaAtu
                   )
                 })}
                 {arrastando !== null && alvo?.chave === chave && alvo.antes === null && itens.some((c) => c.passos[0]?.id !== arrastando) && <LinhaDeQueda />}
-                {!itens.length && <span className="m-auto text-xs text-muted-foreground/70">{folga ? 'folga' : 'sem passos'}</span>}
+                {!itens.length && <span className="m-auto text-xs text-muted-foreground/70 max-[900px]:m-0">{folga ? 'folga' : 'sem passos'}</span>}
               </div>
             </section>
           )
