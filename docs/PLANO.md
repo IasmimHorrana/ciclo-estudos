@@ -10,7 +10,7 @@
 > | Extra: aba Edital verticalizado | feita na `dev`: importar com pré-visualização, prioridade e "＋ Ciclo". Em out/2026, ideias do "PROMPT GRATUITO": layout em checklist com busca e painel lateral, faixas de acerto ajustáveis, revisão espaçada dos assuntos (Dexie v6) e alertas de reforço; aguardando o seu teste. Ficaram para depois: comando para IA, caderno de erros, simulados, provas em PDF, lei seca e tamanho da letra |
 > | Extra: modo Livre e cronômetro livre | feito na `dev` (out/2026): chave Ciclo \| Livre na aba Semana (até duas matérias por dia, meta semanal 28/32 h sem dívida, horas pelas sessões) e chave Pomodoro \| Livre no Relógio da barra lateral (cronômetro que conta para cima, "Fechar sessão" com questões e acertos, retomada ao reabrir). O Pomodoro e o ciclo de passos continuam iguais. Aguardando o seu teste; não testado no celular |
 > | 5. Supabase (login e sincronização) | a fazer |
-> | 6. Publicar e instalar no celular | site no ar em https://iasmimhorrana.github.io/ciclo-estudos/ (GitHub Pages, a cada mudança na `main`); service worker registrado; faltam instalar no celular e testar abrir sem internet |
+> | 6. Publicar e instalar no celular | site no ar em https://iasmimhorrana.github.io/ciclo-estudos/ (GitHub Pages, a cada mudança na `main`); service worker registrado e abrir sem internet testado no computador (preview); layout de celular feito (barra do topo com ☰ e gaveta, Flashcards e Semana ajustados, 2026-11-13); faltam instalar no celular e testar lá de verdade |
 # Plano: base nova (Git + Vite/React/TS + Dexie + PWA), Flashcards estilo Anki (SM-2) nela e Supabase depois
 
 ## Contexto
