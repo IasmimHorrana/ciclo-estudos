@@ -23,6 +23,8 @@ import { colorir } from '@/lib/colunas'
 import { cn } from '@/lib/utils'
 
 const card = 'rounded-xl border bg-card p-3.5 shadow-sm'
+/** quadros da coluna de gráficos: menos respiro para caber mais coisa sem rolar */
+const cardCompacto = 'rounded-xl border bg-card px-3 py-2 shadow-sm'
 const mudo = 'text-xs text-muted-foreground'
 function Kpi({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
@@ -90,7 +92,7 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
         <Kpi rotulo="Dias com estudo" valor={String(d.dias)} />
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-3 max-[1000px]:grid-cols-1 max-[1000px]:overflow-visible">
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)] gap-3 max-[1000px]:grid-cols-1 max-[1000px]:overflow-visible">
         <section className={cn(card, 'flex min-h-0 flex-col')}>
           <h2 className="m-0 mb-1 text-sm font-bold">Matérias e assuntos</h2>
           <p className={cn(mudo, 'm-0 mb-2')}>
@@ -137,23 +139,23 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
           </div>
         </section>
 
-        <div className="flex min-h-0 flex-col gap-3 overflow-auto max-[1000px]:overflow-visible">
-          <section className={card}>
-            <h2 className="m-0 mb-2 text-sm font-bold">Horas por matéria</h2>
+        <div className="flex min-h-0 flex-col gap-2 overflow-auto max-[1000px]:overflow-visible">
+          <section className={cardCompacto}>
+            <h2 className="m-0 mb-1 text-sm font-bold">Horas por matéria</h2>
             <Rosca dados={d.horasPorMateria.map((x) => ({ nome: x.nome, valor: x.valor, cor: cor(x.nome), rotulo: fmtH(x.valor) }))} centro={fmtH(d.horas)} sub="estudadas" />
             <p className={cn(mudo, 'm-0 mt-2 text-center')}>{d.tipos.map((t) => `${t.tipo}: ${fmtH(t.horas)}`).join(' · ')}</p>
           </section>
-          <section className={card}>
-            <h2 className="m-0 mb-2 text-sm font-bold">Horas por dia</h2>
+          <section className={cardCompacto}>
+            <h2 className="m-0 mb-1 text-sm font-bold">Horas por dia</h2>
             <Barras cols={colorir(d.colsHoras, cor, { acerto: 'var(--primary)', erro: 'var(--erro)' })} fmt={fmtH} />
           </section>
-          <section className={card}>
-            <h2 className="m-0 mb-2 text-sm font-bold">Questões por dia</h2>
+          <section className={cardCompacto}>
+            <h2 className="m-0 mb-1 text-sm font-bold">Questões por dia</h2>
             <Barras cols={colorir(d.colsQuestoes, cor, { acerto: 'var(--primary)', erro: 'var(--erro)' })} fmt={String} />
             <p className={cn(mudo, 'm-0 mt-1')}><span style={{ color: 'var(--primary)' }}>■</span> acertos · <span style={{ color: 'var(--erro)' }}>■</span> erros</p>
           </section>
-          <section className={card}>
-            <h2 className="m-0 mb-2 text-sm font-bold">Acerto por matéria</h2>
+          <section className={cardCompacto}>
+            <h2 className="m-0 mb-1 text-sm font-bold">Acerto por matéria</h2>
             {d.acertoPorMateria.length === 0 && <p className={mudo}>Registre questões para ver o desempenho por matéria.</p>}
             {d.acertoPorMateria.map((x) => (
               <div key={x.materia} className="mb-2.5 last:mb-0">
@@ -166,8 +168,8 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
               </div>
             ))}
           </section>
-          <section className={card}>
-            <h2 className="m-0 mb-2 text-sm font-bold">Últimos registros de questões</h2>
+          <section className={cardCompacto}>
+            <h2 className="m-0 mb-1 text-sm font-bold">Últimos registros de questões</h2>
             {d.ultimos.length === 0 && <p className={mudo}>Nenhum registro ainda.</p>}
             {d.ultimos.map((q) => (
               <div key={q.id} className="flex items-center gap-2 border-b py-1 text-sm last:border-b-0">
@@ -178,8 +180,8 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
               </div>
             ))}
           </section>
-          <section className={card}>
-            <h2 className="m-0 mb-2 text-sm font-bold">Últimos registros de tempo</h2>
+          <section className={cardCompacto}>
+            <h2 className="m-0 mb-1 text-sm font-bold">Últimos registros de tempo</h2>
             {d.ultimasSessoes.length === 0 && <p className={mudo}>Nenhum tempo registrado ainda.</p>}
             {d.ultimasSessoes.map((x) => (
               <div key={x.id} className="flex items-center gap-2 border-b py-1 text-sm last:border-b-0">
