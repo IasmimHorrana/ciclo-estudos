@@ -51,6 +51,7 @@ export function CamposNota({ ed, campos, cloze }: { ed: EditorCampos; campos: st
               {campo}
               <AreaTexto
                 ref={(el) => { caixas.current[campo] = el }}
+                className="min-h-40"
                 value={valores[campo] ?? ''}
                 placeholder={cloze && i === 0 ? 'Ex.: A capital do Brasil é {{c1::Brasília}}.' : ''}
                 onChange={(e) => setValores((v) => ({ ...v, [campo]: e.target.value }))}
