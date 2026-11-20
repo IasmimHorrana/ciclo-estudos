@@ -135,6 +135,28 @@ export function emLotes<T>(lista: readonly T[], tamanho: number): T[][] {
   return saida
 }
 
+/**
+ * Lotes limitados também pelo tamanho (cartões com imagens podem ter centenas de KB): fecha o lote quando passaria
+ * de `maxBytes` ou de `maxItens`. Um item sozinho maior que o limite vai num lote só dele.
+ */
+export function emLotesPorTamanho<T>(lista: readonly T[], tamanhoDe: (x: T) => number, maxBytes: number, maxItens: number): T[][] {
+  const saida: T[][] = []
+  let atual: T[] = []
+  let bytes = 0
+  for (const x of lista) {
+    const t = tamanhoDe(x)
+    if (atual.length && (bytes + t > maxBytes || atual.length >= maxItens)) {
+      saida.push(atual)
+      atual = []
+      bytes = 0
+    }
+    atual.push(x)
+    bytes += t
+  }
+  if (atual.length) saida.push(atual)
+  return saida
+}
+
 /** Folga ao puxar: gravações que terminaram fora de ordem no servidor não ficam para trás. Puxar duas vezes não faz mal. */
 export const FOLGA_CURSOR_MS = 60_000
 

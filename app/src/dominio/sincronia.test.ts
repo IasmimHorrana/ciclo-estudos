@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  avancarCursor, campoChave, decidir, deNuvem, emLotes, ESQUEMA_VERSAO, inicioDaBusca, medirDesvio, paraNuvem, podeExpurgar,
+  avancarCursor, campoChave, decidir, deNuvem, emLotes, emLotesPorTamanho, ESQUEMA_VERSAO, inicioDaBusca, medirDesvio, paraNuvem, podeExpurgar,
   podeLimparSujo, precisaAtualizar, primeiraSincronizacao, RETENCAO_EXCLUIDOS_MS, servidorAceita, type Colecao, type RegistroLocal, type RegistroNuvem,
 } from '@/dominio/sincronia'
 
@@ -202,6 +202,14 @@ describe('envio, lotes e cursor', () => {
     expect(emLotes([1, 2, 3], 2)).toEqual([[1, 2], [3]])
     expect(emLotes([], 2)).toEqual([])
     expect(() => emLotes([1], 0)).toThrow()
+  })
+
+  it('lotes por tamanho: fecha antes de passar do limite; item grande vai sozinho', () => {
+    const t = (x: number) => x
+    expect(emLotesPorTamanho([3, 3, 3, 3], t, 7, 10)).toEqual([[3, 3], [3, 3]])
+    expect(emLotesPorTamanho([2, 20, 2], t, 7, 10)).toEqual([[2], [20], [2]])
+    expect(emLotesPorTamanho([1, 1, 1], t, 100, 2)).toEqual([[1, 1], [1]])
+    expect(emLotesPorTamanho([], t, 5, 5)).toEqual([])
   })
 
   it('cursor: puxa com folga de 1 min e avança para a maior hora recebida', () => {
