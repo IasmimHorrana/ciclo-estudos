@@ -137,6 +137,7 @@ begin
   end if;
 end $$;
 
-select 'TODOS OS TESTES PASSARAM (nada foi gravado: a transação é desfeita a seguir)' as resultado;
-
 rollback;
+
+-- só chega aqui se nenhuma regra falhou
+select 'TODOS OS TESTES PASSARAM (nada ficou gravado: a transação foi desfeita)' as resultado;
