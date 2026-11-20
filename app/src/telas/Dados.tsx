@@ -11,6 +11,9 @@ import { criarZip } from '@/dados/zip'
 import { useBackup } from '@/estado/backup'
 import { carregarDados, substituirDados, type ResumoImportacao } from '@/dados/repositorio'
 import { hoje } from '@/dominio/datas'
+import { baixar } from '@/lib/baixar'
+import { SecaoConta } from '@/telas/SecaoConta'
+import { useConta } from '@/estado/conta'
 
 type Aviso = { tipo: 'ok' | 'erro'; texto: string }
 
@@ -28,22 +31,14 @@ function descreve(r: ResumoImportacao) {
   return partes.filter(Boolean).join(', ')
 }
 
-function baixar(nome: string, conteudo: string | Blob) {
-  const url = URL.createObjectURL(typeof conteudo === 'string' ? new Blob([conteudo], { type: 'application/json' }) : conteudo)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = nome
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
 export function Dados() {
   const entrada = useRef<HTMLInputElement>(null)
   const [aviso, setAviso] = useState<Aviso | null>(null)
   // `undefined` = ainda lendo; `null` = banco vazio
   const bk = useBackup()
+  const conectada = useConta((s) => s.estado === 'dentro')
+  /** Com a conta conectada, importar ou restaurar também muda os outros aparelhos (vai para a nuvem). */
+  const nosOutros = conectada ? ' Com a conta conectada, isso também muda os dados nos seus outros aparelhos (vai para a nuvem).' : ''
   const dados = useLiveQuery(() => carregarDados(db).then((d) => d ?? null), [])
   const fc = useLiveQuery(async () => {
     const [baralhos, cartoes] = await Promise.all([
@@ -58,8 +53,8 @@ export function Dados() {
       const { dados: novos, flashcards } = lerArquivoCompleto(await arquivo.text())
       const temCartoes = (fc?.cartoes ?? 0) > 0
       const pergunta = flashcards
-        ? 'Já existem dados neste app. Importar vai SUBSTITUIR tudo (inclusive os flashcards) pelo conteúdo do arquivo. Continuar?'
-        : `Já existem dados neste app. Importar vai SUBSTITUIR tudo pelo conteúdo do arquivo.${temCartoes ? ' Este backup não tem flashcards: os seus cartões ficam como estão.' : ''} Continuar?`
+        ? `Já existem dados neste app. Importar vai SUBSTITUIR tudo (inclusive os flashcards) pelo conteúdo do arquivo.${nosOutros} Continuar?`
+        : `Já existem dados neste app. Importar vai SUBSTITUIR tudo pelo conteúdo do arquivo.${temCartoes ? ' Este backup não tem flashcards: os seus cartões ficam como estão.' : ''}${nosOutros} Continuar?`
       if ((dados || temCartoes) && !window.confirm(pergunta)) return
       const r = await substituirDados(db, novos, Date.now(), flashcards)
       const semFc = r.cartoes === null && temCartoes ? ' O arquivo não tinha flashcards; os seus cartões não foram mexidos.' : ''
@@ -90,7 +85,7 @@ export function Dados() {
 
   async function restaurar() {
     try {
-      const r = await restaurarDaPasta(() => window.confirm('Restaurar substitui os dados atuais pelos da pasta, inclusive os flashcards se o backup os tiver (e junta os .md novos ou editados). Continuar?'))
+      const r = await restaurarDaPasta(() => window.confirm(`Restaurar substitui os dados atuais pelos da pasta, inclusive os flashcards se o backup os tiver (e junta os .md novos ou editados).${nosOutros} Continuar?`))
       if (r) {
         setAviso({
           tipo: 'ok',
@@ -124,9 +119,13 @@ export function Dados() {
           </p>
         )}
         <p className="m-0 mt-2 text-xs text-muted-foreground">
-          Os dados ficam só neste navegador e neste computador. Limpar os dados do site apaga tudo, por isso exporte um backup de vez em quando.
+          {conectada
+            ? 'Os dados ficam neste aparelho e também na nuvem (conta conectada). Mesmo assim, exporte um backup de vez em quando: a nuvem gratuita não guarda cópias antigas.'
+            : 'Os dados ficam só neste navegador e neste computador. Limpar os dados do site apaga tudo, por isso exporte um backup de vez em quando.'}
         </p>
       </section>
+
+      <SecaoConta />
 
       <section className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-4 shadow-sm">
         <Button onClick={() => entrada.current?.click()}>

@@ -75,6 +75,15 @@ export class BancoCiclo extends Dexie {
           if (!Array.isArray(a.revisoes)) a.revisoes = []
         })
       })
+    // v7: o histórico dos flashcards (revlog) ganha `excluidoEm` (desfazer marca em vez de apagar, por causa da
+    // sincronização). As linhas que já existem ficam vivas (null), sem marcar "sujo".
+    this.version(7)
+      .stores({})
+      .upgrade((tx) =>
+        tx.table('revlog').toCollection().modify((r: { excluidoEm?: number | null }) => {
+          if (r.excluidoEm === undefined) r.excluidoEm = null
+        }),
+      )
   }
 }
 

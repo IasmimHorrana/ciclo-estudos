@@ -44,8 +44,11 @@ export interface CartaoFc extends Controle, EstadoCartao {
   criadoEm: number
 }
 
-/** Histórico de respostas. Só acrescenta: nunca é editado nem apagado (é daqui que o estado se recalcula). */
-export interface RegistroRevisao extends Omit<Controle, 'excluidoEm'> {
+/**
+ * Histórico de respostas. Só acrescenta: nunca é editado. Desfazer uma resposta marca a linha com `excluidoEm`
+ * (em vez de apagar), para a sincronização não trazê-la de volta de outro aparelho. Consultas ignoram as excluídas.
+ */
+export interface RegistroRevisao extends Controle {
   id: string
   cartaoId: string
   baralhoId: string

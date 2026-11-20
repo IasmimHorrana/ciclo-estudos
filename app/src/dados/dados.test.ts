@@ -189,6 +189,29 @@ describe('banco v5 (importância não definida)', () => {
   })
 })
 
+describe('banco v7 (histórico dos flashcards com excluidoEm)', () => {
+  it('as linhas antigas do revlog ficam vivas (excluidoEm null) sem marcar sujo', async () => {
+    const nome = `migracao-${++n}`
+    const antigo = new Dexie(nome)
+    antigo.version(6).stores({
+      valores: 'chave, sujo', semanasFechadas: 'id, inicio, sujo, excluidoEm', modelos: 'id, sujo, excluidoEm', notas: 'id, materia, atualizado, sujo, excluidoEm',
+      assuntos: 'id, materia, sujo, excluidoEm', questoes: 'id, data, materia, sujo, excluidoEm', sessoes: 'id, data, materia, sujo, excluidoEm',
+      local: 'chave', baralhos: 'id, nome, sujo, excluidoEm', gruposOpcoes: 'id, sujo', tiposNota: 'id, sujo', notasFc: 'id, tipoId, baralhoId, sujo, excluidoEm',
+      cartoes: 'id, notaId, baralhoId, tipo, venceDia, venceMs, sujo, excluidoEm', revlog: 'id, cartaoId, baralhoId, dia, sujo', materiasEdital: 'id, nome, sujo, excluidoEm',
+    })
+    await antigo.table('revlog').bulkPut([
+      { id: 'r1', cartaoId: 'c1', baralhoId: 'b1', dia: 10, instante: 1, botao: 3, atualizadoEm: 1, sujo: 0 },
+      { id: 'r2', cartaoId: 'c1', baralhoId: 'b1', dia: 11, instante: 2, botao: 1, atualizadoEm: 2, sujo: 1 },
+    ])
+    antigo.close()
+    const novo = new BancoCiclo(nome)
+    const r = await novo.revlog.toArray()
+    expect(r.find((x) => x.id === 'r1')).toMatchObject({ excluidoEm: null, sujo: 0 })
+    expect(r.find((x) => x.id === 'r2')).toMatchObject({ excluidoEm: null, sujo: 1 })
+    novo.close()
+  })
+})
+
 describe('banco v6 (revisão dos assuntos)', () => {
   it('completa estudadoEm (hoje para os estudados) e revisoes vazias, sem marcar sujo', async () => {
     const nome = `migracao-${++n}`

@@ -16,6 +16,8 @@ import { iniciarPersistenciaCronometro } from '@/componentes/cronometro-api'
 import { iniciarPersistenciaPomodoro } from '@/componentes/restaurar-pomodoro-api'
 import { useCiclo } from '@/dados/useCiclo'
 import { carregarPasta, iniciarBackupAutomatico } from '@/dados/pasta'
+import { iniciarConta } from '@/dados/conta'
+import { iniciarSincroniaAutomatica } from '@/dados/sincronia-auto'
 import { fmtHHMMSS } from '@/dominio/cronometro'
 import { FAIXAS_PADRAO } from '@/dominio/desempenho'
 import { fmtMMSS, NOMES_FASE } from '@/dominio/pomodoro'
@@ -99,6 +101,20 @@ export default function App() {
     void carregarPasta()
     return iniciarBackupAutomatico()
   }, [])
+
+  // conta na nuvem: lê a sessão guardada (o app funciona igual sem conta)
+  useEffect(() => {
+    let parar: (() => void) | undefined
+    let ativo = true
+    void iniciarConta().then((f) => (ativo ? (parar = f) : f()))
+    return () => {
+      ativo = false
+      parar?.()
+    }
+  }, [])
+
+  // sincronização com a nuvem: liga sozinha enquanto a conta estiver conectada
+  useEffect(() => iniciarSincroniaAutomatica(), [])
 
   // tema claro/escuro (e acompanha o sistema no modo automático)
   useEffect(() => {

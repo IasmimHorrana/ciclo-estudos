@@ -16,6 +16,8 @@ import { novoCartao, numeroDoDia, responder, type Botao, type EstadoCartao } fro
 export const GRUPO_PADRAO = 'padrao'
 
 const novo = (agora: number): Controle => ({ atualizadoEm: agora, excluidoEm: null, sujo: 1 })
+/** Linha do histórico que vale (as desfeitas têm `excluidoEm`; as gravadas antes da v7 podem não ter o campo). */
+const vivo = (r: { excluidoEm?: number | null }) => !r.excluidoEm
 const alea = () => Math.random().toString(36).slice(2, 8)
 export { novoIdFc }
 
@@ -29,14 +31,20 @@ export const opcoesDoGrupo = (g: GrupoOpcoes | undefined): OpcoesBaralho => ({ .
 
 // ---------------------------------------------------------------- padrões e baralhos
 
+/**
+ * Controle dos padrões de fábrica: hora 0 e nada a enviar. Assim, num aparelho novo, os padrões recém-criados
+ * nunca vencem (na sincronização) as opções que ela já personalizou em outro aparelho; e o mesmo id em todo aparelho.
+ */
+const deFabrica = (): Controle => ({ atualizadoEm: 0, excluidoEm: null, sujo: 0 })
+
 /** Cria (sem sobrescrever) o grupo de opções padrão e os tipos de nota de fábrica. */
-export async function garantirPadroes(db: BancoCiclo, agora = Date.now()): Promise<void> {
+export async function garantirPadroes(db: BancoCiclo): Promise<void> {
   await db.transaction('rw', [db.gruposOpcoes, db.tiposNota], async () => {
     if (!(await db.gruposOpcoes.get(GRUPO_PADRAO))) {
-      await db.gruposOpcoes.put({ id: GRUPO_PADRAO, nome: 'Padrão', opcoes: OPCOES_BARALHO_PADRAO, ...novo(agora) })
+      await db.gruposOpcoes.put({ id: GRUPO_PADRAO, nome: 'Padrão', opcoes: OPCOES_BARALHO_PADRAO, ...deFabrica() })
     }
     for (const t of TIPOS_DE_FABRICA) {
-      if (!(await db.tiposNota.get(t.id))) await db.tiposNota.put({ ...t, ...novo(agora) })
+      if (!(await db.tiposNota.get(t.id))) await db.tiposNota.put({ ...t, ...deFabrica() })
     }
   })
 }
@@ -221,7 +229,7 @@ export async function carregarContexto(db: BancoCiclo, agora = Date.now(), virad
     db.baralhos.toArray(),
     db.gruposOpcoes.toArray(),
     db.cartoes.filter((c) => c.excluidoEm === null && !c.suspenso && (c.tipo !== 'revisao' || c.venceDia <= hoje)).toArray(),
-    db.revlog.where('dia').equals(hoje).toArray(),
+    db.revlog.where('dia').equals(hoje).filter(vivo).toArray(),
   ])
   const vivos = baralhos.filter((b) => b.excluidoEm === null)
   const porGrupo = new Map(grupos.map((g) => [g.id, g]))
@@ -269,7 +277,7 @@ export async function responderCartao(
     const log: RegistroRevisao = {
       id: logId, cartaoId, baralhoId: c.baralhoId, dia: hoje, instante: agora, botao, tipoLog: r.log.tipoLog, estadoAntes: r.log.estadoAntes,
       intervaloAntes: r.log.intervaloAntes, intervaloDepois: r.log.intervaloDepois, facilidade: r.log.facilidade, tempoMs,
-      atualizadoEm: agora, sujo: 1,
+      atualizadoEm: agora, excluidoEm: null, sujo: 1,
     }
     await db.cartoes.put(novoC)
     await db.revlog.put(log)
@@ -294,13 +302,14 @@ export async function responderCartao(
   })
 }
 
-/** Desfaz a última resposta (cartão, irmãos, tag de sanguessuga e linha do histórico). */
+/** Desfaz a última resposta (cartão, irmãos e tag de sanguessuga); a linha do histórico fica marcada como excluída. */
 export async function desfazerResposta(db: BancoCiclo, d: Desfazer, agora = Date.now()): Promise<void> {
   await db.transaction('rw', [db.cartoes, db.notasFc, db.revlog], async () => {
     await db.cartoes.put({ ...d.cartaoAntes, atualizadoEm: agora, sujo: 1 })
     for (const s of d.irmaosAntes) await db.cartoes.put({ ...s, atualizadoEm: agora, sujo: 1 })
     if (d.notaAntes) await db.notasFc.put({ ...d.notaAntes, atualizadoEm: agora, sujo: 1 })
-    await db.revlog.delete(d.logId)
+    const log = await db.revlog.get(d.logId)
+    if (log) await db.revlog.put({ ...log, excluidoEm: agora, atualizadoEm: agora, sujo: 1 })
   })
 }
 
@@ -356,7 +365,7 @@ export async function definirBandeira(db: BancoCiclo, cartaoId: string, flag: nu
 export async function estudoPorDia(db: BancoCiclo): Promise<{ cartoes: Map<number, number>; tempoMs: Map<number, number> }> {
   const cartoes = new Map<number, number>()
   const tempoMs = new Map<number, number>()
-  await db.revlog.each((r) => {
+  await db.revlog.filter(vivo).each((r) => {
     cartoes.set(r.dia, (cartoes.get(r.dia) ?? 0) + 1)
     tempoMs.set(r.dia, (tempoMs.get(r.dia) ?? 0) + r.tempoMs)
   })
@@ -366,7 +375,7 @@ export async function estudoPorDia(db: BancoCiclo): Promise<{ cartoes: Map<numbe
 /** Respostas e acertos por baralho (sem somar os subbaralhos) a partir de `desdeDia`, para a coluna "Acertos". */
 export async function acertosPorBaralho(db: BancoCiclo, desdeDia: number): Promise<Map<string, Acertos>> {
   const m = new Map<string, Acertos>()
-  await db.revlog.where('dia').aboveOrEqual(desdeDia).each((r) => {
+  await db.revlog.where('dia').aboveOrEqual(desdeDia).filter(vivo).each((r) => {
     const a = m.get(r.baralhoId) ?? { respostas: 0, acertos: 0 }
     a.respostas++
     if (r.botao >= 2) a.acertos++
@@ -390,7 +399,7 @@ export async function estatisticasDoBaralho(db: BancoCiclo, raizId: string | nul
   const baralhos = (await db.baralhos.toArray()).filter((b) => b.excluidoEm === null)
   const ids = idsDaArvore(baralhos, raizId)
   const [registros, cartoes] = await Promise.all([
-    db.revlog.where('baralhoId').anyOf(ids).toArray(),
+    db.revlog.where('baralhoId').anyOf(ids).filter(vivo).toArray(),
     db.cartoes.where('baralhoId').anyOf(ids).filter((c) => c.excluidoEm === null).toArray(),
   ])
   const desde = inicioDoPeriodoFc(periodo, hoje)
