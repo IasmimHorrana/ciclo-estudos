@@ -13,7 +13,7 @@ const CICLO = { config: { horas: 2, duracao: 1, mats: [{ nome: 'Informática', r
 let n = 0
 async function banco() {
   const db = new BancoCiclo(`bkfc-${++n}`)
-  await garantirPadroes(db, T0)
+  await garantirPadroes(db)
   return db
 }
 

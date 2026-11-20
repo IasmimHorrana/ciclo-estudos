@@ -31,14 +31,20 @@ export const opcoesDoGrupo = (g: GrupoOpcoes | undefined): OpcoesBaralho => ({ .
 
 // ---------------------------------------------------------------- padrões e baralhos
 
+/**
+ * Controle dos padrões de fábrica: hora 0 e nada a enviar. Assim, num aparelho novo, os padrões recém-criados
+ * nunca vencem (na sincronização) as opções que ela já personalizou em outro aparelho; e o mesmo id em todo aparelho.
+ */
+const deFabrica = (): Controle => ({ atualizadoEm: 0, excluidoEm: null, sujo: 0 })
+
 /** Cria (sem sobrescrever) o grupo de opções padrão e os tipos de nota de fábrica. */
-export async function garantirPadroes(db: BancoCiclo, agora = Date.now()): Promise<void> {
+export async function garantirPadroes(db: BancoCiclo): Promise<void> {
   await db.transaction('rw', [db.gruposOpcoes, db.tiposNota], async () => {
     if (!(await db.gruposOpcoes.get(GRUPO_PADRAO))) {
-      await db.gruposOpcoes.put({ id: GRUPO_PADRAO, nome: 'Padrão', opcoes: OPCOES_BARALHO_PADRAO, ...novo(agora) })
+      await db.gruposOpcoes.put({ id: GRUPO_PADRAO, nome: 'Padrão', opcoes: OPCOES_BARALHO_PADRAO, ...deFabrica() })
     }
     for (const t of TIPOS_DE_FABRICA) {
-      if (!(await db.tiposNota.get(t.id))) await db.tiposNota.put({ ...t, ...novo(agora) })
+      if (!(await db.tiposNota.get(t.id))) await db.tiposNota.put({ ...t, ...deFabrica() })
     }
   })
 }

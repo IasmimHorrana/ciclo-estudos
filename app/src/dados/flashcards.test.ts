@@ -19,7 +19,7 @@ const DIA = 86_400_000
 let n = 0
 async function banco() {
   const db = new BancoCiclo(`fc-${++n}`)
-  await garantirPadroes(db, T0)
+  await garantirPadroes(db)
   return db
 }
 async function comCiclo(db: BancoCiclo) {
@@ -35,7 +35,7 @@ async function comCiclo(db: BancoCiclo) {
 describe('padrões e baralhos', () => {
   it('cria grupo padrão e 5 tipos de nota, sem duplicar ao repetir', async () => {
     const db = await banco()
-    await garantirPadroes(db, T0 + 1)
+    await garantirPadroes(db)
     expect(await db.gruposOpcoes.count()).toBe(1)
     expect(await db.tiposNota.count()).toBe(5)
   })
