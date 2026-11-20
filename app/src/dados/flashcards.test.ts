@@ -193,13 +193,16 @@ describe('estudar', () => {
     expect(await db.cartoes.get(id)).toMatchObject({ tipo: 'reaprendendo', lapsos: 1, facilidade: 2.3 })
   })
 
-  it('desfazer devolve o cartão ao estado de antes e apaga a linha do histórico', async () => {
+  it('desfazer devolve o cartão ao estado de antes e marca a linha do histórico como excluída (sem apagar)', async () => {
     const { db, id } = await comUmCartao()
     const antes = (await db.cartoes.get(id))!
     const d = await responderCartao(db, id, 3, 1000, T0, null)
     await desfazerResposta(db, d, T0 + 1)
     expect(await db.cartoes.get(id)).toMatchObject({ tipo: 'novo', repeticoes: 0, passo: antes.passo })
-    expect(await db.revlog.count()).toBe(0)
+    expect(await db.revlog.get(d.logId)).toMatchObject({ excluidoEm: T0 + 1, sujo: 1 })
+    // a resposta desfeita não conta no limite do dia nem nas estatísticas
+    expect((await acertosPorBaralho(db, 0)).size).toBe(0)
+    expect((await estatisticasDoBaralho(db, null, 'tudo', T0 + 2)).resumo.total.respostas).toBe(0)
   })
 
   it('irmãos: responder um cartão enterra o outro da mesma nota até amanhã; desfazer solta', async () => {

@@ -75,13 +75,13 @@ export function lerFlashcards(o: Record<string, unknown>, agora: number): Flashc
     tiposNota: f.tiposNota.map((x) => ({ ...x, ...ctl() }) as unknown as TipoNota),
     notas: f.notas.map((x) => ({ ...x, ...ctl() }) as unknown as NotaFc),
     cartoes: f.cartoes.map((x) => ({ ...x, ...ctl() }) as unknown as CartaoFc),
-    revlog: f.revlog.map((x) => ({ ...x, atualizadoEm: agora, sujo: 1 }) as unknown as RegistroRevisao),
+    revlog: f.revlog.map((x) => ({ ...x, ...ctl() }) as unknown as RegistroRevisao),
   }
 }
 
 const vivos = <T extends { excluidoEm: number | null }>(l: T[]) => l.filter((x) => x.excluidoEm === null)
 
-/** Tudo dos flashcards que está vivo (o histórico vai inteiro: ele só acrescenta). */
+/** Tudo dos flashcards que está vivo (o histórico sem as respostas desfeitas). */
 export async function carregarFlashcards(db: BancoCiclo): Promise<Flashcards> {
   const [baralhos, gruposOpcoes, tiposNota, notas, cartoes, revlog] = await Promise.all([
     db.baralhos.toArray(),
@@ -97,7 +97,7 @@ export async function carregarFlashcards(db: BancoCiclo): Promise<Flashcards> {
     tiposNota: vivos(tiposNota),
     notas: vivos(notas),
     cartoes: vivos(cartoes),
-    revlog,
+    revlog: revlog.filter((r) => !r.excluidoEm),
   }
 }
 
@@ -120,7 +120,8 @@ export const tabelasFlashcards = (db: BancoCiclo) => [db.baralhos, db.gruposOpco
 /**
  * Grava os flashcards do backup, **substituindo** os atuais. Chame dentro de uma transação que inclua
  * `tabelasFlashcards(db)`. O que existia e não está no arquivo ganha `excluidoEm` (nada é apagado de verdade).
- * O histórico de respostas é **somado**: entram as linhas do arquivo e nenhuma linha existente sai.
+ * O histórico de respostas é **somado**: entram as linhas do arquivo e nenhuma linha existente sai
+ * (uma resposta desfeita aqui continua desfeita, mesmo que um backup mais antigo a traga).
  */
 export async function gravarFlashcards(db: BancoCiclo, f: Flashcards, agora: number): Promise<void> {
   const pares = [
@@ -138,5 +139,6 @@ export async function gravarFlashcards(db: BancoCiclo, f: Flashcards, agora: num
       .map((x) => ({ ...x, excluidoEm: agora, atualizadoEm: agora, sujo: 1 as const }))
     await t.bulkPut([...entrantes, ...sobras])
   }
-  await db.revlog.bulkPut(f.revlog)
+  const desfeitas = new Set((await db.revlog.filter((r) => !!r.excluidoEm).primaryKeys()) as string[])
+  await db.revlog.bulkPut(f.revlog.filter((r) => !desfeitas.has(r.id)))
 }

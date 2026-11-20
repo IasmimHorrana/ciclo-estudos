@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { carregarFlashcards } from '@/dados/backup-flashcards'
 import { lerArquivoCompleto, paraArquivo } from '@/dados/converter'
 import { BancoCiclo } from '@/dados/db'
-import { adicionarNota, criarBaralho, excluirNota, garantirPadroes, responderCartao } from '@/dados/flashcards'
+import { adicionarNota, criarBaralho, desfazerResposta, excluirNota, garantirPadroes, responderCartao } from '@/dados/flashcards'
 import { carregarDados, substituirDados } from '@/dados/repositorio'
 
 const T0 = new Date(2026, 10, 19, 10, 0).getTime()
@@ -88,6 +88,20 @@ describe('flashcards no backup', () => {
     expect(todos.every((c) => c.excluidoEm !== null)).toBe(true)
     expect(await db.revlog.count()).toBe(2) // o histórico nunca perde linhas
     expect((await carregarFlashcards(db)).tiposNota).toHaveLength(5)
+  })
+
+  it('resposta desfeita não sai no backup e não volta ao importar um backup mais antigo', async () => {
+    const { db, cartao } = await comFlashcards()
+    const antigo = await exportar(db, T0 + 50) // ainda com as 2 respostas
+    const d = await responderCartao(db, cartao, 1, 1000, T0 + 60 * 60_000, null)
+    await desfazerResposta(db, d, T0 + 60 * 60_000 + 1)
+    expect((await carregarFlashcards(db)).revlog).toHaveLength(2)
+    expect(JSON.parse(await exportar(db, T0 + 99)).flashcards.revlog).toHaveLength(2)
+
+    const { dados, flashcards } = lerArquivoCompleto(antigo, T0 + 100)
+    await substituirDados(db, dados, T0 + 100, flashcards)
+    expect(await db.revlog.get(d.logId)).toMatchObject({ excluidoEm: T0 + 60 * 60_000 + 1 })
+    expect((await carregarFlashcards(db)).revlog).toHaveLength(2)
   })
 
   it('o arquivo antigo do app em HTML continua sendo lido', () => {
