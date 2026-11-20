@@ -1,3 +1,4 @@
+import { flashcardsParaArquivo, lerFlashcards, type Flashcards } from '@/dados/backup-flashcards'
 import { BackupLegado, type Controle, type Dados } from '@/dados/esquemas'
 
 /** Marca de um arquivo exportado pela base nova (o app em HTML não grava isto, então dá para distinguir). */
@@ -8,6 +9,11 @@ const ctl = (agora: number, atualizado?: number): Controle => ({ atualizadoEm: a
 
 /** Lê o texto de um backup (do app em HTML ou da base nova) e valida. Lança `Error` com mensagem em português. */
 export function lerArquivo(texto: string, agora = Date.now()): Dados {
+  return lerArquivoCompleto(texto, agora).dados
+}
+
+/** Como `lerArquivo`, mas devolve também os flashcards (`null` se o arquivo não os tem, como os backups antigos). */
+export function lerArquivoCompleto(texto: string, agora = Date.now()): { dados: Dados; flashcards: Flashcards | null } {
   let cru: unknown
   try {
     cru = JSON.parse(texto)
@@ -22,7 +28,8 @@ export function lerArquivo(texto: string, agora = Date.now()): Dados {
   if (!o.config || typeof o.config !== 'object' || !Array.isArray(o.fechadas)) {
     throw new Error('O arquivo não parece um backup do Ciclo de Estudos.')
   }
-  return paraDados(BackupLegado.parse(o), agora)
+  const flashcards = lerFlashcards(o, agora)
+  return { dados: paraDados(BackupLegado.parse(o), agora), flashcards }
 }
 
 /** Converte o backup (já validado) para o formato guardado no Dexie, com os controles de sincronização. */
@@ -49,9 +56,10 @@ const semControle = <T extends Controle>({ atualizadoEm: _a, excluidoEm: _e, suj
 
 /**
  * Objeto do arquivo de backup. Mantém o mesmo formato do app em HTML (assim os dois se leem),
- * acrescentando `formato` e `versao`. Os controles de sincronização não vão para o arquivo.
+ * acrescentando `formato`, `versao` e `flashcards` (o app em HTML ignora a chave que não conhece).
+ * Os controles de sincronização não vão para o arquivo.
  */
-export function paraArquivo(d: Dados, agora = Date.now()) {
+export function paraArquivo(d: Dados, agora = Date.now(), flashcards: Flashcards | null = null) {
   return {
     formato: FORMATO,
     versao: VERSAO_ARQUIVO,
@@ -69,5 +77,6 @@ export function paraArquivo(d: Dados, agora = Date.now()) {
     materiasEdital: d.materiasEdital.map(semControle),
     questoes: d.questoes.map(semControle),
     sessoes: d.sessoes.map(semControle),
+    ...(flashcards ? { flashcards: flashcardsParaArquivo(flashcards) } : {}),
   }
 }

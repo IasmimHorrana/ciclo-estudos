@@ -9,7 +9,7 @@
 > | 4. Portar Montar, Semana, Desempenho e Resumos | feita na `dev`: as quatro abas, a barra lateral e o Pomodoro já funcionam na base nova; aguardando o seu teste (a criar "cartão a partir dos Resumos" e o quadro de flashcards no Desempenho ficam para depois do Flashcards) |
 > | Extra: aba Edital verticalizado | feita na `dev`: importar com pré-visualização, prioridade e "＋ Ciclo". Em out/2026, ideias do "PROMPT GRATUITO": layout em checklist com busca e painel lateral, faixas de acerto ajustáveis, revisão espaçada dos assuntos (Dexie v6) e alertas de reforço; aguardando o seu teste. Ficaram para depois: comando para IA, caderno de erros, simulados, provas em PDF, lei seca e tamanho da letra |
 > | Extra: modo Livre e cronômetro livre | feito na `dev` (out/2026): chave Ciclo \| Livre na aba Semana (até duas matérias por dia, meta semanal 28/32 h sem dívida, horas pelas sessões) e chave Pomodoro \| Livre no Relógio da barra lateral (cronômetro que conta para cima, "Fechar sessão" com questões e acertos, retomada ao reabrir). O Pomodoro e o ciclo de passos continuam iguais. Aguardando o seu teste; não testado no celular |
-> | 5. Supabase (login e sincronização) | a fazer |
+> | 5. Supabase (login e sincronização) | planejada em detalhe em 2026-11-19 (seção "Etapa 5 em detalhe"). 5.0 feita na `dev` em 2026-11-19: flashcards no backup (.json, .zip e pasta); aguardando o teste dela e a ida para a `main`. Próxima: 5.1 |
 > | 6. Publicar e instalar no celular | site no ar em https://iasmimhorrana.github.io/ciclo-estudos/ (GitHub Pages, a cada mudança na `main`); service worker registrado e abrir sem internet testado no computador (preview); layout de celular feito (barra do topo com ☰ e gaveta, Flashcards e Semana ajustados, 2026-11-13); faltam instalar no celular e testar lá de verdade |
 # Plano: base nova (Git + Vite/React/TS + Dexie + PWA), Flashcards estilo Anki (SM-2) nela e Supabase depois
 
@@ -76,6 +76,52 @@ ciclo-estudos/            (repo Git)
 4. **Portar as outras abas** (Montar, Semana, Desempenho, Resumos), com "criar cartão a partir de Resumos" e o quadro de flashcards no Desempenho. Durante 3→4 a pessoa usa o HTML antigo para o ciclo e a base nova para os flashcards (transição assumida; os dados vêm por exportar/importar).
 5. **Supabase:** projeto, SQL com RLS, login por link, sincronização, Storage de imagens, tela de status. Teste com dois perfis do navegador.
 6. **Publicar** (GitHub Pages/Cloudflare), instalar no celular, testar offline; aposentar o HTML (mantendo a tag `v0-html`).
+
+## Etapa 5 em detalhe (planejada em 2026-11-19)
+
+**Objetivo:** abrir o app no celular e no computador, entrar com o mesmo e-mail e ver os mesmos dados (flashcards primeiro, mas tudo junto), sem passar backup de um lado para o outro. O app continua funcionando sem internet e sem login; a nuvem é cópia.
+
+### O que já existe e ajuda
+- Todas as tabelas do Dexie já têm `atualizadoEm`, `sujo` e (quase todas) `excluidoEm`; importar backup já não apaga de verdade.
+- As imagens dos cartões já ficam **dentro do cartão** (data URL WebP, até 1280 px). Por isso a primeira versão **não precisa do Storage**: a imagem viaja junto com o cartão. O Storage só entra se a base passar de ~250 MB (o plano gratuito tem 500 MB de banco); a tela de status mostra o tamanho usado.
+
+### Decisões (recomendadas; ela confirma)
+1. **Entrar com código de 6 dígitos no e-mail**, não com link. O link abre no navegador em vez do app instalado (principalmente no iPhone); o código ela digita no próprio app. A sessão fica salva; só pede de novo se ela sair.
+2. **Só uma conta.** Depois de criar a conta dela, os cadastros novos são desligados no painel do Supabase. A RLS protege os dados de qualquer forma.
+3. **O computador é a fonte da primeira vez.** O primeiro aparelho a entrar envia tudo; os outros recebem. Se um aparelho que entra já tiver dados próprios, o app **pergunta** o que fazer e, antes de qualquer coisa, **baixa um backup .json automático** do que havia nele.
+4. **Conflito simples e seguro** (uma pessoa, dois aparelhos):
+   - Histórico de revisões (revlog): **soma** dos dois lados, nada se perde (ids únicos, só acrescenta).
+   - Cartão estudado nos dois aparelhos sem internet: vale o estado do lado com a **revisão mais recente** no revlog (no lugar do "recalcular tudo pelo revlog" previsto antes, que é mais arriscado e não muda o resultado no uso real).
+   - Demais registros (notas, resumos, config, semana etc.): vale a **edição mais recente**, com a hora corrigida pelo desvio do relógio do aparelho.
+   - Excluído em um lado: continua excluído (a exclusão também é uma edição com hora).
+5. **Quando sincroniza:** ao abrir, ao voltar a internet, ~5 s depois de cada mudança, a cada 2 min com o app aberto e ao minimizar. Nada disso trava a tela.
+
+### Banco na nuvem (SQL versionado em `supabase/migrations/`)
+- `registros(user_id, colecao, id, dados jsonb, editado_em, atualizado_em, excluido_em, esquema_versao)`, chave `(user_id, colecao, id)`; RLS `user_id = auth.uid()` para ler e gravar.
+- Gatilho preenche `atualizado_em = now()` do servidor (o cursor de "puxar") e recusa `esquema_versao` menor que a mínima (tabela `config_app`).
+- `dispositivos(user_id, id, nome, ultima_sync)` para saber quando é seguro expurgar marcas de exclusão (90 dias).
+- Coleções = as tabelas do Dexie: `valores`, `semanasFechadas`, `modelos`, `notas`, `assuntos`, `materiasEdital`, `questoes`, `sessoes`, `baralhos`, `gruposOpcoes`, `tiposNota`, `notasFc`, `cartoes`, `revlog`. A tabela `local` (pasta de backup, coisas do aparelho) **nunca** sobe.
+
+### Como a sincronização funciona
+- **Empurrar:** pega os registros `sujo = 1`, envia em lotes de 200 (upsert). Só limpa o `sujo` se o registro não mudou durante o envio (comparando `atualizadoEm`), para não perder uma edição feita no meio.
+- **Puxar:** busca `atualizado_em > cursor`, ordenado por `(atualizado_em, id)`, em páginas de 500; o cursor volta 1 min a cada vez (puxar duas vezes o mesmo registro não faz mal) para não perder gravações que terminaram fora de ordem.
+- **Juntar:** registro local limpo → aplica o do servidor. Registro local sujo → regra de conflito acima. Tudo em transação do Dexie; as telas atualizam sozinhas (`useLiveQuery`).
+- **Estado visível:** no rodapé da barra lateral (ao lado do backup): "Sincronizado há 2 min", "Sem internet: 12 mudanças esperando", "Erro: …", "Atualize o app". Clicar abre a tela de status com "Sincronizar agora", conta, aparelhos e tamanho usado.
+- Lógica pura (decidir conflito, montar lotes, cursor, desvio do relógio) em `src/dominio/sincronia.ts`, com testes Vitest; a parte de rede em `src/dados/sincronizar.ts`, testada com um servidor falso em memória.
+
+### Sub-etapas (paro para ela ver ao fim das marcadas ⏸)
+0. **5.0 Flashcards no backup ✅ (2026-11-19, `dev`).** Descoberto ao revisar os riscos: o .json, o .zip e o backup em pasta não levavam os flashcards. Agora levam (chave `flashcards`, `backup-flashcards.ts`), com testes de ida e volta, backup antigo e arquivo com defeito. Precisa ir para a `main` antes de tudo, para o backup em pasta dela passar a guardar os cartões.
+1. **5.1 Preparar o app (sem nuvem ainda).** Desfazer resposta passa a marcar o revlog como excluído em vez de apagar (`db.revlog.delete` em `flashcards.ts`); conferir com teste que toda gravação marca `sujo` e `atualizadoEm`; id do aparelho na tabela `local`; `sincronia.ts` com testes. Nada muda para ela na tela.
+2. **5.2 Projeto no Supabase ⏸ (com ela).** Ela cria a conta e o projeto gratuito (região São Paulo) e me passa a **URL** e a **chave anon/publishable** (nunca a `service_role`). Eu entrego o SQL; ela cola no SQL Editor (ou autoriza a CLI). Configuro o e-mail com código, desligo cadastros depois da conta dela e testo a RLS com um segundo usuário de teste (apagado em seguida). A URL e a chave vão para `.env.local` (fora do Git) e para as variáveis do GitHub Actions (com a confirmação dela).
+3. **5.3 Entrar e sair.** Tela "Conta" (e-mail → código), sessão salva, sair. Sem login o app segue igual.
+4. **5.4 Sincronização ⏸.** Motor, primeira sincronização com a pergunta e o backup automático, indicador e tela de status. Aviso ao importar um backup com a sincronização ligada (importar substitui os dados **em todos os aparelhos**).
+5. **5.5 Testes e publicação ⏸.** Dois perfis do navegador (roteiro da seção Verificação: offline nos dois, mesmo cartão estudado nos dois, exclusão que não ressuscita, 3.000 registros, relógio atrasado). Depois, com a aprovação dela, vai para a `main` (o site atualiza) e ela testa no celular: instalar, entrar, estudar na rua sem internet, ver no computador.
+
+### Riscos e respostas
+- **Projeto pausado após 7 dias sem uso** (plano gratuito): o app continua funcionando local e avisa; um agendamento semanal no GitHub Actions pode manter o projeto ativo (opcional).
+- **Sem backup automático na nuvem gratuita:** o backup em pasta do computador continua ligado; ele passa a ser a cópia de segurança da nuvem.
+- **Limite de e-mails do Supabase** (poucos por hora no plano gratuito): só importa ao entrar, o que é raro.
+- **Bug na sincronização espalhar um erro:** a primeira sincronização sempre baixa um .json antes; o revlog nunca é sobrescrito; e a versão do esquema impede um app antigo de gravar formato velho.
 
 ### Agendador SM-2 (função pura)
 `responder(cartao, botao, opcoes, agora, hoje)` e `previsaoIntervalos(...)` (sem variação aleatória, para os rótulos).
