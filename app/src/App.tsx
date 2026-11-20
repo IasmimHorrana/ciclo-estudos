@@ -17,6 +17,7 @@ import { iniciarPersistenciaPomodoro } from '@/componentes/restaurar-pomodoro-ap
 import { useCiclo } from '@/dados/useCiclo'
 import { carregarPasta, iniciarBackupAutomatico } from '@/dados/pasta'
 import { iniciarConta } from '@/dados/conta'
+import { iniciarSincroniaAutomatica } from '@/dados/sincronia-auto'
 import { fmtHHMMSS } from '@/dominio/cronometro'
 import { FAIXAS_PADRAO } from '@/dominio/desempenho'
 import { fmtMMSS, NOMES_FASE } from '@/dominio/pomodoro'
@@ -111,6 +112,9 @@ export default function App() {
       parar?.()
     }
   }, [])
+
+  // sincronização com a nuvem: liga sozinha enquanto a conta estiver conectada
+  useEffect(() => iniciarSincroniaAutomatica(), [])
 
   // tema claro/escuro (e acompanha o sistema no modo automático)
   useEffect(() => {
