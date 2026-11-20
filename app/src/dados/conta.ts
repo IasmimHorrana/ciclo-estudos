@@ -35,19 +35,19 @@ const online = () => (typeof navigator === 'undefined' ? true : navigator.onLine
 /** Ao abrir o app: lê a sessão guardada (sem rede) e acompanha entradas, saídas e renovações. */
 export async function iniciarConta(): Promise<() => void> {
   if (!nuvemConfigurada()) {
-    useConta.setState({ estado: 'semNuvem', email: '' })
+    useConta.setState({ estado: 'semNuvem', email: '', usuarioId: '' })
     return () => undefined
   }
   try {
     const sb = await clienteNuvem()
     const { data } = await sb.auth.getSession()
-    useConta.setState({ estado: data.session ? 'dentro' : 'fora', email: data.session?.user.email ?? '' })
+    useConta.setState({ estado: data.session ? 'dentro' : 'fora', email: data.session?.user.email ?? '', usuarioId: data.session?.user.id ?? '' })
     const { data: sub } = sb.auth.onAuthStateChange((_evento, sessao) => {
-      useConta.setState({ estado: sessao ? 'dentro' : 'fora', email: sessao?.user.email ?? '' })
+      useConta.setState({ estado: sessao ? 'dentro' : 'fora', email: sessao?.user.email ?? '', usuarioId: sessao?.user.id ?? '' })
     })
     return () => sub.subscription.unsubscribe()
   } catch {
-    useConta.setState({ estado: 'fora', email: '' })
+    useConta.setState({ estado: 'fora', email: '', usuarioId: '' })
     return () => undefined
   }
 }
@@ -61,7 +61,7 @@ export async function entrar(email: string, senha: string): Promise<string | nul
     const sb = await clienteNuvem()
     const { data, error } = await sb.auth.signInWithPassword({ email: email.trim(), password: senha })
     if (error) return mensagemDeErroDaConta(error)
-    useConta.setState({ estado: 'dentro', email: data.user?.email ?? email.trim() })
+    useConta.setState({ estado: 'dentro', email: data.user?.email ?? email.trim(), usuarioId: data.user?.id ?? '' })
     return null
   } catch (e) {
     return mensagemDeErroDaConta(e, online())
@@ -74,6 +74,6 @@ export async function sair(): Promise<void> {
     const sb = await clienteNuvem()
     await sb.auth.signOut({ scope: 'local' })
   } finally {
-    useConta.setState({ estado: 'fora', email: '' })
+    useConta.setState({ estado: 'fora', email: '', usuarioId: '' })
   }
 }
