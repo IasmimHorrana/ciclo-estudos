@@ -36,6 +36,10 @@ jobs:
       - run: npm run build
         env:
           VITE_BASE: /ciclo-estudos/
+          # Nuvem (Supabase): só a URL e a chave PUBLICÁVEL, guardadas como variáveis do repositório.
+          # Nunca a chave secreta/service_role. A proteção dos dados vem das regras (RLS) no banco.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: app/dist
