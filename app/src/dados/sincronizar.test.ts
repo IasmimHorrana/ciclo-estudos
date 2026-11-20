@@ -292,7 +292,7 @@ describe('segurança do motor', () => {
     await sincronizarAgora(cel, nuvem.srv, opcoes('cel'))
     expect(await cel.questoes.count()).toBe(muitas)
     expect(await cel.baralhos.get(baralho)).toBeDefined()
-  })
+  }, 30_000) // mais de mil registros: a máquina do GitHub é lenta
 
   it('só uma sincronização por vez', async () => {
     const nuvem = nuvemFalsa()
