@@ -11,6 +11,7 @@ import { criarZip } from '@/dados/zip'
 import { useBackup } from '@/estado/backup'
 import { carregarDados, substituirDados, type ResumoImportacao } from '@/dados/repositorio'
 import { hoje } from '@/dominio/datas'
+import { SecaoConta } from '@/telas/SecaoConta'
 
 type Aviso = { tipo: 'ok' | 'erro'; texto: string }
 
@@ -127,6 +128,8 @@ export function Dados() {
           Os dados ficam só neste navegador e neste computador. Limpar os dados do site apaga tudo, por isso exporte um backup de vez em quando.
         </p>
       </section>
+
+      <SecaoConta />
 
       <section className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-4 shadow-sm">
         <Button onClick={() => entrada.current?.click()}>
