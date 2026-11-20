@@ -1,6 +1,7 @@
 import { liveQuery } from 'dexie'
 import { caminhoNota, hashTexto, lerMd, notaParaArquivo } from '@/dados/arquivos'
-import { lerArquivo, paraArquivo } from '@/dados/converter'
+import { carregarFlashcards, tabelasFlashcards, type Flashcards } from '@/dados/backup-flashcards'
+import { lerArquivoCompleto, paraArquivo } from '@/dados/converter'
 import { db } from '@/dados/db'
 import { mesclarMd, type MdDaPasta } from '@/dados/mesclar'
 import { carregarDados, substituirDados } from '@/dados/repositorio'
@@ -8,7 +9,7 @@ import { useBackup } from '@/estado/backup'
 
 /**
  * Backup automático numa pasta do computador (File System Access API: só Chrome/Edge).
- * Grava um `.md` por resumo, em `Matéria/Título.md`, e o `_backup-app.json` com todos os dados.
+ * Grava um `.md` por resumo, em `Matéria/Título.md`, e o `_backup-app.json` com todos os dados (inclusive os flashcards).
  * Só apaga arquivos que o próprio app criou.
  */
 
@@ -106,7 +107,7 @@ export async function gravarTudo(forcar: boolean) {
     for (const [id, antigo] of Object.entries((await lerLocal<Registro>('registroPasta'))?.arquivos ?? {})) {
       if (arquivos[id] !== antigo) await apagar(raiz, antigo) // só o que o app criou
     }
-    await escrever(raiz, ARQUIVO_JSON, JSON.stringify(paraArquivo(d)))
+    await escrever(raiz, ARQUIVO_JSON, JSON.stringify(paraArquivo(d, Date.now(), await carregarFlashcards(db))))
     const agora = Date.now()
     await gravarLocal('registroPasta', { arquivos, hashes } satisfies Registro)
     await gravarLocal('ultimoBackup', agora)
@@ -145,18 +146,28 @@ export async function reconectarPasta() {
   }
 }
 
-/** Liga o backup automático: a cada mudança nos dados, espera 2 s e grava. Devolve a função que desliga. */
+/** Espera depois de uma mudança nos flashcards: no estudo há uma resposta a cada poucos segundos e o arquivo leva todos os cartões. */
+const ESPERA_FLASHCARDS = 15_000
+
+/**
+ * Liga o backup automático: a cada mudança nos dados, espera 2 s e grava (nos flashcards, 15 s).
+ * Devolve a função que desliga.
+ */
 export function iniciarBackupAutomatico() {
-  const sub = liveQuery(() => carregarDados(db)).subscribe({
-    next: () => {
-      if (!pasta || useBackup.getState().estado !== 'ok') return
-      clearTimeout(timer)
-      timer = setTimeout(() => void gravarTudo(false), 2000)
-    },
+  const agendar = (espera: number) => {
+    if (!pasta || useBackup.getState().estado !== 'ok') return
+    clearTimeout(timer)
+    timer = setTimeout(() => void gravarTudo(false), espera)
+  }
+  const sub = liveQuery(() => carregarDados(db)).subscribe({ next: () => agendar(2000), error: () => undefined })
+  // Observa as tabelas dos flashcards sem ler os cartões inteiros: contar já faz o liveQuery avisar de qualquer gravação nelas.
+  const subFc = liveQuery(() => Promise.all(tabelasFlashcards(db).map((t) => t.count()))).subscribe({
+    next: () => agendar(ESPERA_FLASHCARDS),
     error: () => undefined,
   })
   return () => {
     sub.unsubscribe()
+    subFc.unsubscribe()
     clearTimeout(timer)
   }
 }
@@ -178,6 +189,8 @@ export interface ResultadoRestauro {
   temJson: boolean
   novas: number
   atualizadas: number
+  /** Cartões restaurados; `null` = o backup da pasta não tinha flashcards (os atuais ficaram como estavam). */
+  cartoes: number | null
 }
 
 /**
@@ -192,10 +205,11 @@ export async function restaurarDaPasta(confirmarSubstituir: () => boolean): Prom
     return null
   }
   let base = await carregarDados(db)
+  let flashcards: Flashcards | null = null
   let temJson = false
   try {
     const f = await (await h.getFileHandle(ARQUIVO_JSON)).getFile()
-    base = lerArquivo(await f.text())
+    ;({ dados: base, flashcards } = lerArquivoCompleto(await f.text()))
     temJson = true
   } catch (e) {
     if (e instanceof Error && !(e instanceof DOMException)) throw e // JSON existe mas está inválido
@@ -203,14 +217,14 @@ export async function restaurarDaPasta(confirmarSubstituir: () => boolean): Prom
   const mds: MdDaPasta[] = []
   await varrer(h, '', mds, 0)
   if (!temJson && !mds.length) throw new Error('Nenhum backup encontrado nesta pasta.')
-  if (!base) base = lerArquivo(JSON.stringify({ config: {}, fechadas: [] }))
+  if (!base) base = lerArquivoCompleto(JSON.stringify({ config: {}, fechadas: [] })).dados
   if ((await carregarDados(db)) && !confirmarSubstituir()) return null
 
   const { dados, novas, atualizadas } = mesclarMd(base, mds)
-  await substituirDados(db, dados)
+  await substituirDados(db, dados, Date.now(), flashcards)
   pasta = h
   await gravarLocal('pasta', h)
   await gravarLocal('registroPasta', { arquivos: {}, hashes: {} } satisfies Registro)
   useBackup.setState({ estado: 'ok', nomePasta: h.name })
-  return { nome: h.name, temJson, novas, atualizadas }
+  return { nome: h.name, temJson, novas, atualizadas, cartoes: flashcards ? flashcards.cartoes.length : null }
 }

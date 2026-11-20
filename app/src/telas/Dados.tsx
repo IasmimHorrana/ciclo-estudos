@@ -3,7 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Archive, Download, FolderSync, Upload } from 'lucide-react'
 import { Button } from '@/componentes/ui/button'
 import { caminhoNota, notaParaArquivo } from '@/dados/arquivos'
-import { lerArquivo, paraArquivo } from '@/dados/converter'
+import { carregarFlashcards } from '@/dados/backup-flashcards'
+import { lerArquivoCompleto, paraArquivo } from '@/dados/converter'
 import { db } from '@/dados/db'
 import { escolherPasta, gravarTudo, pastaSuportada, reconectarPasta, restaurarDaPasta } from '@/dados/pasta'
 import { criarZip } from '@/dados/zip'
@@ -22,6 +23,7 @@ function descreve(r: ResumoImportacao) {
     `${r.assuntos} assunto(s)`,
     `${r.questoes} registro(s) de questões`,
     `${r.sessoes} sessão(ões) de foco`,
+    r.cartoes === null ? null : `${r.cartoes} cartão(ões) de flashcards`,
   ]
   return partes.filter(Boolean).join(', ')
 }
@@ -43,13 +45,25 @@ export function Dados() {
   // `undefined` = ainda lendo; `null` = banco vazio
   const bk = useBackup()
   const dados = useLiveQuery(() => carregarDados(db).then((d) => d ?? null), [])
+  const fc = useLiveQuery(async () => {
+    const [baralhos, cartoes] = await Promise.all([
+      db.baralhos.filter((b) => b.excluidoEm === null).count(),
+      db.cartoes.filter((c) => c.excluidoEm === null).count(),
+    ])
+    return { baralhos, cartoes }
+  }, [])
 
   async function importar(arquivo: File) {
     try {
-      const novos = lerArquivo(await arquivo.text())
-      if (dados && !window.confirm('Já existem dados neste app. Importar vai SUBSTITUIR tudo pelo conteúdo do arquivo. Continuar?')) return
-      const r = await substituirDados(db, novos)
-      setAviso({ tipo: 'ok', texto: `Importado: ${descreve(r)}.` })
+      const { dados: novos, flashcards } = lerArquivoCompleto(await arquivo.text())
+      const temCartoes = (fc?.cartoes ?? 0) > 0
+      const pergunta = flashcards
+        ? 'Já existem dados neste app. Importar vai SUBSTITUIR tudo (inclusive os flashcards) pelo conteúdo do arquivo. Continuar?'
+        : `Já existem dados neste app. Importar vai SUBSTITUIR tudo pelo conteúdo do arquivo.${temCartoes ? ' Este backup não tem flashcards: os seus cartões ficam como estão.' : ''} Continuar?`
+      if ((dados || temCartoes) && !window.confirm(pergunta)) return
+      const r = await substituirDados(db, novos, Date.now(), flashcards)
+      const semFc = r.cartoes === null && temCartoes ? ' O arquivo não tinha flashcards; os seus cartões não foram mexidos.' : ''
+      setAviso({ tipo: 'ok', texto: `Importado: ${descreve(r)}.${semFc}` })
     } catch (e) {
       setAviso({ tipo: 'erro', texto: e instanceof Error ? e.message : 'Não foi possível importar o arquivo.' })
     }
@@ -58,8 +72,9 @@ export function Dados() {
   async function exportar() {
     const d = await carregarDados(db)
     if (!d) return setAviso({ tipo: 'erro', texto: 'Ainda não há dados para exportar.' })
-    baixar(`ciclo-estudos-backup-${hoje()}.json`, JSON.stringify(paraArquivo(d), null, 2))
-    setAviso({ tipo: 'ok', texto: 'Backup exportado. Guarde o arquivo fora da pasta do projeto (Documentos ou nuvem).' })
+    const f = await carregarFlashcards(db)
+    baixar(`ciclo-estudos-backup-${hoje()}.json`, JSON.stringify(paraArquivo(d, Date.now(), f), null, 2))
+    setAviso({ tipo: 'ok', texto: `Backup exportado (com ${f.cartoes.length} cartão(ões) de flashcards). Guarde o arquivo fora da pasta do projeto (Documentos ou nuvem).` })
   }
 
   async function exportarZip() {
@@ -67,18 +82,21 @@ export function Dados() {
     if (!d) return setAviso({ tipo: 'erro', texto: 'Ainda não há dados para exportar.' })
     const usados = new Set<string>()
     const arquivos = d.notas.map((n) => ({ nome: caminhoNota(n, usados), texto: notaParaArquivo(n) }))
-    arquivos.push({ nome: '_backup-app.json', texto: JSON.stringify(paraArquivo(d), null, 2) })
+    const f = await carregarFlashcards(db)
+    arquivos.push({ nome: '_backup-app.json', texto: JSON.stringify(paraArquivo(d, Date.now(), f), null, 2) })
     baixar(`ciclo-estudos-${hoje()}.zip`, criarZip(arquivos))
-    setAviso({ tipo: 'ok', texto: `Zip exportado com ${d.notas.length} resumo(s) em .md e o backup completo.` })
+    setAviso({ tipo: 'ok', texto: `Zip exportado com ${d.notas.length} resumo(s) em .md e o backup completo (com ${f.cartoes.length} cartão(ões) de flashcards).` })
   }
 
   async function restaurar() {
     try {
-      const r = await restaurarDaPasta(() => window.confirm('Restaurar substitui os dados atuais pelos da pasta (e junta os .md novos ou editados). Continuar?'))
+      const r = await restaurarDaPasta(() => window.confirm('Restaurar substitui os dados atuais pelos da pasta, inclusive os flashcards se o backup os tiver (e junta os .md novos ou editados). Continuar?'))
       if (r) {
         setAviso({
           tipo: 'ok',
-          texto: `Restaurado da pasta "${r.nome}"${r.temJson ? '' : ' (sem _backup-app.json)'}: ${r.novas} nota(s) nova(s), ${r.atualizadas} atualizada(s) por edição direta no arquivo.`,
+          texto: `Restaurado da pasta "${r.nome}"${r.temJson ? '' : ' (sem _backup-app.json)'}: ${r.novas} nota(s) nova(s), ${r.atualizadas} atualizada(s) por edição direta no arquivo, ${
+            r.cartoes === null ? 'flashcards não mexidos (o backup da pasta não os tinha)' : `${r.cartoes} cartão(ões) de flashcards`
+          }.`,
         })
       }
     } catch (e) {
@@ -101,7 +119,8 @@ export function Dados() {
         ) : (
           <p className="m-0 text-sm text-muted-foreground">
             {dados.config.mats.length} matéria(s) no ciclo, {dados.fechadas.length} semana(s) fechada(s), {dados.notas.length} resumo(s),{' '}
-            {dados.assuntos.length} assunto(s), {dados.questoes.length} registro(s) de questões.
+            {dados.assuntos.length} assunto(s), {dados.questoes.length} registro(s) de questões
+            {fc ? `, ${fc.baralhos} baralho(s) e ${fc.cartoes} cartão(ões) de flashcards` : ''}.
           </p>
         )}
         <p className="m-0 mt-2 text-xs text-muted-foreground">

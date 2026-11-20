@@ -1,3 +1,4 @@
+import { gravarFlashcards, tabelasFlashcards, type Flashcards } from '@/dados/backup-flashcards'
 import type { BancoCiclo } from '@/dados/db'
 import { Preferencias, type Controle, type Dados } from '@/dados/esquemas'
 
@@ -43,6 +44,8 @@ export interface ResumoImportacao {
   questoes: number
   sessoes: number
   temSemana: boolean
+  /** Cartões de flashcards importados; `null` = o arquivo não tinha flashcards (os atuais ficaram como estavam). */
+  cartoes: number | null
 }
 
 /**
@@ -50,11 +53,13 @@ export interface ResumoImportacao {
  * o que existia e não está nos dados novos ganha `excluidoEm` (e continua "sujo" para a nuvem saber).
  * Tudo numa transação só: ou grava tudo ou não grava nada.
  */
-export async function substituirDados(db: BancoCiclo, d: Dados, agora = Date.now()): Promise<ResumoImportacao> {
+export async function substituirDados(db: BancoCiclo, d: Dados, agora = Date.now(), flashcards: Flashcards | null = null): Promise<ResumoImportacao> {
   const tabelas = [db.semanasFechadas, db.modelos, db.notas, db.assuntos, db.materiasEdital, db.questoes, db.sessoes] as const
   const novos = [d.fechadas, d.modelos, d.notas, d.assuntos, d.materiasEdital, d.questoes, d.sessoes] as const
 
-  await db.transaction('rw', [db.valores, ...tabelas], async () => {
+  // Sem flashcards no arquivo (backup antigo), os cartões atuais ficam como estão.
+  await db.transaction('rw', [db.valores, ...tabelas, ...(flashcards ? tabelasFlashcards(db) : [])], async () => {
+    if (flashcards) await gravarFlashcards(db, flashcards, agora)
     for (const chave of CHAVES) {
       await db.valores.put({ chave, valor: d[chave], atualizadoEm: agora, sujo: 1 })
     }
@@ -80,5 +85,6 @@ export async function substituirDados(db: BancoCiclo, d: Dados, agora = Date.now
     questoes: d.questoes.length,
     sessoes: d.sessoes.length,
     temSemana: d.semana !== null,
+    cartoes: flashcards ? flashcards.cartoes.length : null,
   }
 }
