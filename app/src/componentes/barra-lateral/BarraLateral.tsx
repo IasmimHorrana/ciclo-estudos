@@ -5,6 +5,8 @@ import { Button } from '@/componentes/ui/button'
 import { MiniCalendario } from '@/componentes/barra-lateral/MiniCalendario'
 import { Relogio } from '@/componentes/barra-lateral/Relogio'
 import { useBackup } from '@/estado/backup'
+import { useConta } from '@/estado/conta'
+import { textoSincronia, useSincronia } from '@/estado/sincronia'
 import { useUi, temaEscuro, PALETAS, type AbaId } from '@/estado/ui'
 import { cn } from '@/lib/utils'
 
@@ -33,6 +35,9 @@ export function BarraLateral({ aberta = false, aoNavegar }: { aberta?: boolean; 
   const nomePaleta = PALETAS.find((p) => p.id === paleta)?.nome
   const bk = useBackup((s) => s.estado)
   const backupOk = bk === 'ok' || bk === 'gravando'
+  const conectada = useConta((s) => s.estado === 'dentro')
+  const sinc = useSincronia()
+  const sincRuim = sinc.estado === 'erro' || sinc.estado === 'atualize' || sinc.estado === 'aguardando'
   return (
     <aside
       id="barra-lateral"
@@ -92,6 +97,11 @@ export function BarraLateral({ aberta = false, aoNavegar }: { aberta?: boolean; 
         title="Importar, exportar e backup em pasta"
       >
         {backupOk ? '✅ Backup em pasta ativo' : '⚠ Sem backup automático'} · Dados
+        {conectada && (
+          <span className={cn('mt-0.5 block text-[0.72rem] font-medium', sincRuim ? 'text-erro' : 'opacity-80')}>
+            ☁ {textoSincronia(sinc.estado, sinc.ultima, sinc.pendentes, sinc.erro)}
+          </span>
+        )}
       </button>
     </aside>
   )

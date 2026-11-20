@@ -1,13 +1,16 @@
 import { useState, type FormEvent } from 'react'
-import { Cloud, LogIn, LogOut } from 'lucide-react'
+import { Cloud, LogIn, LogOut, RefreshCw } from 'lucide-react'
 import { Button } from '@/componentes/ui/button'
 import { Entrada } from '@/componentes/ui/entrada'
 import { entrar, sair } from '@/dados/conta'
+import { sincronizarManual } from '@/dados/sincronia-auto'
 import { useConta } from '@/estado/conta'
+import { textoSincronia, useSincronia } from '@/estado/sincronia'
 
-/** Seção "Conta na nuvem" do painel Dados e backup: entrar e sair. A sincronização em si chega na sub-etapa 5.4. */
+/** Seção "Conta na nuvem" do painel Dados e backup: entrar, sair e o estado da sincronização. */
 export function SecaoConta() {
   const { estado, email } = useConta()
+  const sinc = useSincronia()
   const [form, setForm] = useState({ email: '', senha: '' })
   const [erro, setErro] = useState('')
   const [ocupado, setOcupado] = useState(false)
@@ -48,9 +51,19 @@ export function SecaoConta() {
           <p className="m-0 basis-full text-sm">
             ✅ Conectada como <strong className="break-all">{email}</strong>.
           </p>
-          <p className="m-0 basis-full text-xs text-muted-foreground">
-            A sincronização entre aparelhos chega na próxima versão. Por enquanto nada é enviado: os dados continuam só neste aparelho.
+          <p
+            role="status"
+            className={`m-0 basis-full text-sm ${sinc.estado === 'erro' || sinc.estado === 'atualize' ? 'font-semibold text-erro' : 'text-muted-foreground'}`}
+          >
+            {textoSincronia(sinc.estado, sinc.ultima, sinc.pendentes, sinc.erro)}
           </p>
+          <p className="m-0 basis-full text-xs text-muted-foreground">
+            Com a conta conectada, o que você faz aqui vai para a nuvem e o que fez nos outros aparelhos chega aqui. O app continua funcionando sem
+            internet.
+          </p>
+          <Button size="sm" onClick={() => void sincronizarManual()} disabled={ocupado || sinc.estado === 'sincronizando'}>
+            <RefreshCw className={`size-4 ${sinc.estado === 'sincronizando' ? 'animate-spin' : ''}`} /> Sincronizar agora
+          </Button>
           <Button variant="outline" size="sm" onClick={() => void aoSair()} disabled={ocupado}>
             <LogOut className="size-4" /> Sair da conta
           </Button>
@@ -60,7 +73,7 @@ export function SecaoConta() {
       {estado === 'fora' && (
         <form className="flex flex-col gap-2" onSubmit={(e) => void aoEntrar(e)} noValidate>
           <p className="m-0 text-sm text-muted-foreground">
-            Entre para, em breve, ver os mesmos dados no computador e no celular. Use o e-mail e a senha da sua conta no Supabase (a mesma do app de finanças).
+            Entre para ver os mesmos dados no computador e no celular. Use o e-mail e a senha da sua conta no Supabase (a mesma do app de finanças).
           </p>
           <div className="flex flex-wrap gap-2">
             <label className="flex min-w-48 flex-1 flex-col gap-0.5 text-xs font-semibold">
