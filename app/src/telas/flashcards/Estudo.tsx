@@ -16,11 +16,12 @@ import { sanitizarHtml } from '@/lib/sanitizar'
 import { cn } from '@/lib/utils'
 import { EditarNota } from '@/telas/flashcards/EditarNota'
 
+/** "Bom" vem cheio: é o que Enter/espaço escolhe. */
 const BOTOES: { botao: Botao; nome: string; cor: string }[] = [
-  { botao: 1, nome: 'Errei', cor: 'bg-red-500/15 text-red-600 hover:bg-red-500/25 dark:text-red-400' },
-  { botao: 2, nome: 'Difícil', cor: 'bg-amber-500/15 text-amber-700 hover:bg-amber-500/25 dark:text-amber-400' },
-  { botao: 3, nome: 'Bom', cor: 'bg-green-500/15 text-green-700 hover:bg-green-500/25 dark:text-green-400' },
-  { botao: 4, nome: 'Fácil', cor: 'bg-blue-500/15 text-blue-700 hover:bg-blue-500/25 dark:text-blue-400' },
+  { botao: 1, nome: 'Errei', cor: 'border bg-card text-erro hover:bg-erro-bg' },
+  { botao: 2, nome: 'Difícil', cor: 'border bg-card text-aviso hover:bg-aviso-bg' },
+  { botao: 3, nome: 'Bom', cor: 'border border-ok bg-ok text-white shadow-[0_8px_20px_color-mix(in_oklab,var(--ok)_30%,transparent)] hover:brightness-110' },
+  { botao: 4, nome: 'Fácil', cor: 'border bg-card text-primary hover:bg-accent' },
 ]
 
 /** Tela de estudo: lê a fila, mostra o próximo cartão e guarda a pilha de "desfazer". */
@@ -53,14 +54,15 @@ export function Estudo() {
   }
 
   const contador = (rotulo: string, n: number | undefined, cor: string, ativo: boolean) => (
-    <span className={cn('font-bold tabular-nums', cor, ativo && 'underline underline-offset-4')}>
-      {n ?? 0} <span className="text-xs font-semibold text-muted-foreground max-[900px]:hidden">{rotulo}</span>
+    <span className={cn('flex items-center gap-1.5 text-[0.8rem] font-semibold tabular-nums', cor, ativo && 'underline underline-offset-4')}>
+      <i className="size-2 rounded-full bg-current" />
+      {n ?? 0} <span className="max-[900px]:hidden">{rotulo}</span>
     </span>
   )
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 max-[900px]:flex-nowrap">
+      <div className="-mx-5 -mt-4 flex min-h-14 flex-wrap items-center gap-2 border-b px-5 py-2.5 max-[900px]:-mx-3 max-[900px]:-mt-3 max-[900px]:px-3 justify-between max-[900px]:flex-nowrap">
         <Button variant="outline" size="sm" className="max-[900px]:size-9 max-[900px]:px-0" onClick={() => ir('baralhos')} aria-label="Voltar aos baralhos">
           <ArrowLeft className="size-4" /> <span className="max-[900px]:hidden">Baralhos</span>
         </Button>
@@ -69,16 +71,16 @@ export function Estudo() {
           <span className="min-[901px]:hidden">{partesNome[partesNome.length - 1]}</span>
         </h1>
         <div className="flex shrink-0 items-center gap-3 text-sm max-[900px]:gap-2">
-          {contador('novos', c?.novos, 'text-blue-500', origem === 'novo')}
-          {contador('aprender', c?.aprendendo, 'text-red-500', origem === 'aprendendo' || origem === 'antecipado')}
-          {contador('revisar', c?.revisao, 'text-green-600', origem === 'revisao')}
+          {contador('novos', c?.novos, 'text-primary', origem === 'novo')}
+          {contador('aprender', c?.aprendendo, 'text-erro', origem === 'aprendendo' || origem === 'antecipado')}
+          {contador('revisar', c?.revisao, 'text-ok', origem === 'revisao')}
           <Button variant="ghost" size="icon" title="Desfazer (Ctrl+Z)" aria-label="Desfazer" disabled={!pilha.length} onClick={() => void desfazer()}>
             <Undo2 className="size-4" />
           </Button>
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-xl border bg-card shadow-sm">
+      <div className="flex min-h-0 flex-1 flex-col rounded-2xl bg-[radial-gradient(ellipse_at_50%_38%,var(--accent),transparent_68%)]">
         {!ctx ? (
           <p className="m-auto text-sm text-muted-foreground">Carregando…</p>
         ) : !prox ? (
@@ -217,7 +219,7 @@ function CartaoEmEstudo({
           />
         </div>
         <div
-          className="cartao-conteudo w-full max-w-3xl"
+          className="cartao-conteudo w-full max-w-3xl rounded-[22px] border bg-card px-10 py-9 shadow-[0_24px_60px_color-mix(in_oklab,var(--primary)_14%,transparent)] max-[900px]:px-4 max-[900px]:py-6"
           dangerouslySetInnerHTML={{ __html: sanitizarHtml(mostrando ? renderizado.verso.html : renderizado.frente.html) }}
         />
         {digitar && (
@@ -236,9 +238,10 @@ function CartaoEmEstudo({
       </div>
       {aviso && <p className="m-0 px-4 pb-1 text-center text-xs text-muted-foreground">{aviso}</p>}
       {/* no celular a página rola: os botões ficam presos embaixo da tela, ao alcance do polegar */}
-      <div className="border-t p-3 max-[900px]:sticky max-[900px]:bottom-0 max-[900px]:rounded-b-xl max-[900px]:bg-card max-[900px]:pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      {/* no celular fica logo acima da barra do relógio */}
+      <div className="mx-auto w-full max-w-xl p-3 pb-5 max-[900px]:sticky max-[900px]:bottom-[calc(3.6rem+env(safe-area-inset-bottom))] max-[900px]:max-w-none max-[900px]:bg-card max-[900px]:pb-3">
         {!mostrando ? (
-          <Button className="w-full" size="lg" onClick={() => setMostrando(true)}>
+          <Button className="w-full" size="lg" variant="destaque" onClick={() => setMostrando(true)}>
             Mostrar resposta <span className="ml-2 text-xs opacity-70 pointer-coarse:hidden">(espaço)</span>
           </Button>
         ) : (
@@ -247,12 +250,12 @@ function CartaoEmEstudo({
               <button
                 key={botao}
                 onClick={() => void responder(botao)}
-                className={cn('flex min-h-12 cursor-pointer flex-col items-center justify-center rounded-lg px-1 py-2 text-sm font-bold transition-colors', cor)}
+                className={cn('flex min-h-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-2 text-sm font-bold transition-colors', cor)}
               >
-                <span className="text-xs font-semibold opacity-80">{previsao.find((p) => p.botao === botao)?.texto}</span>
                 <span>
                   {nome} <span className="text-[0.65rem] font-normal opacity-60 pointer-coarse:hidden">({botao})</span>
                 </span>
+                <span className="font-mono text-[0.7rem] font-medium opacity-75">{previsao.find((p) => p.botao === botao)?.texto}</span>
               </button>
             ))}
           </div>
