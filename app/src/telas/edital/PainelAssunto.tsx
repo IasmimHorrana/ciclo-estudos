@@ -316,21 +316,38 @@ export function PainelAssunto({ l, b, maxPrioridade, fechar, intervalos }: {
 }
 
 /** Painel sem assunto aberto: progresso geral e totais de questões. */
+/** Anel de progresso (0 a 100) com a porcentagem no meio, no degradê da paleta. */
+function Anel({ pct }: { pct: number }) {
+  const r = 30
+  const c = 2 * Math.PI * r
+  return (
+    <svg viewBox="0 0 80 80" className="size-20 shrink-0" role="progressbar" aria-label="Progresso do edital" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+      <defs>
+        <linearGradient id="anel-edital" x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0" stopColor="var(--primary)" />
+          <stop offset="1" stopColor="color-mix(in oklab, var(--primary) 55%, #b04cf5)" />
+        </linearGradient>
+      </defs>
+      <circle cx="40" cy="40" r={r} fill="none" strokeWidth="9" className="stroke-foreground/10" />
+      <circle cx="40" cy="40" r={r} fill="none" strokeWidth="9" strokeLinecap="round" stroke="url(#anel-edital)" strokeDasharray={`${(pct / 100) * c} ${c}`} transform="rotate(-90 40 40)" className="transition-[stroke-dasharray]" />
+      <text x="40" y="45" textAnchor="middle" className="fill-foreground text-[15px] font-bold">{pct}%</text>
+    </svg>
+  )
+}
+
 export function ResumoGeral({ resumo, certas, erradas, children }: { resumo: ResumoEdital; certas: number; erradas: number; children?: ReactNode }) {
   return (
     <div className="flex flex-col gap-4 p-4">
       <section className="flex flex-col gap-2">
         <span className={rotulo}>Progresso do edital</span>
-        <div className="flex items-center gap-2">
-          <span className="h-3 flex-1 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Progresso do edital" aria-valuenow={resumo.pctEstudados} aria-valuemin={0} aria-valuemax={100}>
-            <i className="block h-full rounded-full bg-primary transition-[width]" style={{ width: `${resumo.pctEstudados}%` }} />
-          </span>
-          <span className="w-10 text-right text-sm font-bold tabular-nums">{resumo.pctEstudados}%</span>
+        <div className="flex items-center gap-4">
+          <Anel pct={resumo.pctEstudados} />
+          <div className="min-w-0">
+            <b className="block text-xl leading-tight">{resumo.estudados} de {resumo.assuntos}</b>
+            <span className="text-xs text-muted-foreground">assuntos estudados</span>
+            {resumo.horasIdeais > 0 && <span className="block text-xs text-muted-foreground">{fmtH(resumo.horasFeitas)} de {fmtH(resumo.horasIdeais)} ideais ({resumo.pctHoras}%)</span>}
+          </div>
         </div>
-        <p className="m-0 text-xs text-muted-foreground">
-          {resumo.estudados} de {resumo.assuntos} assuntos estudados
-          {resumo.horasIdeais > 0 && <> · {fmtH(resumo.horasFeitas)} de {fmtH(resumo.horasIdeais)} ideais ({resumo.pctHoras}%)</>}
-        </p>
       </section>
       <section className="flex flex-col gap-2">
         <div className="flex items-center justify-between">

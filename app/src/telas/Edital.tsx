@@ -5,6 +5,7 @@ import { Menu } from '@/componentes/Menu'
 import { avisar, pedirTexto } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
+import { Topo } from '@/componentes/visual'
 import { db } from '@/dados/db'
 import { adicionarMateriaEdital, carregarEdital, enviarAoCiclo } from '@/dados/edital'
 import { mudarPreferencias } from '@/dados/ciclo'
@@ -123,8 +124,8 @@ export function Edital() {
   if (materias.length === 0) {
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-3">
-        <h1 className="m-0 text-xl font-bold">Edital verticalizado</h1>
-        <div className="m-auto max-w-md rounded-xl border bg-card p-8 text-center shadow-sm">
+        <Topo titulo="Edital verticalizado" />
+        <div className="m-auto max-w-md rounded-2xl border bg-card p-8 text-center">
           <h2 className="mb-2 text-lg font-bold">Seu edital ainda está vazio</h2>
           <p className="mb-4 text-sm text-muted-foreground">Cole o conteúdo programático do edital: o app separa as matérias e os assuntos, e você confere antes de salvar. Os assuntos que você já criou em Desempenho não aparecem aqui; se o nome for igual ao do edital, eles são ligados a ele.</p>
           <div className="flex justify-center gap-2">
@@ -138,9 +139,8 @@ export function Edital() {
 
   const resumo = completo.total.resumo
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="m-0 mr-auto text-xl font-bold">Edital verticalizado</h1>
+    <div className="flex min-h-0 flex-1 flex-col gap-3.5">
+      <Topo titulo="Edital verticalizado">
         <span className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Entrada
@@ -172,10 +172,14 @@ export function Edital() {
           <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={ui.ocultarEstudados} disabled={ui.soRevisar} onChange={(e) => ui.definir({ ocultarEstudados: e.target.checked })} />
           Ocultar estudados
         </label>
-        <label className={cn('flex cursor-pointer items-center gap-1.5 text-sm', paraRevisar > 0 && 'font-semibold')} title="Só os assuntos com revisão para hoje ou atrasada">
-          <input type="checkbox" className="size-4 accent-[var(--primary)]" checked={ui.soRevisar} onChange={(e) => ui.definir({ soRevisar: e.target.checked })} />
+        <label
+          className={cn('flex h-9 cursor-pointer items-center gap-1.5 rounded-[10px] border px-3 text-sm font-semibold has-checked:border-primary/40 has-checked:bg-accent has-checked:text-primary', paraRevisar === 0 && 'font-medium text-muted-foreground')}
+          title="Só os assuntos com revisão para hoje ou atrasada"
+        >
+          <input type="checkbox" className="sr-only" checked={ui.soRevisar} onChange={(e) => ui.definir({ soRevisar: e.target.checked })} />
+          <CalendarClock className="size-4" />
           Revisões de hoje
-          <span className={cn('rounded-full px-1.5 text-xs tabular-nums', paraRevisar > 0 ? 'bg-aviso-bg text-aviso' : 'bg-muted text-muted-foreground')}>{paraRevisar}</span>
+          <span className={cn('rounded-full px-1.5 text-xs tabular-nums', paraRevisar > 0 ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground')}>{paraRevisar}</span>
         </label>
         <Menu
           rotulo="Mais ações do edital"
@@ -187,7 +191,7 @@ export function Edital() {
             { rotulo: 'Ir para Montar ciclo', icone: <ArrowRight className="size-4" />, acao: () => irParaAba('montar') },
           ]}
         />
-      </div>
+      </Topo>
 
       {/* em tela estreita o painel some; o progresso fica numa linha */}
       <p className="m-0 text-xs text-muted-foreground lg:hidden">
@@ -210,7 +214,7 @@ export function Edital() {
         <aside
           aria-label={selecionado ? `Detalhes de ${selecionado.l.nome}` : 'Resumo do edital'}
           className={cn(
-            'min-h-0 flex-col overflow-auto rounded-xl border bg-card shadow-sm lg:static lg:z-auto lg:flex lg:w-80 lg:shrink-0',
+            'min-h-0 flex-col overflow-auto rounded-2xl border bg-card lg:static lg:z-auto lg:flex lg:w-80 lg:shrink-0',
             selecionado ? 'fixed inset-y-2 right-2 z-40 flex w-[min(22rem,calc(100%-1rem))]' : 'hidden',
           )}
         >

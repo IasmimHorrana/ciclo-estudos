@@ -4,6 +4,7 @@ import { Menu } from '@/componentes/Menu'
 import { SeloAcerto } from '@/componentes/nivel'
 import { avisar, confirmar, pedirTexto } from '@/componentes/dialogos-api'
 import { Selecao } from '@/componentes/ui/entrada'
+import { Sigla } from '@/componentes/visual'
 import { db } from '@/dados/db'
 import { enviarAoCiclo, incluirAssuntos, moverAssunto, mudarComSubtopicos, mudarMateriaEdital, tirarMateriaDoEdital } from '@/dados/edital'
 import { renomearMateria } from '@/dados/materias'
@@ -71,9 +72,9 @@ export function CartaoMateria({ b, maxPrioridade, recolhida, podeSoltar }: {
   }
 
   return (
-    <section className="rounded-xl border bg-card shadow-sm" style={{ boxShadow: `inset 4px 0 0 ${cor}` }}>
+    <section className={cn('rounded-2xl border bg-card', !recolhida && 'border-primary/20 shadow-[0_6px_20px_color-mix(in_oklab,var(--primary)_7%,transparent)]')}>
       <header
-        className={cn('flex flex-wrap items-center gap-x-3 gap-y-1 rounded-t-xl py-2 pr-2 pl-4', quedaNoFim && 'bg-primary/15')}
+        className={cn('flex flex-wrap items-center gap-x-3 gap-y-1 rounded-t-2xl py-2.5 pr-2 pl-3', quedaNoFim && 'bg-primary/15')}
         onDragOver={(e) => {
           if (!arrasto || !daqui || !podeSoltar(arrasto.id, null, 'dentro')) return
           e.preventDefault()
@@ -85,8 +86,9 @@ export function CartaoMateria({ b, maxPrioridade, recolhida, podeSoltar }: {
         }}
         title={daqui ? 'Solte aqui para virar assunto solto (sem tópico), no fim da matéria' : undefined}
       >
-        <button className="flex min-w-0 cursor-pointer items-center gap-1.5 font-bold" onClick={() => alternar(b.materia.id)} aria-expanded={!recolhida}>
-          <Seta className="size-4 shrink-0" />
+        <button className="flex min-w-0 cursor-pointer items-center gap-2 font-bold" onClick={() => alternar(b.materia.id)} aria-expanded={!recolhida}>
+          <Seta className="size-4 shrink-0 text-muted-foreground" />
+          <Sigla materia={b.materia.nome} cor={cor} />
           <span className="truncate">{b.materia.nome}</span>
         </button>
         <label className="flex items-center gap-1 text-xs text-muted-foreground" title="Peso da matéria na prova (1 a 5)">
@@ -98,11 +100,11 @@ export function CartaoMateria({ b, maxPrioridade, recolhida, podeSoltar }: {
         <span className="ml-auto flex items-center gap-2">
           {mat && <span className="rounded-full bg-ok-bg px-2 py-0.5 text-[0.68rem] font-semibold text-ok" title="Já está na montagem do ciclo">no ciclo · {mat.rep}</span>}
           <SeloAcerto feitas={feitas} acertos={b.totais.certas} />
-          <span className="flex w-36 items-center gap-2" title={b.resumo.horasIdeais > 0 ? `${fmtH(b.resumo.horasFeitas)} de ${fmtH(b.resumo.horasIdeais)} ideais` : undefined}>
+          <span className="flex w-44 items-center gap-2" title={b.resumo.horasIdeais > 0 ? `${fmtH(b.resumo.horasFeitas)} de ${fmtH(b.resumo.horasIdeais)} ideais` : undefined}>
             <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label={`Progresso de ${b.materia.nome}`} aria-valuenow={b.resumo.pctEstudados} aria-valuemin={0} aria-valuemax={100}>
-              <i className="block h-full rounded-full bg-primary" style={{ width: `${b.resumo.pctEstudados}%` }} />
+              <i className="block h-full rounded-full bg-[image:var(--degrade)]" style={{ width: `${b.resumo.pctEstudados}%` }} />
             </span>
-            <span className="text-xs text-muted-foreground tabular-nums">{b.resumo.estudados}/{b.resumo.assuntos}</span>
+            <span className="font-mono text-[0.7rem] text-muted-foreground tabular-nums">{b.resumo.estudados}/{b.resumo.assuntos}</span>
           </span>
           <Menu
             rotulo={`Ações de ${b.materia.nome}`}
