@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { BarChart3, ChevronDown, ChevronRight, ChevronsDownUp, FolderPlus, Plus, Settings, Trash2, Upload, X } from 'lucide-react'
+import { BarChart3, CheckCheck, ChevronDown, ChevronRight, ChevronsDownUp, FolderPlus, Layers, Play, Plus, Repeat, RotateCcw, Settings, Trash2, Upload, X } from 'lucide-react'
 import { avisar } from '@/componentes/dialogos-api'
 import { Menu } from '@/componentes/Menu'
 import { useFaixas } from '@/componentes/faixas-contexto'
 import { COR_NIVEL } from '@/componentes/nivel-cores'
 import { Button } from '@/componentes/ui/button'
 import { Entrada } from '@/componentes/ui/entrada'
+import { Numero, Numeros, Topo } from '@/componentes/visual'
 import { importarArquivoApkg } from '@/dados/apkg-navegador'
 import { db } from '@/dados/db'
 import { acertosPorBaralho, carregarContexto, criarBaralho, excluirBaralho, filaDe } from '@/dados/flashcards'
@@ -16,6 +17,7 @@ import { acertosNaArvore, nivelFc } from '@/dominio/estatisticasFc'
 import { dentroDe } from '@/dominio/fila'
 import { useFc, useFcArvore } from '@/estado/flashcards'
 import { CalendarioCalor } from '@/telas/flashcards/CalendarioCalor'
+import { cn } from '@/lib/utils'
 
 export function Baralhos() {
   const ir = useFc((s) => s.ir)
@@ -49,6 +51,9 @@ export function Baralhos() {
     c: filaDe(ctx, l.item.id).contagem,
     a: acertos?.get(l.item.id) ?? { respostas: 0, acertos: 0 },
   }))
+  // o que falta hoje em todos os baralhos juntos e o que já foi respondido
+  const hoje = filaDe(ctx, null).contagem
+  const respondidos = [...ctx.uso.values()].reduce((t, u) => t + u.novos + u.revisoes, 0)
   const comFilhos = nomesComFilhos(ctx.baralhos.map((b) => b.nome))
   const tudoRecolhido = recolhidos.length >= comFilhos.length
   const alternarTudo = () => definirRecolhidos(tudoRecolhido ? [] : comFilhos)
@@ -103,12 +108,11 @@ export function Baralhos() {
     await excluirBaralho(db, id)
   }
 
-  const num = (n: number, cor: string) => <span className={n ? cor : 'text-muted-foreground/50'}>{n}</span>
+  const num = (n: number, cor: string) => (n ? <span className={cn('inline-block min-w-8 rounded-[7px] px-2 py-0.5', cor)}>{n}</span> : <span className="font-medium text-muted-foreground/45">0</span>)
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="m-0 text-xl font-bold">Flashcards</h1>
+    <div className="flex min-h-0 flex-1 flex-col gap-3.5">
+      <Topo titulo="Flashcards" sub={`${ctx.baralhos.length} ${ctx.baralhos.length === 1 ? 'baralho' : 'baralhos'}`}>
         <div className="flex flex-wrap items-center gap-2">
           {comFilhos.length > 0 && (
             <Button variant="outline" size="sm" className="max-[900px]:hidden" onClick={alternarTudo} title="Fechar ou abrir todos os baralhos que têm subbaralhos">
@@ -135,7 +139,7 @@ export function Baralhos() {
           <Button variant="outline" size="sm" className="max-[900px]:hidden" disabled={linhas.length === 0} onClick={() => ir('estatisticas', null)} title="Acertos e evolução de todos os baralhos juntos">
             <BarChart3 className="size-4" /> Estatísticas
           </Button>
-          <Button size="sm" onClick={() => ir('adicionar', null)}>
+          <Button size="sm" variant="destaque" onClick={() => ir('adicionar', null)}>
             <Plus className="size-4" /> Adicionar cartões
           </Button>
           {/* no celular, as ações menos usadas ficam neste menu */}
@@ -149,10 +153,19 @@ export function Baralhos() {
             ]}
           />
         </div>
-      </div>
+      </Topo>
+
+      {linhas.length > 0 && (
+        <Numeros>
+          <Numero destaque rotulo="Para estudar hoje" icone={Layers} valor={hoje.novos + hoje.aprendendo + hoje.revisao} unidade="cartões" sub={`${hoje.novos} novos · ${hoje.aprendendo} em aprendizado`} />
+          <Numero rotulo="Em aprendizado" icone={RotateCcw} valor={hoje.aprendendo} sub="cartões que voltam hoje" />
+          <Numero rotulo="Revisões de hoje" icone={Repeat} valor={hoje.revisao} sub={hoje.revisao ? 'vencidas ou para hoje' : 'nenhuma pendente'} />
+          <Numero rotulo="Respondidos hoje" icone={CheckCheck} valor={respondidos} unidade="cartões" sub="novos e revisões" />
+        </Numeros>
+      )}
 
       {novo !== null && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-card p-3">
           {novo.pai !== null && (
             <span className="flex items-center gap-1 rounded-lg bg-accent px-2 py-1 text-sm">
               Dentro de <strong>{novo.pai.split('::').join(' › ')}</strong>
@@ -189,21 +202,21 @@ export function Baralhos() {
         </div>
       )}
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-card shadow-sm max-[900px]:overflow-visible">
+      <div className="min-h-0 flex-1 overflow-auto rounded-2xl border bg-card max-[900px]:overflow-visible">
         {linhas.length === 0 ? (
           <p className="m-0 p-6 text-center text-sm text-muted-foreground">
             Nenhum baralho ainda. Crie um no botão "Baralho" (ex.: Administração Pública) e depois use o botão de pasta com + na linha dele para criar os subbaralhos dentro (uma lei ou um assunto em cada). Também dá para importar do Anki.
           </p>
         ) : (
           <table className="w-full border-collapse text-sm">
-            <thead className="sticky top-0 bg-card text-xs text-muted-foreground uppercase max-[900px]:hidden">
+            <thead className="sticky top-0 z-10 bg-card text-[0.62rem] tracking-[0.08em] text-muted-foreground uppercase max-[900px]:hidden">
               <tr className="border-b">
                 <th className="px-3 py-2 text-left font-bold">Baralho</th>
-                <th className="w-20 px-2 py-2 text-right font-bold">Novos</th>
-                <th className="w-20 px-2 py-2 text-right font-bold">Aprender</th>
-                <th className="w-20 px-2 py-2 text-right font-bold">Revisar</th>
+                <th className="w-20 px-2 py-2 text-center font-bold">Novos</th>
+                <th className="w-20 px-2 py-2 text-center font-bold">Aprender</th>
+                <th className="w-20 px-2 py-2 text-center font-bold">Revisar</th>
                 <th className="w-24 px-2 py-2 text-right font-bold max-[900px]:hidden" title="Acertos nos últimos 30 dias (tudo menos Errei), com os subbaralhos">Acertos</th>
-                <th className="w-40 px-2 py-2" />
+                <th className="w-48 px-2 py-2" />
               </tr>
             </thead>
             <tbody>
@@ -229,9 +242,9 @@ export function Baralhos() {
                       </button>
                     </span>
                   </td>
-                  <td className="px-2 text-right font-bold tabular-nums max-[900px]:px-1">{num(c.novos, 'text-blue-500')}</td>
-                  <td className="px-2 text-right font-bold tabular-nums max-[900px]:px-1">{num(c.aprendendo, 'text-red-500')}</td>
-                  <td className="px-2 text-right font-bold tabular-nums max-[900px]:px-1">{num(c.revisao, 'text-green-600')}</td>
+                  <td className="px-2 text-center font-mono text-[0.8rem] font-bold tabular-nums max-[900px]:px-1">{num(c.novos, 'bg-accent text-primary')}</td>
+                  <td className="px-2 text-center font-mono text-[0.8rem] font-bold tabular-nums max-[900px]:px-1">{num(c.aprendendo, 'bg-erro-bg text-erro')}</td>
+                  <td className="px-2 text-center font-mono text-[0.8rem] font-bold tabular-nums max-[900px]:px-1">{num(c.revisao, 'bg-ok-bg text-ok')}</td>
                   <td className="px-2 text-right tabular-nums max-[900px]:hidden">
                     <SeloAcertos respostas={a.respostas} acertos={a.acertos} nivel={nivelFc(a, faixas)} />
                   </td>
@@ -247,6 +260,9 @@ export function Baralhos() {
                       ]}
                     />
                     <span className="max-[900px]:hidden">
+                      <Button variant="ghost" size="icon" className="text-primary" title="Estudar este baralho" aria-label={`Estudar ${b.nome}`} onClick={() => ir('estudo', b.id)}>
+                        <Play className="size-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" title="Novo subbaralho dentro deste" aria-label={`Novo subbaralho dentro de ${b.nome}`} onClick={() => abrirCaixa(b.nome)}>
                         <FolderPlus className="size-4" />
                       </Button>
@@ -270,7 +286,7 @@ export function Baralhos() {
       <CalendarioCalor />
 
       <p className="m-0 text-xs text-muted-foreground">
-        Clique (ou toque) no nome do baralho para estudar. Azul = novos, vermelho = em aprendizado, verde = revisões de hoje. Acertos = % dos últimos 30 dias (tudo menos "Errei"), com a cor do nível; "—" enquanto há menos de 10 respostas. O gráfico na linha abre as estatísticas. Os números de um baralho incluem os subbaralhos.
+        Clique (ou toque) no nome do baralho para estudar. Cor da paleta = novos, vermelho = em aprendizado, verde = revisões de hoje. Acertos = % dos últimos 30 dias (tudo menos "Errei"), com a cor do nível; "—" enquanto há menos de 10 respostas. O gráfico na linha abre as estatísticas. Os números de um baralho incluem os subbaralhos.
       </p>
     </div>
   )

@@ -3,6 +3,7 @@ import { AvisoSemana } from '@/componentes/AvisoSemana'
 import { Dialogos } from '@/componentes/Dialogos'
 import { FaixasContexto } from '@/componentes/faixas-contexto'
 import { BarraLateral } from '@/componentes/barra-lateral/BarraLateral'
+import { BarraRelogio } from '@/componentes/BarraRelogio'
 import { TopoCelular } from '@/componentes/TopoCelular'
 import { Dados } from '@/telas/Dados'
 import { Desempenho } from '@/telas/Desempenho'
@@ -126,7 +127,7 @@ export default function App() {
     return () => mq.removeEventListener('change', aplicar)
   }, [tema])
 
-  // paleta de cores (a padrão, verde-menta, não precisa do atributo)
+  // paleta de cores (a verde-menta é a das variáveis de :root e não precisa do atributo)
   useEffect(() => {
     if (paleta === 'menta') delete document.documentElement.dataset.paleta
     else document.documentElement.dataset.paleta = paleta
@@ -150,14 +151,18 @@ export default function App() {
 
   return (
     <FaixasContexto.Provider value={ciclo?.preferencias.faixas ?? FAIXAS_PADRAO}>
-      <div className="grid h-dvh grid-cols-[276px_minmax(0,1fr)] overflow-hidden max-[900px]:flex max-[900px]:h-auto max-[900px]:min-h-dvh max-[900px]:flex-col max-[900px]:overflow-visible">
+      <div className="grid h-dvh grid-cols-[232px_minmax(0,1fr)] overflow-hidden max-[900px]:flex max-[900px]:h-auto max-[900px]:min-h-dvh max-[900px]:flex-col max-[900px]:overflow-visible">
         <TopoCelular aoAbrirMenu={gaveta.abrir} />
         <BarraLateral aberta={gaveta.aberta} aoNavegar={() => gaveta.aberta && gaveta.fechar()} />
         {gaveta.aberta && <div className="fixed inset-0 z-40 bg-black/50 min-[901px]:hidden" aria-hidden onClick={gaveta.fechar} />}
-        <main className="flex min-h-0 min-w-0 flex-col overflow-hidden px-5 py-3.5 max-[900px]:flex-1 max-[900px]:overflow-visible max-[900px]:p-3">
-          <AvisoSemana />
-          {TELAS[aba]}
-        </main>
+        {/* à direita do menu: o painel branco da tela e, embaixo, a barra do relógio */}
+        <div className="flex min-h-0 min-w-0 flex-col gap-2 py-2 pr-2 max-[900px]:flex-1 max-[900px]:p-0">
+          <main className="flex min-h-0 min-w-0 flex-1 flex-col gap-3.5 overflow-hidden rounded-2xl bg-card px-5 py-4 shadow-sm max-[900px]:overflow-visible max-[900px]:rounded-none max-[900px]:p-3 max-[900px]:pb-24 max-[900px]:shadow-none">
+            <AvisoSemana />
+            {TELAS[aba]}
+          </main>
+          <BarraRelogio />
+        </div>
         <Dialogos />
       </div>
     </FaixasContexto.Provider>

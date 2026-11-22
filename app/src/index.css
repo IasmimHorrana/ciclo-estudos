@@ -36,6 +36,12 @@
   --calor-2: #b3dca4;
   --calor-3: #8fca82;
   --calor-4: #6bb36b;
+  /* destaque (cartão principal, botão de ação): nas paletas sem degradê, a cor primária lisa */
+  --degrade: linear-gradient(120deg, var(--primary), var(--primary));
+  --destaque-sombra: transparent;
+  --destaque-texto: var(--primary-foreground);
+  /* fundo dos campos de texto e listas de escolha */
+  --campo: var(--background);
 }
 
 .dark {
@@ -136,7 +142,82 @@
   --calor-4: #e3c49e;
 }
 
+/* Paleta "Índigo" (a padrão): lilás claro, cartões brancos e destaque índigo → roxo em degradê */
+:root[data-paleta='indigo']:not(.dark) {
+  --background: #efedf8;
+  --foreground: #15132b;
+  --card: #ffffff;
+  --card-foreground: #15132b;
+  --popover: #ffffff;
+  --popover-foreground: #15132b;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --secondary: #eceafd;
+  --secondary-foreground: #4338ca;
+  --muted: #f5f4fb;
+  --muted-foreground: #6f6c8a;
+  --accent: #eceafd;
+  --accent-foreground: #3730a3;
+  --destructive: #e5484d;
+  --border: #e7e5f2;
+  --input: #e2dff0;
+  --ring: #6d65f0;
+  --lateral: #f4f3fb;
+  --ok: #16a34a;
+  --ok-bg: #dcfce7;
+  --aviso: #b45309;
+  --aviso-bg: #fef3c7;
+  --erro: #e5484d;
+  --erro-bg: #fde2e3;
+  --calor-1: #d4d1fb;
+  --calor-2: #a9a3f6;
+  --calor-3: #7c74ee;
+  --calor-4: #4f46e5;
+  --degrade: linear-gradient(120deg, #4f46e5 0%, #7c3aed 60%, #9d4cf5 100%);
+  --destaque-sombra: #6d4aff38;
+  --destaque-texto: #ffffff;
+  --campo: #f6f5fb;
+}
+
+:root.dark[data-paleta='indigo'] {
+  --background: #0e0d16;
+  --foreground: #ecebf5;
+  --card: #17161f;
+  --card-foreground: #ecebf5;
+  --popover: #1f1d2b;
+  --popover-foreground: #ecebf5;
+  --primary: #8b84ff;
+  --primary-foreground: #110f33;
+  --secondary: #262347;
+  --secondary-foreground: #d4d1ff;
+  --muted: #211f2e;
+  --muted-foreground: #a19fbd;
+  --accent: #29264a;
+  --accent-foreground: #d4d1ff;
+  --destructive: #fb7185;
+  --border: #2c2a3d;
+  --input: #34324a;
+  --ring: #8b84ff;
+  --lateral: #121119;
+  --ok: #4ade80;
+  --ok-bg: #173324;
+  --aviso: #fbbf24;
+  --aviso-bg: #3a2f14;
+  --erro: #fb7185;
+  --erro-bg: #3d1f27;
+  --calor-1: #2e2a5e;
+  --calor-2: #4a43a0;
+  --calor-3: #6d65e6;
+  --calor-4: #a49eff;
+  --degrade: linear-gradient(120deg, #5b52f0 0%, #7c3aed 60%, #9d4cf5 100%);
+  --destaque-sombra: #000000;
+  --destaque-texto: #ffffff;
+  --campo: #1d1b29;
+}
+
 @theme inline {
+  --font-sans: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -156,6 +237,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-lateral: var(--lateral);
+  --color-campo: var(--campo);
   --color-ok: var(--ok);
   --color-ok-bg: var(--ok-bg);
   --color-aviso: var(--aviso);
@@ -182,8 +264,22 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
   line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* cartão de número em destaque (o primeiro de cada tela) */
+.destaque {
+  background: var(--degrade);
+  color: var(--destaque-texto);
+  box-shadow: 0 8px 22px var(--destaque-sombra);
+}
+
+/* sigla colorida da matéria: a cor da matéria vem em --cor (fundo claro, texto escuro; no escuro, o contrário) */
+.sigla {
+  background: color-mix(in oklab, var(--cor) 22%, var(--card));
+  color: color-mix(in oklab, var(--cor) 55%, var(--foreground));
 }
 
 button {
@@ -203,6 +299,7 @@ button {
 
 /* resumos (Markdown) */
 .md { font-size: 0.95rem; line-height: 1.6; overflow-wrap: anywhere; }
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6 { font-weight: 700; line-height: 1.3; }
 .md h1 { font-size: 1.5rem; margin: 0.6em 0 0.3em; }
 .md h2 { font-size: 1.25rem; margin: 0.6em 0 0.3em; }
 .md h3, .md h4, .md h5, .md h6 { font-size: 1.05rem; margin: 0.6em 0 0.3em; }

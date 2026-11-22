@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
+import { CalendarCheck, CircleCheck, CircleHelp, Clock, Plus, Repeat, SlidersHorizontal, Target, Timer } from 'lucide-react'
 import { abrirQuestoes } from '@/componentes/abrirQuestoes'
 import { AjustarFaixas } from '@/componentes/AjustarFaixas'
 import { avisar, confirmar, pedirTexto } from '@/componentes/dialogos-api'
@@ -6,6 +7,7 @@ import { Barras } from '@/componentes/graficos/Barras'
 import { Rosca } from '@/componentes/graficos/Rosca'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
+import { Barrinha, caixa, Numero, Numeros, Segmentado, Sigla, tituloCaixa, Topo } from '@/componentes/visual'
 import { excluirSemanaFechada, repetirSemanaFechada, type Ciclo } from '@/dados/ciclo'
 import { adicionarAssuntos, carregarEstudo, excluirAssunto, excluirRegistroQuestoes, excluirSessao, renomearAssunto, type Estudo } from '@/dados/desempenho'
 import { db } from '@/dados/db'
@@ -22,18 +24,11 @@ import { ResumoDaSemana } from '@/telas/Semana'
 import { colorir } from '@/lib/colunas'
 import { cn } from '@/lib/utils'
 
-const card = 'rounded-xl border bg-card p-3.5 shadow-sm'
+const card = caixa
 /** quadros da coluna de gráficos: menos respiro para caber mais coisa sem rolar */
-const cardCompacto = 'rounded-xl border bg-card px-3 py-2 shadow-sm'
+const cardCompacto = 'rounded-2xl border bg-card px-3.5 py-3'
 const mudo = 'text-xs text-muted-foreground'
-function Kpi({ rotulo, valor }: { rotulo: string; valor: string }) {
-  return (
-    <div className={cn(card, 'py-2.5')}>
-      <span className={mudo}>{rotulo}</span>
-      <b className="block text-xl">{valor}</b>
-    </div>
-  )
-}
+const titulo = cn(tituloCaixa, 'mb-2')
 
 export function Desempenho() {
   const ciclo = useCiclo()
@@ -43,28 +38,17 @@ export function Desempenho() {
   const definir = useDesempenhoUi((s) => s.definir)
   if (!ciclo || !estudo) return <p className="text-sm text-muted-foreground">Carregando…</p>
 
-  const botoes = <T extends string>(itens: [T, string][], atual: T, onChange: (k: T) => void) => (
-    <div className="inline-flex rounded-lg border p-0.5">
-      {itens.map(([k, r]) => (
-        <button key={k} onClick={() => onChange(k)} className={cn('cursor-pointer rounded-md px-3 py-1 text-sm font-semibold', atual === k ? 'bg-primary text-primary-foreground' : 'hover:bg-accent')}>
-          {r}
-        </button>
-      ))}
-    </div>
-  )
-
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="m-0 mr-1 text-xl font-bold">Desempenho</h1>
-        {botoes<'estudo' | 'semanas'>([['estudo', 'Estudo'], ['semanas', 'Semanas']], visao, (k) => definir({ visao: k }))}
-        {visao === 'estudo' && botoes<Periodo>([['hoje', 'Hoje'], ['7', '7 dias'], ['30', '30 dias'], ['tudo', 'Tudo']], periodo, (k) => definir({ periodo: k }))}
+    <div className="flex min-h-0 flex-1 flex-col gap-3.5">
+      <Topo titulo="Desempenho" className="[&>div]:ml-0 [&>div]:flex-1">
+        <Segmentado rotulo="Visão" itens={[['estudo', 'Estudo'], ['semanas', 'Semanas']]} atual={visao} aoMudar={(k) => definir({ visao: k })} />
+        {visao === 'estudo' && <Segmentado<Periodo> rotulo="Período" itens={[['hoje', 'Hoje'], ['7', '7 dias'], ['30', '30 dias'], ['tudo', 'Tudo']]} atual={periodo} aoMudar={(k) => definir({ periodo: k })} />}
         <span className="flex-1" />
         <Button variant="outline" title="Onde começa cada nível (Fraco, Médio, Bom, Dominado)" onClick={() => void abrirDialogo('Faixas de acerto', (fechar) => <AjustarFaixas atual={ciclo.preferencias.faixas} fechar={() => fechar()} />)}>
-          Faixas de acerto
+          <SlidersHorizontal className="size-4" /> Faixas de acerto
         </Button>
-        {visao === 'estudo' && <Button onClick={() => void abrirQuestoes()}>＋ Registrar questões</Button>}
-      </div>
+        {visao === 'estudo' && <Button variant="destaque" onClick={() => void abrirQuestoes()}><Plus className="size-4" /> Registrar questões</Button>}
+      </Topo>
       {visao === 'estudo' ? <VisaoEstudo ciclo={ciclo} estudo={estudo} periodo={periodo} /> : <VisaoSemanas ciclo={ciclo} />}
     </div>
   )
@@ -88,17 +72,19 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
 
   return (
     <>
-      <div className="grid grid-cols-4 gap-3 max-[700px]:grid-cols-2">
-        <Kpi rotulo="Horas estudadas" valor={fmtH(d.horas)} />
-        <Kpi rotulo="Questões feitas" valor={String(d.feitas)} />
-        <Kpi rotulo="Acertos" valor={d.feitas ? `${pctDe(d.acertos, d.feitas)}%` : '—'} />
-        <Kpi rotulo="Dias com estudo" valor={String(d.dias)} />
-      </div>
+      <Numeros>
+        <Numero destaque rotulo="Horas estudadas" icone={Clock} valor={fmtH(d.horas)} sub={d.tipos.map((t) => `${t.tipo} ${fmtH(t.horas)}`).join(' · ') || 'nenhuma ainda'} />
+        <Numero rotulo="Questões feitas" icone={CircleHelp} valor={d.feitas.toLocaleString('pt-BR')} sub={d.feitas ? `${d.acertos} certas · ${d.feitas - d.acertos} erradas` : 'nenhuma ainda'} />
+        <Numero rotulo="Acertos" icone={Target} valor={d.feitas ? `${pctDe(d.acertos, d.feitas)}%` : '—'}>
+          {d.feitas > 0 && <Barrinha pct={pctDe(d.acertos, d.feitas)} cor={COR_NIVEL[nivelDe(d.feitas, d.acertos, ciclo.preferencias.faixas)]} className="my-1.5" />}
+        </Numero>
+        <Numero rotulo="Dias com estudo" icone={CalendarCheck} valor={d.dias} unidade={d.dias === 1 ? 'dia' : 'dias'} />
+      </Numeros>
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)] gap-3 max-[1000px]:grid-cols-1 max-[1000px]:overflow-visible">
         <section className={cn(card, 'flex min-h-0 flex-col')}>
           <div className="mb-1 flex items-center gap-2">
-            <h2 className="m-0 flex-1 text-sm font-bold">Matérias e assuntos</h2>
+            <h2 className={cn(tituloCaixa, 'flex-1')}>Matérias e assuntos <span className="text-xs font-normal text-muted-foreground">{d.blocos.length} {d.blocos.length === 1 ? 'matéria' : 'matérias'}</span></h2>
             {(verTodas || d.escondidas > 0) && (
               <Button
                 size="sm"
@@ -110,8 +96,8 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
               </Button>
             )}
           </div>
-          <p className={cn(mudo, 'm-0 mb-2')}>
-            O nível de cada assunto vem da porcentagem de acertos no período (mínimo de {MIN_QUESTOES} questões): abaixo de {fx.fraco}% é Fraco, até {fx.medio - 1}% Médio, até {fx.bom - 1}% Bom e {fx.bom}% ou mais Dominado (ajuste em "Faixas de acerto").
+          <p className={cn(mudo, 'm-0 mb-2.5')}>
+            Nível pela % de acertos no período (mín. {MIN_QUESTOES} questões): <b className="font-semibold text-foreground">Fraco</b> abaixo de {fx.fraco}% · <b className="font-semibold text-foreground">Médio</b> até {fx.medio - 1}% · <b className="font-semibold text-foreground">Bom</b> até {fx.bom - 1}% · <b className="font-semibold text-foreground">Dominado</b> {fx.bom}% ou mais.
           </p>
           <FormAssuntos materias={todas} visiveis={d.mats} />
           <div className="min-h-0 flex-1 overflow-auto">
@@ -120,11 +106,15 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
             )}
             {d.blocos.map((b) => (
               <details key={b.materia} open={abertas.includes(b.materia)} onToggle={(e) => alternarAberta(b.materia, e.currentTarget.open)} className="border-b last:border-b-0">
-                <summary className="flex cursor-pointer items-center gap-2 py-2 text-sm">
-                  <i className="size-3 shrink-0 rounded-sm" style={{ background: cor(b.materia) }} />
-                  <span className="min-w-0 flex-1 truncate font-bold" title={b.materia}>{b.materia}</span>
-                  <span className={mudo}>{b.feitas ? `${b.acertos}/${b.feitas} · ${pctDe(b.acertos, b.feitas)}%` : 'sem questões'} · {fmtH(b.horas)}</span>
-                  <Etiqueta nivel={b.nivel} />
+                <summary className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_minmax(0,0.8fr)_3rem_auto] items-center gap-3 py-2 text-sm max-[700px]:grid-cols-[auto_minmax(0,1fr)_auto]">
+                  <Sigla materia={b.materia} cor={cor(b.materia)} />
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold" title={b.materia}>{b.materia}</span>
+                    <span className={cn(mudo, 'block truncate')}>{b.feitas ? `${b.acertos}/${b.feitas}` : 'sem questões'} · {fmtH(b.horas)}</span>
+                  </span>
+                  <Barrinha pct={b.feitas ? pctDe(b.acertos, b.feitas) : 0} cor={COR_NIVEL[b.nivel]} className="h-2 max-[700px]:hidden" />
+                  <b className="text-right font-mono text-xs max-[700px]:hidden">{b.feitas ? `${pctDe(b.acertos, b.feitas)}%` : '—'}</b>
+                  <span className="justify-self-end"><Etiqueta nivel={b.nivel} /></span>
                 </summary>
                 {/* as linhas mudam de ordem (com questões e por nível): ficam numa div fixa, porque o Chrome não volta a
                     desenhar um filho do <details> que o React move de lugar */}
@@ -158,21 +148,21 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
 
         <div className="flex min-h-0 flex-col gap-2 overflow-auto max-[1000px]:overflow-visible">
           <section className={cardCompacto}>
-            <h2 className="m-0 mb-1 text-sm font-bold">Horas por matéria</h2>
+            <h2 className={titulo}>Horas por matéria</h2>
             <Rosca dados={d.horasPorMateria.map((x) => ({ nome: x.nome, valor: x.valor, cor: cor(x.nome), rotulo: fmtH(x.valor) }))} centro={fmtH(d.horas)} sub="estudadas" />
             <p className={cn(mudo, 'm-0 mt-2 text-center')}>{d.tipos.map((t) => `${t.tipo}: ${fmtH(t.horas)}`).join(' · ')}</p>
           </section>
           <section className={cardCompacto}>
-            <h2 className="m-0 mb-1 text-sm font-bold">Horas por dia</h2>
+            <h2 className={titulo}>Horas por dia</h2>
             <Barras cols={colorir(d.colsHoras, cor, { acerto: 'var(--primary)', erro: 'var(--erro)' })} fmt={fmtH} />
           </section>
           <section className={cardCompacto}>
-            <h2 className="m-0 mb-1 text-sm font-bold">Questões por dia</h2>
+            <h2 className={titulo}>Questões por dia</h2>
             <Barras cols={colorir(d.colsQuestoes, cor, { acerto: 'var(--primary)', erro: 'var(--erro)' })} fmt={String} />
             <p className={cn(mudo, 'm-0 mt-1')}><span style={{ color: 'var(--primary)' }}>■</span> acertos · <span style={{ color: 'var(--erro)' }}>■</span> erros</p>
           </section>
           <section className={cardCompacto}>
-            <h2 className="m-0 mb-1 text-sm font-bold">Acerto por matéria</h2>
+            <h2 className={titulo}>Acerto por matéria</h2>
             {d.acertoPorMateria.length === 0 && <p className={mudo}>Registre questões para ver o desempenho por matéria.</p>}
             {d.acertoPorMateria.map((x) => (
               <div key={x.materia} className="mb-2.5 last:mb-0">
@@ -186,7 +176,7 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
             ))}
           </section>
           <section className={cardCompacto}>
-            <h2 className="m-0 mb-1 text-sm font-bold">Últimos registros de questões</h2>
+            <h2 className={titulo}>Últimos registros de questões</h2>
             {d.ultimos.length === 0 && <p className={mudo}>Nenhum registro ainda.</p>}
             {d.ultimos.map((q) => (
               <div key={q.id} className="flex items-center gap-2 border-b py-1 text-sm last:border-b-0">
@@ -198,7 +188,7 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
             ))}
           </section>
           <section className={cardCompacto}>
-            <h2 className="m-0 mb-1 text-sm font-bold">Últimos registros de tempo</h2>
+            <h2 className={titulo}>Últimos registros de tempo</h2>
             {d.ultimasSessoes.length === 0 && <p className={mudo}>Nenhum tempo registrado ainda.</p>}
             {d.ultimasSessoes.map((x) => (
               <div key={x.id} className="flex items-center gap-2 border-b py-1 text-sm last:border-b-0">
@@ -290,15 +280,15 @@ function VisaoSemanas({ ciclo }: { ciclo: Ciclo }) {
 
   return (
     <>
-      <div className="grid grid-cols-4 gap-3 max-[700px]:grid-cols-2">
-        <Kpi rotulo="Semanas fechadas" valor={String(r.total)} />
-        <Kpi rotulo="Ciclos completos" valor={r.total ? `${r.fechadas} de ${r.total}` : '0'} />
-        <Kpi rotulo="Horas nessas semanas" valor={fmtH(r.horas)} />
-        <Kpi rotulo="Passos concluídos (média)" valor={r.total ? `${r.media}%` : '—'} />
-      </div>
+      <Numeros>
+        <Numero destaque rotulo="Semanas fechadas" icone={CalendarCheck} valor={r.total} />
+        <Numero rotulo="Ciclos completos" icone={CircleCheck} valor={r.total ? r.fechadas : 0} unidade={r.total ? `de ${r.total}` : undefined} />
+        <Numero rotulo="Horas nessas semanas" icone={Timer} valor={fmtH(r.horas)} />
+        <Numero rotulo="Passos concluídos (média)" icone={Repeat} valor={r.total ? `${r.media}%` : '—'} />
+      </Numeros>
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-3 max-[1000px]:grid-cols-1">
         <section className={cn(card, 'flex min-h-0 flex-col')}>
-          <h2 className="m-0 mb-2 text-sm font-bold">Semanas fechadas</h2>
+          <h2 className={titulo}>Semanas fechadas</h2>
           <div className="min-h-0 flex-1 overflow-auto">
             {f.length === 0 && <p className={mudo}>Nenhuma semana fechada ainda. Ao fechar uma semana, as estatísticas dela aparecem aqui.</p>}
             {[...f].reverse().map((x) => (
@@ -319,7 +309,7 @@ function VisaoSemanas({ ciclo }: { ciclo: Ciclo }) {
         </section>
         <div className="flex min-h-0 flex-col gap-3 overflow-auto">
           <section className={card}>
-            <h2 className="m-0 mb-2 text-sm font-bold">Horas por semana</h2>
+            <h2 className={titulo}>Horas por semana</h2>
             {f.length === 0 ? (
               <p className={mudo}>O gráfico aparece quando você fechar a primeira semana.</p>
             ) : (
@@ -348,7 +338,7 @@ function VisaoSemanas({ ciclo }: { ciclo: Ciclo }) {
             )}
           </section>
           <section className={card}>
-            <h2 className="m-0 mb-1 text-sm font-bold">Sobre estas horas</h2>
+            <h2 className={titulo}>Sobre estas horas</h2>
             <p className={cn(mudo, 'm-0')}>Nas semanas fechadas, as horas somam o que foi marcado nos passos (focos do Pomodoro e horas digitadas à mão). Na visão <b>Estudo</b>, as horas vêm das sessões registradas (Pomodoro, cronômetro livre e registro manual).</p>
           </section>
         </div>

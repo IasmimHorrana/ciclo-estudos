@@ -130,7 +130,7 @@ export function EscolherAssunto({ assuntos, valor, aoMudar, valorNovo, rotulo = 
         title={atual.extra ? undefined : atual.rotulo}
         onClick={() => (aberto ? fechar() : abrir())}
         className={cn(
-          'flex w-full items-start gap-2 rounded-lg border bg-background px-2.5 py-1.5 text-left text-sm font-normal tracking-normal normal-case outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
+          'flex w-full items-start gap-2 rounded-lg border bg-campo px-2.5 py-1.5 text-left text-sm font-normal tracking-normal normal-case outline-none focus-visible:ring-2 focus-visible:ring-ring/50',
           atual.extra && 'text-muted-foreground',
         )}
       >

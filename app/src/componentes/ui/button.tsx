@@ -9,6 +9,8 @@ const botao = cva(
     variants: {
       variant: {
         default: 'bg-primary text-primary-foreground hover:brightness-110',
+        /** a ação principal da tela: degradê da paleta */
+        destaque: 'destaque hover:brightness-110',
         outline: 'border bg-card text-foreground hover:bg-accent',
         ghost: 'text-foreground hover:bg-accent',
         secondary: 'bg-secondary text-secondary-foreground hover:brightness-95',

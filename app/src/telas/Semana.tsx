@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { Clock, ListChecks, Sun, Target } from 'lucide-react'
 import { Pizza, RoscaCiclo } from '@/componentes/graficos/Rosca'
 import { CampoNumero } from '@/componentes/CampoNumero'
 import { avisar, confirmar } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
+import { Barrinha, caixa, Numero, Numeros, tituloCaixa, Topo } from '@/componentes/visual'
 import { definirMeta, fecharSemana, limparSemana, reagendar, type Ciclo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
@@ -16,7 +18,7 @@ import { RegistroManual } from '@/telas/RegistroManual'
 import { SemanaLivre, SeletorModo } from '@/telas/SemanaLivre'
 import { cn } from '@/lib/utils'
 
-const card = 'rounded-xl border bg-card p-3.5 shadow-sm'
+const card = caixa
 const mudo = 'text-xs text-muted-foreground'
 
 /** O resumo da semana (também usado ao fechar e nas semanas fechadas do Desempenho). */
@@ -119,24 +121,20 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2 text-sm font-bold">
-        📅 Hoje: {NOMES_DIA_LONGO[idxDia(hojeISO)]}, {fmtData(hojeISO)}
-        <span className="text-xs font-normal text-muted-foreground">
-          · Semana {fmtData(s.seg)} → {fmtData(s.dom)}{fora}
-        </span>
+      <Topo titulo="Semana" sub={`${NOMES_DIA_LONGO[idxDia(hojeISO)]}, ${fmtData(hojeISO)} · semana de ${fmtData(s.seg)} a ${fmtData(s.dom)}${fora}`}>
         <SeletorModo modo="ciclo" />
-      </div>
+      </Topo>
 
-      <div className={cn(card, 'grid grid-cols-[repeat(5,minmax(0,1fr))] items-start gap-4 max-[900px]:grid-cols-2')}>
-        <Estat rotulo="Hoje" valor={passosHoje.length ? `${hojeFeitos}/${passosHoje.length}` : '—'} sub={passosHoje.length ? 'passos do dia' : 'sem passos hoje'} />
-        <Estat rotulo="Passos" valor={`${feitos}/${n}`} barra={pctP} />
-        <Estat rotulo="Horas estudadas" valor={fmtH(horas)} barra={pctH} />
-        <div className="flex flex-col gap-1">
-          <span className={mudo}>Meta da semana (h)</span>
-          <CampoNumero key={`meta${s.meta}${meta}`} className="w-24" valor={meta} aoConfirmar={(v) => void definirMeta(db, v !== null && v >= 0 ? v : null)} />
-        </div>
-        <Estat rotulo="Faltam" valor={fmtH(falta)} />
-      </div>
+      <Numeros>
+        <Numero destaque rotulo="Hoje" icone={Sun} valor={passosHoje.length ? hojeFeitos : '—'} unidade={passosHoje.length ? `/ ${passosHoje.length} passos` : undefined} sub={passosHoje.length ? 'passos do dia' : 'sem passos hoje'} />
+        <Numero rotulo="Passos da semana" icone={ListChecks} valor={feitos} unidade={`/ ${n}`} sub={`${pctP}% concluído`}>
+          <Barrinha pct={pctP} className="my-1" />
+        </Numero>
+        <Numero rotulo="Horas estudadas" icone={Clock} valor={fmtH(horas)} unidade={`de ${fmtH(meta)}`} sub={falta > 0 ? `faltam ${fmtH(falta)}` : '✅ meta batida'}>
+          <Barrinha pct={pctH} className="my-1" />
+        </Numero>
+        <Numero rotulo="Meta da semana (h)" icone={Target} valor={<CampoNumero key={`meta${s.meta}${meta}`} className="mt-1 w-24 bg-card text-base font-bold" valor={meta} aoConfirmar={(v) => void definirMeta(db, v !== null && v >= 0 ? v : null)} />} />
+      </Numeros>
 
       {/* a coluna da direita ocupa as duas primeiras linhas: do topo até onde termina o quadro "Ciclo da semana" */}
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_300px] grid-rows-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-2 max-[1100px]:grid-cols-1 max-[1100px]:grid-rows-none max-[1100px]:overflow-visible">
@@ -144,7 +142,7 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
           <Constancia s={s} diasDeEstudo={config.dias} hojeISO={hojeISO} />
           <div className={cn(card, 'flex min-h-0 flex-col')}>
             <div className="mb-2 flex items-center justify-between gap-2">
-              <h2 className="m-0 text-sm font-bold">
+              <h2 className={tituloCaixa}>
                 Ciclo da semana <span className="font-normal text-muted-foreground">· início {fmtData(s.inicio)}</span>
               </h2>
               <span className="flex items-center gap-2">
@@ -155,7 +153,7 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
             <QuadroSemana s={s} cores={cores} diasDeEstudo={config.dias} hojeISO={hojeISO} />
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => void fechar()}>✅ Fechar semana</Button>
+            <Button variant="destaque" onClick={() => void fechar()}>✅ Fechar semana</Button>
             <Button variant="outline" onClick={() => void reagendarPendentes()}>📅 Reagendar pendentes a partir de hoje</Button>
             <Button variant="destructive" onClick={() => void limpar()}>Limpar marcações sem salvar</Button>
           </div>
@@ -163,7 +161,7 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
 
         <div className="col-start-2 row-span-2 row-start-1 flex min-h-0 flex-col gap-3 overflow-auto max-[1100px]:col-start-1 max-[1100px]:row-span-1 max-[1100px]:row-start-auto max-[1100px]:overflow-visible">
           <section className={cn(card, 'flex flex-1 flex-col')}>
-            <h2 className="m-0 mb-2 text-sm font-bold">Ciclo</h2>
+            <h2 className={cn(tituloCaixa, 'mb-2')}>Ciclo</h2>
             <div className="my-auto">
               <RoscaCiclo passos={s.passos} cores={cores} />
             </div>
@@ -171,17 +169,6 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
           <RegistroManual s={s} config={config} hojeISO={hojeISO} />
         </div>
       </div>
-    </div>
-  )
-}
-
-function Estat({ rotulo, valor, sub, barra }: { rotulo: string; valor: string; sub?: string; barra?: number }) {
-  return (
-    <div className="flex min-w-0 flex-col gap-0.5">
-      <span className={mudo}>{rotulo}</span>
-      <b className="text-xl leading-tight">{valor}</b>
-      {sub && <span className={mudo}>{sub}</span>}
-      {barra !== undefined && <div className="mt-0.5 h-1.5 overflow-hidden rounded bg-muted"><i className="block h-full bg-primary" style={{ width: `${barra}%` }} /></div>}
     </div>
   )
 }

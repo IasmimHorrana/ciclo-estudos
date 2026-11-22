@@ -22,7 +22,7 @@ export function Alertas({ alertas, total, abrir, porNoCiclo }: {
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-[0.68rem] font-bold text-muted-foreground uppercase">Precisa de atenção</span>
+        <span className="text-sm font-bold">Precisa de atenção</span>
         {total > alertas.length && <span className="text-xs text-muted-foreground">{alertas.length} de {total}</span>}
       </div>
       {alertas.length === 0 ? (
@@ -33,7 +33,7 @@ export function Alertas({ alertas, total, abrir, porNoCiclo }: {
             const { Icone, cor } = ICONE[a.motivo]
             const ciclo = porNoCiclo(a.assuntoId)
             return (
-              <li key={a.assuntoId} className="rounded-lg border bg-background/60 px-2.5 py-2">
+              <li key={a.assuntoId} className="rounded-xl border bg-card px-3 py-2.5">
                 <button className="flex w-full cursor-pointer items-start gap-2 text-left" onClick={() => abrir(a.assuntoId)} title="Abrir o assunto">
                   <Icone className={cn('mt-0.5 size-4 shrink-0', cor)} aria-hidden />
                   <span className="min-w-0 flex-1">

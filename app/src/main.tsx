@@ -1,5 +1,12 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+// fontes embutidas (funcionam sem internet): Poppins no texto, JetBrains Mono nos números do relógio
+import '@fontsource/poppins/latin-400.css'
+import '@fontsource/poppins/latin-500.css'
+import '@fontsource/poppins/latin-600.css'
+import '@fontsource/poppins/latin-700.css'
+import '@fontsource/jetbrains-mono/latin-500.css'
+import '@fontsource/jetbrains-mono/latin-700.css'
 import './index.css'
 import App from './App'
 import { recarregarAoAtualizar } from '@/lib/atualizacao'

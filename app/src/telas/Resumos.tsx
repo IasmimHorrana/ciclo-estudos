@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { FileText, Plus, Search, Upload } from 'lucide-react'
 import { confirmar } from '@/componentes/dialogos-api'
 import { abrirNota } from '@/lib/abrirNota'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
+import { caixa, Segmentado, Sigla, Topo } from '@/componentes/visual'
 import { nomeSeguro } from '@/dados/arquivos'
 import { type Ciclo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
@@ -19,7 +21,7 @@ import { sanitizarMarkdown } from '@/lib/sanitizar'
 import { cn } from '@/lib/utils'
 import { ImportarTexto } from '@/telas/ImportarTexto'
 
-const card = 'rounded-xl border bg-card p-3.5 shadow-sm'
+const card = caixa
 const mudo = 'text-xs text-muted-foreground'
 
 export function Resumos() {
@@ -42,13 +44,19 @@ function ResumosTela({ ciclo, notas }: { ciclo: Ciclo; notas: NotaResumo[] }) {
   }
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[260px_minmax(0,1fr)] gap-3 max-[900px]:grid-cols-1 max-[900px]:overflow-visible">
-      <aside className={cn(card, 'flex min-h-0 flex-col gap-1.5')}>
-        <Entrada type="search" placeholder="🔍 Buscar nas notas…" value={busca} onChange={(e) => buscar(e.target.value)} />
-        <Button onClick={() => void nova()}>＋ Nova nota</Button>
-        <Button variant="outline" onClick={() => void abrirDialogo('Importar / colar texto', (fechar) => <ImportarTexto aoImportar={(id) => { fechar(); abrirNota(id) }} fechar={() => fechar()} />)}>
-          ⬆ Importar / colar texto
-        </Button>
+    <div className="flex min-h-0 flex-1 flex-col gap-3.5">
+    <Topo titulo="Resumos" sub={`${notas.length} ${notas.length === 1 ? 'nota' : 'notas'}`}>
+      <span className="relative">
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Entrada type="search" className="w-60 pl-8 max-[900px]:w-full" placeholder="Buscar nas notas" aria-label="Buscar nas notas" value={busca} onChange={(e) => buscar(e.target.value)} />
+      </span>
+      <Button variant="outline" onClick={() => void abrirDialogo('Importar / colar texto', (fechar) => <ImportarTexto aoImportar={(id) => { fechar(); abrirNota(id) }} fechar={() => fechar()} />)}>
+        <Upload className="size-4" /> Importar / colar texto
+      </Button>
+      <Button variant="destaque" onClick={() => void nova()}><Plus className="size-4" /> Nova nota</Button>
+    </Topo>
+    <div className="grid min-h-0 flex-1 grid-cols-[260px_minmax(0,1fr)] gap-3.5 max-[900px]:grid-cols-1 max-[900px]:overflow-visible">
+      <aside className={cn(card, 'flex min-h-0 flex-col gap-1.5 bg-muted/40 px-3')}>
         {notas.length > 0 && (
           <div className={mudo}>
             <button className="cursor-pointer underline" onClick={() => recolherTodos(notas.map((n) => n.materia || CHAVE_SEM_MATERIA))}>Recolher tudo</button> ·{' '}
@@ -71,7 +79,7 @@ function ResumosTela({ ciclo, notas }: { ciclo: Ciclo; notas: NotaResumo[] }) {
                     onClick={() => alternarGrupo(chave)}
                   >
                     <span className="w-3 text-xs">{fechado ? '▸' : '▾'}</span>
-                    <i className="size-2.5 shrink-0 rounded-sm" style={{ background: g.materia ? corDe(ciclo.cores, g.materia) : 'var(--muted-foreground)' }} />
+                    {g.materia ? <Sigla materia={g.materia} cor={corDe(ciclo.cores, g.materia)} className="h-5 min-w-9 text-[0.55rem]" /> : <i className="size-2.5 shrink-0 rounded-sm bg-muted-foreground" />}
                     <span className="min-w-0 flex-1 truncate">{g.materia || 'Sem matéria'}</span>
                     <span className="text-xs font-normal text-muted-foreground">{g.notas.length}</span>
                   </button>
@@ -82,9 +90,10 @@ function ResumosTela({ ciclo, notas }: { ciclo: Ciclo; notas: NotaResumo[] }) {
                     <button
                       key={n.id}
                       onClick={() => { selecionar(n.id); abrirGrupo(chave) }}
-                      className={cn('block w-full cursor-pointer truncate rounded-md py-1 pr-1 pl-6 text-left text-sm hover:bg-accent', n.id === notaId && 'bg-accent font-semibold')}
+                      className={cn('flex w-full cursor-pointer items-center gap-2 truncate rounded-lg py-1.5 pr-1 pl-6 text-left text-sm hover:bg-card', n.id === notaId && 'bg-card font-semibold text-primary shadow-[0_0_0_1px_var(--border)]')}
                     >
-                      {n.titulo}
+                      <FileText className="size-3.5 shrink-0 opacity-60" />
+                      <span className="truncate">{n.titulo}</span>
                     </button>
                   ))}
               </div>
@@ -104,10 +113,11 @@ function ResumosTela({ ciclo, notas }: { ciclo: Ciclo; notas: NotaResumo[] }) {
               <li>Use <code>-</code> e <b>Tab</b> / <b>Shift+Tab</b> para montar tópicos que recolhem e expandem.</li>
               <li>Digite <code>[[Nome da nota]]</code> para ligar notas; as ligações aparecem como "Mencionada em".</li>
             </ul>
-            <div><Button onClick={() => void nova()}>＋ Nova nota</Button></div>
+            <div><Button variant="destaque" onClick={() => void nova()}><Plus className="size-4" /> Nova nota</Button></div>
           </div>
         </div>
       )}
+    </div>
     </div>
   )
 }
@@ -258,13 +268,7 @@ function Editor({ nota, notas, ciclo }: { nota: NotaResumo; notas: NotaResumo[];
             <option key={m}>{m}</option>
           ))}
         </Selecao>
-        <div className="inline-flex rounded-lg border p-0.5">
-          {modos.map(([k, r]) => (
-            <button key={k} onClick={() => definirModo(k)} className={cn('cursor-pointer rounded-md px-3 py-1 text-sm font-semibold', modo === k ? 'bg-primary text-primary-foreground' : 'hover:bg-accent')}>
-              {r}
-            </button>
-          ))}
-        </div>
+        <Segmentado<ModoEditor> rotulo="Modo do editor" itens={modos} atual={modo} aoMudar={definirModo} />
         <span className="flex-1" />
         <Button size="sm" variant="outline" onClick={exportarMd}>⬇ .md</Button>
         <Button size="sm" variant="destructive" onClick={() => void excluir()}>Excluir</Button>
@@ -275,7 +279,7 @@ function Editor({ nota, notas, ciclo }: { nota: NotaResumo; notas: NotaResumo[];
           <div className="relative min-h-0">
             <textarea
               ref={ta}
-              className="size-full min-h-60 resize-none rounded-lg border bg-background p-3 font-mono text-sm leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              className="size-full min-h-60 resize-none rounded-xl border bg-campo p-4 font-mono text-sm leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               spellCheck={false}
               value={texto}
               placeholder="Escreva em Markdown. Ex.: - tópico, [[outra nota]]"
@@ -307,7 +311,7 @@ function Editor({ nota, notas, ciclo }: { nota: NotaResumo; notas: NotaResumo[];
         {modo !== 'editar' && (
           <div
             ref={previa}
-            className="md min-h-0 overflow-auto rounded-lg border p-3"
+            className="md min-h-0 overflow-auto rounded-xl border px-5 py-4"
             onClick={(e) => {
               const a = (e.target as HTMLElement).closest('a.wiki') as HTMLElement | null
               if (a) {
