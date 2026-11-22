@@ -181,18 +181,18 @@ export function BarraRelogio() {
     <div
       className={cn(
         'grid shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-2xl bg-card px-4 py-2 shadow-sm',
-        'max-[900px]:fixed max-[900px]:inset-x-0 max-[900px]:bottom-0 max-[900px]:z-30 max-[900px]:grid-cols-[minmax(0,1fr)_auto] max-[900px]:rounded-none max-[900px]:border-t max-[900px]:px-3 max-[900px]:pb-[max(0.5rem,env(safe-area-inset-bottom))]',
+        'max-[900px]:fixed max-[900px]:inset-x-0 max-[900px]:bottom-0 max-[900px]:z-30 max-[900px]:grid-cols-[minmax(0,1fr)_auto] max-[900px]:gap-2 max-[900px]:rounded-none max-[900px]:border-t max-[900px]:px-3 max-[900px]:pb-[max(0.5rem,env(safe-area-inset-bottom))]',
       )}
     >
       <button className="flex min-w-0 items-center gap-2.5 rounded-lg text-left hover:opacity-80" onClick={trocarAlvo} title="Clique para trocar o que está estudando">
         {materia ? <Sigla materia={materia} cor={corDe(cores, materia)} /> : <span className="grid h-6 min-w-10 place-items-center rounded-md bg-muted text-muted-foreground"><Clock className="size-3.5" /></span>}
-        <span className="min-w-0 max-[480px]:hidden">
+        <span className="min-w-0 max-[640px]:hidden">
           <span className="block text-[0.6rem] font-bold tracking-[0.08em] text-muted-foreground uppercase">{rotulo}</span>
           <span className="block truncate text-[0.84rem] leading-tight font-semibold">{texto}</span>
         </span>
       </button>
 
-      <div className="flex items-center gap-2 rounded-[14px] border bg-muted p-1.5">
+      <div className="flex items-center gap-2 justify-self-end rounded-[14px] border bg-muted p-1.5 min-[901px]:justify-self-auto max-[640px]:gap-1.5 max-[640px]:p-1">
         <div role="radiogroup" aria-label="Relógio" className="flex rounded-[9px] border bg-card p-0.5">
           {OPCOES.map((o) => (
             <button
@@ -204,13 +204,13 @@ export function BarraRelogio() {
               onClick={() => escolherRelogio(o.id)}
               className={cn('rounded-[7px] px-2.5 py-1 text-[0.7rem] font-semibold text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50', atual === o.id && 'bg-accent text-primary')}
             >
-              <span className="max-[480px]:hidden">{o.rotulo}</span>
-              <span className="min-[481px]:hidden">{o.rotulo.slice(0, 4)}</span>
+              <span className="max-[640px]:hidden">{o.rotulo}</span>
+              <span className="min-[641px]:hidden">{o.rotulo === 'Pomodoro' ? 'Pomo' : o.rotulo}</span>
             </button>
           ))}
         </div>
         <span className="flex flex-col items-center px-1.5 leading-none">
-          <span className={cn('font-mono text-[1.2rem] font-bold tabular-nums', rodando ? 'text-primary' : 'text-muted-foreground')} role="timer" aria-live="off">
+          <span className={cn('font-mono text-[1.2rem] font-bold tabular-nums max-[640px]:text-base', rodando ? 'text-primary' : 'text-muted-foreground')} role="timer" aria-live="off">
             {ehPomo ? fmtMMSS(pomo.restaSeg) : fmtHHMMSS(livre.seg)}
           </span>
           {ehPomo && pomo.fase !== 'foco' && <span className="mt-0.5 text-[0.58rem] font-semibold text-muted-foreground uppercase">{NOMES_FASE[pomo.fase]}</span>}

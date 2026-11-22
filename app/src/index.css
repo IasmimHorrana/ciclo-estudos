@@ -39,6 +39,7 @@
   /* destaque (cartão principal, botão de ação): nas paletas sem degradê, a cor primária lisa */
   --degrade: linear-gradient(120deg, var(--primary), var(--primary));
   --destaque-sombra: transparent;
+  --destaque-texto: var(--primary-foreground);
   /* fundo dos campos de texto e listas de escolha */
   --campo: var(--background);
 }
@@ -174,6 +175,7 @@
   --calor-4: #4f46e5;
   --degrade: linear-gradient(120deg, #4f46e5 0%, #7c3aed 60%, #9d4cf5 100%);
   --destaque-sombra: #6d4aff38;
+  --destaque-texto: #ffffff;
   --campo: #f6f5fb;
 }
 
@@ -209,6 +211,7 @@
   --calor-4: #a49eff;
   --degrade: linear-gradient(120deg, #5b52f0 0%, #7c3aed 60%, #9d4cf5 100%);
   --destaque-sombra: #000000;
+  --destaque-texto: #ffffff;
   --campo: #1d1b29;
 }
 
@@ -269,7 +272,7 @@ body {
 /* cartão de número em destaque (o primeiro de cada tela) */
 .destaque {
   background: var(--degrade);
-  color: var(--primary-foreground);
+  color: var(--destaque-texto);
   box-shadow: 0 8px 22px var(--destaque-sombra);
 }
 

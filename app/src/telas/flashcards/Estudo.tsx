@@ -20,7 +20,7 @@ import { EditarNota } from '@/telas/flashcards/EditarNota'
 const BOTOES: { botao: Botao; nome: string; cor: string }[] = [
   { botao: 1, nome: 'Errei', cor: 'border bg-card text-erro hover:bg-erro-bg' },
   { botao: 2, nome: 'Difícil', cor: 'border bg-card text-aviso hover:bg-aviso-bg' },
-  { botao: 3, nome: 'Bom', cor: 'border border-ok bg-ok text-white shadow-[0_8px_20px_color-mix(in_oklab,var(--ok)_30%,transparent)] hover:brightness-110' },
+  { botao: 3, nome: 'Bom', cor: 'border border-ok bg-ok text-white dark:text-[#052e16] shadow-[0_8px_20px_color-mix(in_oklab,var(--ok)_30%,transparent)] hover:brightness-110' },
   { botao: 4, nome: 'Fácil', cor: 'border bg-card text-primary hover:bg-accent' },
 ]
 
