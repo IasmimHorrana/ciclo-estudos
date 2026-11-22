@@ -1,6 +1,6 @@
 // Cálculos da aba Desempenho: níveis por assunto, horas e questões por período. Tudo puro.
 
-import { addDias, type DataISO } from '@/dominio/datas'
+import { addDias, segundaDe, type DataISO } from '@/dominio/datas'
 import { round2, soma, todasMaterias } from '@/dominio/ciclo'
 
 /** Abaixo disso o nível fica "Poucos dados". */
@@ -100,6 +100,11 @@ export interface EntradaDesempenho {
   hojeISO: DataISO
   /** Limites dos níveis (padrão `FAIXAS_PADRAO`). */
   faixas?: Faixas
+  /**
+   * Se `true`, só entram as matérias com estudo registrado (tempo ou questões) desde a segunda-feira
+   * desta semana ou dentro do período, o que for mais longo. Sem isso, entram todas as conhecidas.
+   */
+  soEstudadas?: boolean
 }
 
 /** Tudo que a visão "Estudo" mostra, calculado para o período escolhido. */
@@ -117,10 +122,20 @@ export function calcularDesempenho(e: EntradaDesempenho) {
   const add = (m: string) => {
     if (m && !mats.includes(m)) mats.push(m)
   }
-  e.assuntos.forEach((a) => add(a.materia))
-  e.questoes.forEach((q) => add(q.materia))
-  e.sessoes.forEach((x) => add(x.materia))
-  e.materiasDaSemana.forEach(add)
+  if (e.soEstudadas) {
+    const desde = ini < segundaDe(e.hojeISO) ? ini : segundaDe(e.hojeISO)
+    e.questoes.forEach((q) => q.data >= desde && add(q.materia))
+    e.sessoes.forEach((x) => x.data >= desde && add(x.materia))
+  } else {
+    e.assuntos.forEach((a) => add(a.materia))
+    e.questoes.forEach((q) => add(q.materia))
+    e.sessoes.forEach((x) => add(x.materia))
+    e.materiasDaSemana.forEach(add)
+  }
+  // matérias conhecidas que ficaram de fora da lista (para o botão "Mostrar todas")
+  const escondidas = e.soEstudadas
+    ? [...new Set([...e.assuntos.map((a) => a.materia), ...e.questoes.map((q) => q.materia), ...e.sessoes.map((x) => x.materia), ...e.materiasDaSemana])].filter((m) => m && !mats.includes(m)).length
+    : 0
   const pos = (m: string) => (ordem.indexOf(m) < 0 ? 999 : ordem.indexOf(m))
   mats.sort((a, b) => pos(a) - pos(b))
 
@@ -181,7 +196,7 @@ export function calcularDesempenho(e: EntradaDesempenho) {
   const recentes = <T extends { data: DataISO; id: string }>(l: T[]) => [...l].sort((a, b) => b.data.localeCompare(a.data) || b.id.localeCompare(a.id)).slice(0, 8)
   const ultimos = recentes(e.questoes)
   const ultimasSessoes = recentes(e.sessoes)
-  return { feitas, acertos, dias, horas, tipos, mats, blocos, horasPorMateria, colsHoras, colsQuestoes, acertoPorMateria, ultimos, ultimasSessoes }
+  return { feitas, acertos, dias, horas, tipos, mats, escondidas, blocos, horasPorMateria, colsHoras, colsQuestoes, acertoPorMateria, ultimos, ultimasSessoes }
 }
 
 /** Indicadores da visão "Semanas" (histórico de semanas fechadas). */

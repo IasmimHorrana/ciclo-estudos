@@ -74,9 +74,12 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
   const hojeISO = useHojeISO()
   const abertas = useDesempenhoUi((s) => s.abertas)
   const alternarAberta = useDesempenhoUi((s) => s.alternarAberta)
+  const verTodas = useDesempenhoUi((s) => s.todasMaterias)
+  const definir = useDesempenhoUi((s) => s.definir)
   const d = calcularDesempenho({
     questoes: estudo.questoes, sessoes: estudo.sessoes, assuntos: estudo.assuntos, periodo, hojeISO,
     materiasDaSemana: ciclo.semana?.passos.map((p) => p.materia) ?? [], config: ciclo.config, faixas: ciclo.preferencias.faixas,
+    soEstudadas: !verTodas,
   })
   const fx = ciclo.preferencias.faixas
   const cor = (m: string) => corDe(ciclo.cores, m)
@@ -94,13 +97,27 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
 
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)] gap-3 max-[1000px]:grid-cols-1 max-[1000px]:overflow-visible">
         <section className={cn(card, 'flex min-h-0 flex-col')}>
-          <h2 className="m-0 mb-1 text-sm font-bold">Matérias e assuntos</h2>
+          <div className="mb-1 flex items-center gap-2">
+            <h2 className="m-0 flex-1 text-sm font-bold">Matérias e assuntos</h2>
+            {(verTodas || d.escondidas > 0) && (
+              <Button
+                size="sm"
+                variant="outline"
+                title={verTodas ? 'Mostrar só as matérias com estudo registrado nesta semana (ou no período escolhido)' : 'Mostrar também as matérias sem estudo nesta semana'}
+                onClick={() => definir({ todasMaterias: !verTodas })}
+              >
+                {verTodas ? 'Só as estudadas' : `Mostrar todas (+${d.escondidas})`}
+              </Button>
+            )}
+          </div>
           <p className={cn(mudo, 'm-0 mb-2')}>
             O nível de cada assunto vem da porcentagem de acertos no período (mínimo de {MIN_QUESTOES} questões): abaixo de {fx.fraco}% é Fraco, até {fx.medio - 1}% Médio, até {fx.bom - 1}% Bom e {fx.bom}% ou mais Dominado (ajuste em "Faixas de acerto").
           </p>
-          <FormAssuntos materias={todas} />
+          <FormAssuntos materias={todas} visiveis={d.mats} />
           <div className="min-h-0 flex-1 overflow-auto">
-            {d.blocos.length === 0 && <p className={mudo}>Nada ainda. Adicione assuntos a uma matéria ou registre questões.</p>}
+            {d.blocos.length === 0 && (
+              <p className={mudo}>{verTodas ? 'Nada ainda. Adicione assuntos a uma matéria ou registre questões.' : 'Nenhum estudo registrado nesta semana ainda. As matérias aparecem aqui conforme você registra tempo ou questões.'}</p>
+            )}
             {d.blocos.map((b) => (
               <details key={b.materia} open={abertas.includes(b.materia)} onToggle={(e) => alternarAberta(b.materia, e.currentTarget.open)} className="border-b last:border-b-0">
                 <summary className="flex cursor-pointer items-center gap-2 py-2 text-sm">
@@ -215,7 +232,7 @@ async function apagarRegistro(id: string) {
   if (await confirmar('Apagar este registro de questões? Não dá para desfazer.', 'Apagar', true)) await excluirRegistroQuestoes(db, id)
 }
 
-function FormAssuntos({ materias }: { materias: string[] }) {
+function FormAssuntos({ materias, visiveis }: { materias: string[]; visiveis: string[] }) {
   async function adicionar(form: HTMLFormElement) {
     const dados = new FormData(form)
     const materia = String(dados.get('materia') ?? '')
@@ -223,8 +240,9 @@ function FormAssuntos({ materias }: { materias: string[] }) {
     if (!nomes.length) return void avisar('Aviso', 'Digite o nome de um ou mais assuntos (separados por vírgula).')
     useDesempenhoUi.getState().alternarAberta(materia, true)
     const novos = await adicionarAssuntos(db, materia, nomes)
-    if (!novos) void avisar('Aviso', 'Esses assuntos já existem nessa matéria.')
-    else form.reset()
+    if (!novos) return void avisar('Aviso', 'Esses assuntos já existem nessa matéria.')
+    form.reset()
+    if (!visiveis.includes(materia)) void avisar('Assunto adicionado', `${materia} não aparece na lista porque ainda não tem estudo registrado nesta semana. Use "Mostrar todas" para vê-la.`)
   }
   return (
     <form

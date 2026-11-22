@@ -111,6 +111,24 @@ describe('calcularDesempenho', () => {
     expect(d.mats).toEqual(['Língua Portuguesa', 'Estatística', 'Informática', 'Zeta Própria'])
   })
 
+  it('só estudadas: matérias com tempo ou questões desde a segunda desta semana (sexta, 09/10 → segunda, 05/10)', () => {
+    const e = base({
+      periodo: 'hoje',
+      assuntos: [{ id: 'a', materia: 'Informática', nome: 'Redes' }],
+      materiasDaSemana: ['Estatística'],
+      questoes: [q('1', '2026-10-05', 'Língua Portuguesa', 1, 1), q('2', '2026-10-04', 'Direito', 1, 1)],
+      sessoes: [s('1', HOJE, 'Redação', 30)],
+      soEstudadas: true,
+    })
+    const d = calcularDesempenho(e)
+    expect(d.mats).toEqual(['Língua Portuguesa', 'Redação'])
+    expect(d.escondidas).toBe(3) // Informática, Estatística e Direito (domingo, semana passada)
+    // período maior que a semana: entra o que foi estudado no período
+    expect(calcularDesempenho({ ...e, periodo: '7' }).mats).toContain('Direito')
+    // sem o filtro, volta a lista completa
+    expect(calcularDesempenho({ ...e, soEstudadas: false }).mats).toHaveLength(5)
+  })
+
   it('colunas: 30 dias, hoje por último, e erros = feitas − acertos', () => {
     const d = calcularDesempenho(base({ questoes: [q('1', HOJE, 'A', 10, 7)] }))
     expect(d.colsQuestoes).toHaveLength(30)
