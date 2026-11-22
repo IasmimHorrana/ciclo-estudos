@@ -79,3 +79,22 @@ export function Barrinha({ pct, cor, className }: { pct: number; cor?: string; c
     </div>
   )
 }
+
+/** Botões de escolha única lado a lado (o escolhido fica branco, em relevo). */
+export function Segmentado<T extends string>({ itens, atual, aoMudar, rotulo, className }: { itens: [T, string][]; atual: T; aoMudar: (k: T) => void; rotulo: string; className?: string }) {
+  return (
+    <div role="radiogroup" aria-label={rotulo} className={cn('inline-flex rounded-[11px] border bg-muted p-0.5 text-xs font-semibold', className)}>
+      {itens.map(([k, r]) => (
+        <button
+          key={k}
+          role="radio"
+          aria-checked={atual === k}
+          onClick={() => aoMudar(k)}
+          className={cn('cursor-pointer rounded-lg px-3 py-1.5 text-muted-foreground transition-colors hover:text-foreground', atual === k && 'bg-card text-foreground shadow-sm')}
+        >
+          {r}
+        </button>
+      ))}
+    </div>
+  )
+}
