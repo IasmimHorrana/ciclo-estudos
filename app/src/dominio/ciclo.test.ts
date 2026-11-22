@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   agendar, agruparPassosParaEstudo, alternarPasso, materiasParaEstudo, passoAutomatico, aplicarSnapshot, atribuirCores, calcularDistribuicao, configPadrao, construirSemana, corDe, diasDisponiveis, fmtH,
-  cartoesDaMateria, gerarCicloEspacado, limparMarcacoes, moverPasso, moverPassos, normalizarConfig, passosDe, previaAgenda, previaPassos, PALETA, reagendarPendentes, resumoSemana,
+  cartoesDaMateria, gerarCicloEspacado, ordemDoCiclo, limparMarcacoes, moverPasso, moverPassos, normalizarConfig, passosDe, previaAgenda, previaPassos, PALETA, reagendarPendentes, resumoSemana,
   rotuloDoPasso, semanaAlvo, snapshotConfig, validarGerar, todasMaterias, type MateriaCfg,
 } from '@/dominio/ciclo'
 import type { ConfigCiclo } from '@/dados/esquemas'
@@ -286,5 +286,25 @@ describe('cartões da matéria no quadro', () => {
     const movido = moverPassos(s, [1, 2], '2026-10-11', null)
     expect(movido.passos.filter((x) => x.dia === '2026-10-11').map((x) => x.id)).toEqual([5, 6, 1, 2])
     expect(moverPassos(s, [1, 2], '2026-10-11', 2)).toBe(s)
+  })
+})
+
+describe('ordemDoCiclo (prévia da tela Montar)', () => {
+  it('é a mesma ordem dos passos gerados, no Livre e no Ponderado', () => {
+    for (const modo of ['Livre', 'Recomendado'] as const) {
+      const c = cfg({ modo })
+      expect(ordemDoCiclo(c)).toEqual(construirSemana(c, SEXTA, AGORA).passos.map((p) => p.materia))
+    }
+  })
+
+  it('no Livre respeita as repetições e não repete a matéria em seguida', () => {
+    const o = ordemDoCiclo(cfg({ modo: 'Livre' }))
+    expect(o).toHaveLength(6)
+    expect(o.filter((m) => m === 'RL')).toHaveLength(2)
+    expect(o.some((m, i) => i > 0 && o[i - 1] === m)).toBe(false)
+  })
+
+  it('sem matérias, a ordem fica vazia', () => {
+    expect(ordemDoCiclo(cfg({ mats: [] }))).toEqual([])
   })
 })

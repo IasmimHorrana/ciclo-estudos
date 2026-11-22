@@ -213,14 +213,19 @@ export function previaAgenda(c: ConfigCiclo, hojeISO: DataISO): string {
 // ---------------------------------------------------------------- semana
 
 /** Monta a semana a partir da configuração. Chame `validarGerar` antes. */
-export function construirSemana(c: ConfigCiclo, hojeISO: DataISO, agora: number): Semana {
+/** A ordem das matérias nos passos do ciclo (a mesma que "Gerar ciclo" usa; serve de prévia na tela Montar). */
+export function ordemDoCiclo(c: ConfigCiclo): string[] {
   const livre = c.modo === 'Livre'
   const passos = passosDe(c)
   const mats = c.mats.map((m) => ({ nome: m.nome, peso: livre ? m.rep : m.peso })).filter((m) => m.peso > 0)
   const total = soma(mats, (m) => m.peso)
-  const lista = livre
+  return livre
     ? gerarCicloEspacado(mats, total)
     : gerarCicloEspacado(calcularDistribuicao(mats, total, passos).map((d) => ({ nome: d.nome, peso: d.horas })), passos)
+}
+
+export function construirSemana(c: ConfigCiclo, hojeISO: DataISO, agora: number): Semana {
+  const lista = ordemDoCiclo(c)
   const seg = semanaAlvo(hojeISO, c.dias)
   const base: Passo[] = lista.map((nome, i) => ({ id: i + 1, materia: nome, dia: null, horasPlanejadas: c.duracao, horasFeitas: 0, feito: false, nota: '' }))
   return {

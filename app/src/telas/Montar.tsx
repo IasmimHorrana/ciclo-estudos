@@ -12,15 +12,16 @@ import { db } from '@/dados/db'
 import { renomearMateria } from '@/dados/materias'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
 import {
-  corDe, fmtH, MATERIAS_PADRAO, passosDe, previaAgenda, previaPassos, round2, soma, temProgresso, todasMaterias, validarGerar,
+  corDe, fmtH, MATERIAS_PADRAO, ordemDoCiclo, passosDe, previaAgenda, previaPassos, round2, soma, temProgresso, todasMaterias, validarGerar,
 } from '@/dominio/ciclo'
 import { fmtData, idxDia, NOMES_DIA, NOMES_DIA_LONGO } from '@/dominio/datas'
 import { useUi } from '@/estado/ui'
 import { abrirDialogo } from '@/estado/dialogo'
 import { cn } from '@/lib/utils'
+import { caixa, Sigla, tituloCaixa, Topo } from '@/componentes/visual'
 
-const card = 'rounded-xl border bg-card p-3.5 shadow-sm'
-const titulo = 'm-0 mb-1.5 text-sm font-bold'
+const card = caixa
+const titulo = cn(tituloCaixa, 'mb-2')
 const apoio = 'm-0 text-xs text-muted-foreground'
 
 function Secao({ titulo: t, children, className }: { titulo: string; children: ReactNode; className?: string }) {
@@ -129,8 +130,18 @@ function MontarTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
     await repetirSemanaFechada(db, ultima.id)
   }
 
+  const ordem = ordemDoCiclo(c)
+  const maiorRep = Math.max(1, ...c.mats.map((m) => prev[m.nome] ?? 0))
+  const mudarRep = (i: number, n: number | null) =>
+    void mexer((x) => ({ ...x, mats: x.mats.map((y, k) => (k === i ? { ...y, rep: n !== null && n >= 0 ? Math.min(Math.trunc(n), passos) : 0 } : y)) }))
+
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-3 max-[1000px]:grid-cols-1 max-[1000px]:overflow-visible">
+    <div className="flex min-h-0 flex-1 flex-col gap-3.5">
+    <Topo titulo="Montar ciclo" sub={`${passos} passos de ${fmtH(c.duracao)} · ${fmtH(horasEf)} por semana`}>
+      <Button variant="destructive" onClick={() => void resetar()}>Voltar ao padrão</Button>
+      <Button variant="destaque" disabled={!validacao.ok} onClick={() => void gerar()}>Gerar ciclo e abrir a semana</Button>
+    </Topo>
+    <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-3.5 max-[1000px]:grid-cols-1 max-[1000px]:overflow-visible">
       {/* coluna esquerda: modelos, tamanho, dias */}
       <div className="flex min-h-0 flex-col gap-3 overflow-auto pr-0.5 max-[1000px]:overflow-visible">
         <Secao titulo="Modelos de ciclo">
@@ -153,7 +164,7 @@ function MontarTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
           <div className="mt-2 flex max-h-40 flex-col gap-1.5 overflow-auto">
             {modelos.length === 0 && <p className={apoio}>Nenhum modelo salvo ainda.</p>}
             {modelos.map((m) => (
-              <div key={m.id} className="flex items-center gap-1.5 rounded-lg border px-2 py-1.5">
+              <div key={m.id} className="flex items-center gap-1.5 rounded-xl border px-3 py-2">
                 <div className="min-w-0 flex-1">
                   <b className="block truncate text-sm">{m.nome}</b>
                   <span className={apoio}>
@@ -215,12 +226,12 @@ function MontarTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
             {fmtH(c.horas)} ÷ {fmtH(c.duracao)} = <b>{passos} passos</b>
             {Math.abs(horasEf - c.horas) > 0.01 ? ` (arredondado: o ciclo terá ${fmtH(horasEf)})` : ''}. A duração de cada passo pode ser ajustada depois, na aba Semana.
           </p>
-          <div className="mt-2 inline-flex rounded-lg border p-0.5">
+          <div className="mt-2 inline-flex rounded-[11px] border bg-muted p-0.5">
             {(['Livre', 'Recomendado'] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => void mexer((x) => ({ ...x, modo: m }))}
-                className={cn('cursor-pointer rounded-md px-3 py-1 text-sm font-semibold', c.modo === m ? 'bg-primary text-primary-foreground' : 'hover:bg-accent')}
+                className={cn('cursor-pointer rounded-lg px-3.5 py-1.5 text-xs font-semibold', c.modo === m ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
               >
                 {m === 'Livre' ? 'Ciclo Livre' : 'Ciclo Ponderado'}
               </button>
@@ -244,7 +255,7 @@ function MontarTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
                   if (c.dias[i] && c.dias.filter(Boolean).length === 1) return void avisar('Aviso', 'Mantenha ao menos um dia de estudo marcado.')
                   await mexer((x) => ({ ...x, dias: x.dias.map((d, k) => (k === i ? !d : d)) }))
                 }}
-                className={cn('cursor-pointer rounded-full border px-3 py-1 text-sm font-semibold', c.dias[i] ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-accent')}
+                className={cn('min-w-12 cursor-pointer rounded-[10px] border px-3 py-1.5 text-sm font-semibold', c.dias[i] ? 'border-primary bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent')}
               >
                 {n}
               </button>
@@ -290,19 +301,15 @@ function MontarTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
         <div className="min-h-0 flex-1 overflow-auto">
           {c.mats.length === 0 && <p className={apoio}>Nenhuma matéria no ciclo ainda. Use o seletor abaixo para adicionar.</p>}
           {c.mats.map((m, i) => (
-            <div key={m.nome} className="flex items-center gap-2 border-b py-1.5 last:border-b-0">
-              <i className="size-2.5 shrink-0 rounded-full" style={{ background: corDe(cores, m.nome) }} />
+            <div key={m.nome} className="flex items-center gap-2.5 border-b py-2 last:border-b-0">
+              <Sigla materia={m.nome} cor={corDe(cores, m.nome)} />
               <span className="min-w-0 flex-1 truncate text-sm font-semibold" title={m.nome}>{m.nome}</span>
               {livre ? (
-                <label className="flex items-center gap-1 text-xs text-muted-foreground" title="Repetições no ciclo">
-                  Rep.
-                  <CampoNumero
-                    key={`r${m.nome}${m.rep}`}
-                    className="w-14 text-center"
-                    valor={m.rep}
-                    aoConfirmar={(n) => void mexer((x) => ({ ...x, mats: x.mats.map((y, k) => (k === i ? { ...y, rep: n !== null && n >= 0 ? Math.min(Math.trunc(n), passos) : 0 } : y)) }))}
-                  />
-                </label>
+                <span className="flex h-8 items-center overflow-hidden rounded-[10px] border" title="Repetições no ciclo">
+                  <button className="grid h-full w-7 cursor-pointer place-items-center bg-muted text-muted-foreground hover:text-foreground" aria-label={`Uma vez a menos: ${m.nome}`} onClick={() => mudarRep(i, m.rep - 1)}>−</button>
+                  <CampoNumero key={`r${m.nome}${m.rep}`} aria-label={`Repetições de ${m.nome}`} className="h-full w-11 rounded-none border-0 bg-card px-1 text-center font-mono font-bold" valor={m.rep} aoConfirmar={(n) => mudarRep(i, n)} />
+                  <button className="grid h-full w-7 cursor-pointer place-items-center bg-muted text-muted-foreground hover:text-foreground" aria-label={`Uma vez a mais: ${m.nome}`} onClick={() => mudarRep(i, m.rep + 1)}>+</button>
+                </span>
               ) : (
                 <label className="flex items-center gap-1 text-xs text-muted-foreground">
                   Peso
@@ -315,6 +322,9 @@ function MontarTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
               )}
               <span className="hidden w-32 text-xs text-muted-foreground min-[1200px]:inline">
                 {prev[m.nome] != null ? `≈ ${prev[m.nome]} passo(s) · ${fmtH((prev[m.nome] as number) * c.duracao)}` : ''}
+              </span>
+              <span className="hidden h-1.5 w-24 overflow-hidden rounded-full bg-foreground/10 min-[1300px]:block">
+                <i className="block h-full rounded-full" style={{ width: `${((prev[m.nome] ?? 0) / maiorRep) * 100}%`, background: corDe(cores, m.nome) }} />
               </span>
               <Button size="sm" variant="outline" title="Tirar do ciclo" aria-label={`Tirar ${m.nome} do ciclo`} onClick={() => void mexer((x) => ({ ...x, mats: x.mats.filter((_, k) => k !== i) }))}>
                 ✕
@@ -333,11 +343,23 @@ function MontarTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
           </Selecao>
           <Button size="sm" variant="outline" onClick={() => void gerenciarMaterias()}>⚙ Gerenciar lista</Button>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button disabled={!validacao.ok} onClick={() => void gerar()}>Gerar ciclo e abrir a semana</Button>
-          <Button variant="destructive" onClick={() => void resetar()}>Voltar ao padrão</Button>
-        </div>
+        {ordem.length > 0 && (
+          <div className="mt-3 border-t pt-3">
+            <h3 className={titulo}>
+              A ordem do ciclo <span className="text-xs font-normal text-muted-foreground">prévia · a semana segue esta ordem</span>
+            </h3>
+            <ol className="m-0 grid max-h-40 list-none grid-cols-[repeat(auto-fill,minmax(4.6rem,1fr))] gap-1.5 overflow-auto p-0">
+              {ordem.map((m, i) => (
+                <li key={i} className="flex items-center justify-between gap-1 rounded-lg border px-1.5 py-1">
+                  <Sigla materia={m} cor={corDe(cores, m)} className="h-5 min-w-0 px-1 text-[0.55rem]" />
+                  <span className="font-mono text-[0.6rem] text-muted-foreground">{String(i + 1).padStart(2, '0')}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
       </Secao>
+    </div>
     </div>
   )
 }
