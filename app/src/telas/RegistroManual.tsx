@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { EscolherAssunto } from '@/componentes/EscolherAssunto'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
+import { caixa, rotuloCampo, tituloCaixa } from '@/componentes/visual'
 import type { Ciclo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
 import { criarAssunto } from '@/dados/edital'
@@ -15,7 +16,7 @@ import { cn } from '@/lib/utils'
 type SemanaAtual = NonNullable<Ciclo['semana']>
 
 const NOVO = '__novo'
-const rotulo = 'flex flex-col gap-1 text-[0.7rem] font-bold tracking-wide text-muted-foreground uppercase'
+const rotulo = rotuloCampo
 
 /**
  * Registro manual: estudo feito fora do app (outro lugar, sem o Pomodoro). Tempo, matéria, assunto e, se for o caso, questões × acertos.
@@ -71,8 +72,8 @@ export function RegistroManual({ s, config, hojeISO, primeiras = [] }: { s: Sema
   }
 
   return (
-    <section className="rounded-xl border bg-card p-3.5 shadow-sm">
-      <h2 className="m-0 mb-2 text-sm font-bold">Registrar estudo manual</h2>
+    <section className={caixa}>
+      <h2 className={cn(tituloCaixa, 'mb-3')}>Registrar estudo manual</h2>
       <div className="flex flex-col gap-2">
         <div className="grid grid-cols-2 gap-2">
           <label className={rotulo}>
@@ -127,7 +128,7 @@ export function RegistroManual({ s, config, hojeISO, primeiras = [] }: { s: Sema
             </Selecao>
           </label>
         )}
-        <Button disabled={gravando || !materia} onClick={() => void registrar()}>Registrar</Button>
+        <Button variant="destaque" className="mt-1" disabled={gravando || !materia} onClick={() => void registrar()}>Registrar</Button>
         {msg && <p className={cn('m-0 text-xs', msg.ok ? 'text-ok' : 'text-erro')} role="status">{msg.texto}</p>}
       </div>
     </section>
