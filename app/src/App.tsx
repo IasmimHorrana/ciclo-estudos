@@ -126,7 +126,7 @@ export default function App() {
     return () => mq.removeEventListener('change', aplicar)
   }, [tema])
 
-  // paleta de cores (a padrão, verde-menta, não precisa do atributo)
+  // paleta de cores (a verde-menta é a das variáveis de :root e não precisa do atributo)
   useEffect(() => {
     if (paleta === 'menta') delete document.documentElement.dataset.paleta
     else document.documentElement.dataset.paleta = paleta

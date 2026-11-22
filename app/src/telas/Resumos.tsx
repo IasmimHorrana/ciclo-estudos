@@ -275,7 +275,7 @@ function Editor({ nota, notas, ciclo }: { nota: NotaResumo; notas: NotaResumo[];
           <div className="relative min-h-0">
             <textarea
               ref={ta}
-              className="size-full min-h-60 resize-none rounded-lg border bg-background p-3 font-mono text-sm leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+              className="size-full min-h-60 resize-none rounded-lg border bg-campo p-3 font-mono text-sm leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               spellCheck={false}
               value={texto}
               placeholder="Escreva em Markdown. Ex.: - tópico, [[outra nota]]"

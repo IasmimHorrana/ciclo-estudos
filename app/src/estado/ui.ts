@@ -8,6 +8,7 @@ export type Relogio = 'pomodoro' | 'livre'
 
 /** Paletas de cor (as variáveis de cada uma ficam em index.css, em [data-paleta]) */
 export const PALETAS = [
+  { id: 'indigo', nome: 'Índigo' },
   { id: 'menta', nome: 'Verde-menta' },
   { id: 'trigo', nome: 'Trigo' },
 ] as const
@@ -36,7 +37,7 @@ export const useUi = create<UiState>()(
     (set, get) => ({
       aba: 'montar',
       tema: 'auto',
-      paleta: 'menta',
+      paleta: 'indigo',
       relogio: 'pomodoro',
       irParaAba: (aba) => set({ aba }),
       escolherRelogio: (relogio) => set({ relogio }),
@@ -46,6 +47,11 @@ export const useUi = create<UiState>()(
         set({ paleta: (PALETAS[(i + 1) % PALETAS.length] ?? PALETAS[0]).id })
       },
     }),
-    { name: 'ciclo-estudos.ui' },
+    {
+      name: 'ciclo-estudos.ui',
+      version: 1,
+      // versão 1 (repaginada): todo mundo passa a ver a paleta Índigo; as outras continuam no botão de paleta
+      migrate: (salvo, versao) => (versao < 1 ? { ...(salvo as object), paleta: 'indigo' } : salvo) as UiState,
+    },
   ),
 )
