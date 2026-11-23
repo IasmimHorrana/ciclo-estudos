@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto'
 import { describe, expect, it } from 'vitest'
 import {
-  atualizarModelo, carregarCiclo, contarPomodoro, definirMeta, editarPasso, moverPassoNaSemana, excluirModelo, fecharSemana, gerarSemana, limparSemana,
+  atualizarModelo, carregarCiclo, contarPomodoro, definirMeta, descartarSemana, editarPasso, moverPassoNaSemana, excluirModelo, fecharSemana, gerarSemana, limparSemana,
   marcarPasso, mudarConfig, nomeModeloExiste, registrarTempo, reagendar, renomearModelo, repetirSemanaFechada, salvarModelo, usarModelo, voltarAoPadrao,
 } from '@/dados/ciclo'
 import { BancoCiclo } from '@/dados/db'
@@ -88,6 +88,17 @@ describe('a semana em andamento', () => {
     const c = await carregarCiclo(db)
     expect(c.semana!.passos.every((p) => !p.feito && p.horasFeitas === 0)).toBe(true)
     expect(c.fechadas).toEqual([])
+  })
+
+  it('descartar semana apaga a semana sem guardar histórico e mantém a montagem', async () => {
+    const db = await montado()
+    await gerarSemana(db, T0)
+    await marcarPasso(db, 1, true)
+    await descartarSemana(db, T0 + 1000)
+    const c = await carregarCiclo(db)
+    expect(c.semana).toBeNull()
+    expect(c.fechadas).toEqual([])
+    expect(c.config.mats.map((m) => m.nome)).toEqual(['RL', 'INF'])
   })
 
   it('registrar tempo do Pomodoro soma horas, pode concluir o passo e grava a sessão', async () => {

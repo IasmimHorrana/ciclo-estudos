@@ -89,6 +89,11 @@ export async function limparSemana(db: BancoCiclo, agora = Date.now()): Promise<
   await mudarSemana(db, (s) => limparMarcacoes(s, c, hoje(new Date(agora)), agora), agora)
 }
 
+/** Descarta a semana do Ciclo sem guardar estatísticas (a montagem continua salva para gerar de novo). */
+export async function descartarSemana(db: BancoCiclo, agora = Date.now()): Promise<void> {
+  await gravar(db, 'semana', null, agora)
+}
+
 export type ResultadoGerar = { ok: true; passosSemDia: number } | { ok: false; erro: string }
 
 /** Gera a semana a partir da montagem. A tela já perguntou se pode substituir a semana atual. */
