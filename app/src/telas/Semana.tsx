@@ -5,7 +5,7 @@ import { CampoNumero } from '@/componentes/CampoNumero'
 import { avisar, confirmar } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
 import { Barrinha, caixa, Numero, Numeros, tituloCaixa, Topo } from '@/componentes/visual'
-import { definirMeta, fecharSemana, limparSemana, reagendar, type Ciclo } from '@/dados/ciclo'
+import { definirMeta, descartarSemana, fecharSemana, limparSemana, reagendar, type Ciclo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
 import { fmtH, horasFeitasDe, metaEf, resumoSemana, round2, type ResumoSemana } from '@/dominio/ciclo'
@@ -102,6 +102,10 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
     if (await confirmar('Isso zera as marcações, horas e anotações da semana SEM salvar estatísticas. Para guardar o resultado, use "Fechar semana". Continuar?', 'Limpar', true)) await limparSemana(db)
   }
 
+  async function descartar() {
+    if (await confirmar('A semana do Ciclo será apagada inteira (passos, marcações e horas dela), sem salvar nada no Desempenho. Seus estudos registrados e a montagem em "Montar ciclo" continuam guardados. Continuar?', 'Descartar', true)) await descartarSemana(db)
+  }
+
   async function fechar() {
     const r = resumoSemana(s, hojeISO, Date.now())
     const escolha = await abrirDialogo<'nova' | 'limpar'>('Fechar semana', (fecharDlg) => (
@@ -156,6 +160,7 @@ function SemanaTela({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string }) {
             <Button variant="destaque" onClick={() => void fechar()}>✅ Fechar semana</Button>
             <Button variant="outline" onClick={() => void reagendarPendentes()}>📅 Reagendar pendentes a partir de hoje</Button>
             <Button variant="destructive" onClick={() => void limpar()}>Limpar marcações sem salvar</Button>
+            <Button variant="destructive" onClick={() => void descartar()}>🗑️ Descartar semana</Button>
           </div>
         </div>
 

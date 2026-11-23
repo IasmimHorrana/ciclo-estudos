@@ -108,6 +108,7 @@ O app usa a data do computador (fuso local) e trabalha com a **semana real, de s
 - "Reagendar pendentes a partir de hoje" redistribui os passos não concluídos nos dias que ainda restam (sobrescreve dias ajustados à mão nesses passos; a ordem em que você arrastou os cartões é mantida na distribuição).
 - Se a semana em andamento já terminou no calendário, aparece um aviso no topo de todas as abas pedindo para fechá-la. O app também percebe a virada do dia com a página aberta (checagem a cada minuto e ao voltar para a aba).
 - Ao fechar a semana com "Salvar e limpar marcações" (ou "Limpar marcações sem salvar"), o ciclo é reagendado na semana real da data de hoje.
+- "🗑️ Descartar semana" (só na base nova, `app/`) apaga a semana do Ciclo inteira, sem salvar nada no Desempenho: a aba Semana volta a "Nenhuma semana em andamento" e o aviso de semana terminada some. Serve para quem passou a usar o modo Livre. As sessões de estudo registradas e a montagem em "Montar ciclo" continuam guardadas; para usar o Ciclo de novo, basta gerar outra semana.
 - Não há integração com Google Calendar nem com outro calendário externo.
 
 Ao clicar em "Gerar ciclo e abrir a semana", a função `gerar()` cria `state.semana` com um passo por posição do ciclo e abre a aba Semana já preenchida. Se já existir uma semana em andamento, o app pergunta antes de substituí-la, e a semana antiga se perde sem salvar estatística (para guardar, feche a semana antes).
