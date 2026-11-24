@@ -106,8 +106,9 @@ function VisaoEstudo({ ciclo, estudo, periodo }: { ciclo: Ciclo; estudo: Estudo;
             )}
             {d.blocos.map((b) => (
               <details key={b.materia} open={abertas.includes(b.materia)} onToggle={(e) => alternarAberta(b.materia, e.currentTarget.open)} className="border-b last:border-b-0">
-                <summary className="grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_minmax(0,0.8fr)_3rem_auto] items-center gap-3 py-2 text-sm max-[700px]:grid-cols-[auto_minmax(0,1fr)_auto]">
-                  <Sigla materia={b.materia} cor={cor(b.materia)} />
+                {/* colunas de largura fixa (sigla, % e etiqueta, que cabe "Poucos dados"): as barras ficam uma embaixo da outra */}
+                <summary className="grid cursor-pointer grid-cols-[3rem_minmax(0,1fr)_minmax(0,0.8fr)_3rem_5.5rem] items-center gap-3 py-2 text-sm max-[700px]:grid-cols-[3rem_minmax(0,1fr)_5.5rem]">
+                  <Sigla materia={b.materia} cor={cor(b.materia)} className="w-full" />
                   <span className="min-w-0">
                     <span className="block truncate font-semibold" title={b.materia}>{b.materia}</span>
                     <span className={cn(mudo, 'block truncate')}>{b.feitas ? `${b.acertos}/${b.feitas}` : 'sem questões'} · {fmtH(b.horas)}</span>
