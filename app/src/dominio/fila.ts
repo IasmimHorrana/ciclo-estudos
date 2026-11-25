@@ -175,6 +175,23 @@ export function proximoCartao(f: Fila, agora: number): { cartao: CartaoNaFila; o
   return null
 }
 
+/**
+ * O cartão que deve estar na tela. Se `fixadoId` (o que já está aberto) ainda está na fila, ele fica:
+ * um aprendizado que vence enquanto você lê não pode tomar o lugar do cartão aberto, só entra depois
+ * da resposta. Se o aberto saiu da fila (escondido, suspenso, apagado), cai em `proximoCartao`.
+ */
+export function cartaoDaVez(f: Fila, agora: number, fixadoId: string | null): { cartao: CartaoNaFila; origem: Origem } | null {
+  if (fixadoId) {
+    const l = f.aprendendo.find((c) => c.id === fixadoId)
+    if (l) return { cartao: l, origem: l.estado.venceMs <= agora ? 'aprendendo' : 'antecipado' }
+    const r = f.revisao.find((c) => c.id === fixadoId)
+    if (r) return { cartao: r, origem: 'revisao' }
+    const n = f.novos.find((c) => c.id === fixadoId)
+    if (n) return { cartao: n, origem: 'novo' }
+  }
+  return proximoCartao(f, agora)
+}
+
 /** Esconde os irmãos (outros cartões da mesma nota) até amanhã. Devolve os ids a enterrar. */
 export function irmaosParaEnterrar(cartoes: CartaoNaFila[], respondido: CartaoNaFila): string[] {
   return cartoes

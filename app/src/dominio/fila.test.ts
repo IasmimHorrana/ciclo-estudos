@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  irmaosParaEnterrar, montarFila, OPCOES_BARALHO_PADRAO, proximoCartao, usoDoDia,
+  cartaoDaVez, irmaosParaEnterrar, montarFila, OPCOES_BARALHO_PADRAO, proximoCartao, usoDoDia,
   type BaralhoFila, type CartaoNaFila, type OpcoesBaralho,
 } from '@/dominio/fila'
 import { novoCartao, numeroDoDia, type EstadoCartao } from '@/dominio/sm2'
@@ -131,6 +131,34 @@ describe('próximo cartão', () => {
       cartao('l2', 'a', { tipo: 'reaprendendo', venceMs: AGORA - 5 * MIN }),
     ])
     expect(proximoCartao(f, AGORA)?.cartao.id).toBe('l2')
+  })
+})
+
+describe('cartão da vez (o aberto não é trocado sozinho)', () => {
+  const bs = [baralho('a', 'A')]
+  const montar = (cs: CartaoNaFila[]) => montarFila(bs, cs, 'a', new Map(), AGORA, HOJE)
+
+  it('um aprendizado que vence não toma o lugar do cartão aberto', () => {
+    const f = montar([cartao('n1', 'a'), cartao('l1', 'a', { tipo: 'aprendendo', venceMs: AGORA - MIN })])
+    expect(proximoCartao(f, AGORA)?.cartao.id).toBe('l1')
+    expect(cartaoDaVez(f, AGORA, 'n1')).toMatchObject({ cartao: { id: 'n1' }, origem: 'novo' })
+  })
+
+  it('o aberto mantém a origem certa (revisão, aprendizado vencido ou antecipado)', () => {
+    const f = montar([
+      cartao('r1', 'a', { tipo: 'revisao', venceDia: HOJE }),
+      cartao('l1', 'a', { tipo: 'aprendendo', venceMs: AGORA - MIN }),
+      cartao('l2', 'a', { tipo: 'aprendendo', venceMs: AGORA + 5 * MIN }),
+    ])
+    expect(cartaoDaVez(f, AGORA, 'r1')?.origem).toBe('revisao')
+    expect(cartaoDaVez(f, AGORA, 'l1')?.origem).toBe('aprendendo')
+    expect(cartaoDaVez(f, AGORA, 'l2')?.origem).toBe('antecipado')
+  })
+
+  it('sem cartão aberto, ou se ele saiu da fila, segue a ordem normal', () => {
+    const f = montar([cartao('n1', 'a'), cartao('l1', 'a', { tipo: 'aprendendo', venceMs: AGORA - MIN })])
+    expect(cartaoDaVez(f, AGORA, null)?.cartao.id).toBe('l1')
+    expect(cartaoDaVez(f, AGORA, 'sumiu')?.cartao.id).toBe('l1')
   })
 })
 

@@ -8,7 +8,7 @@ import { db } from '@/dados/db'
 import {
   alternarMarca, carregarContexto, definirBandeira, desfazerResposta, enterrar, filaDe, responderCartao, suspender, type ContextoEstudo, type Desfazer,
 } from '@/dados/flashcards'
-import { proximoCartao } from '@/dominio/fila'
+import { cartaoDaVez } from '@/dominio/fila'
 import { renderizarCartao, textoPuro } from '@/dominio/modelo'
 import { previsaoDeBotoes, type Botao } from '@/dominio/sm2'
 import { useFc } from '@/estado/flashcards'
@@ -39,7 +39,25 @@ export function Estudo() {
 
   const ctx = useLiveQuery(() => carregarContexto(db), [tick])
   const fila = ctx ? filaDe(ctx, baralhoId) : null
-  const prox = fila && ctx ? proximoCartao(fila, ctx.agora) : null
+
+  // O cartão aberto fica preso até ser respondido: a revisão periódica da fila só atualiza os contadores.
+  // `marca` é o instante da última resposta/desfazer; só uma fila lida depois dela pode escolher o próximo
+  // (uma fila velha ainda traria o cartão que acabou de ser respondido).
+  const [fixado, setFixado] = useState<{ id: string; marca: number } | null>(null)
+  const [marca, setMarca] = useState(0)
+  const filaNova = !!ctx && ctx.agora >= marca
+  const preso = fixado?.marca === marca ? fixado.id : null
+  const prox = fila && ctx ? cartaoDaVez(fila, ctx.agora, preso) : null
+  if (prox && filaNova && preso !== prox.cartao.id) setFixado({ id: prox.cartao.id, marca })
+
+  /** Depois de responder ou desfazer. `voltar`: o cartão desfeito, que reaparece na hora (como no Anki). */
+  function avancar(voltar?: string) {
+    const m = Date.now()
+    setRodada((r) => r + 1)
+    setMarca(m)
+    setFixado(voltar ? { id: voltar, marca: m } : null)
+    setTick((t) => t + 1) // relê a fila já, sem esperar os 15 s
+  }
   const c = fila?.contagem
   const origem = prox?.origem
   const nomeBaralho = ctx?.baralhos.find((b) => b.id === baralhoId)?.nome ?? 'Todos os baralhos'
@@ -50,7 +68,7 @@ export function Estudo() {
     if (!d) return
     setPilha((p) => p.slice(0, -1))
     await desfazerResposta(db, d)
-    setRodada((r) => r + 1)
+    avancar(d.cartaoAntes.id)
   }
 
   const contador = (rotulo: string, n: number | undefined, cor: string, ativo: boolean) => (
@@ -96,7 +114,7 @@ export function Estudo() {
             ctx={ctx}
             onResponder={(d) => {
               setPilha((p) => [...p, d])
-              setRodada((r) => r + 1)
+              avancar()
             }}
             onDesfazer={() => void desfazer()}
           />
