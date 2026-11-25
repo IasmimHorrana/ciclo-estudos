@@ -206,6 +206,25 @@ export async function tirarMateriaDoEdital(db: BancoCiclo, id: string, agora = D
   })
 }
 
+/**
+ * Esvazia a aba Edital de uma vez: é o "Tirar do edital" de todas as matérias.
+ * Os assuntos continuam no app (questões, tempos, flashcards); só saem do edital e do ciclo.
+ * Devolve quantas matérias saíram.
+ */
+export async function tirarEditalInteiro(db: BancoCiclo, agora = Date.now()): Promise<number> {
+  let n = 0
+  await db.transaction('rw', [db.materiasEdital, db.assuntos], async () => {
+    for (const m of vivos(await db.materiasEdital.toArray())) {
+      await db.materiasEdital.put({ ...m, excluidoEm: agora, atualizadoEm: agora, sujo: 1 })
+      n++
+    }
+    for (const a of vivos(await db.assuntos.toArray()).filter((x) => x.noEdital)) {
+      await db.assuntos.put({ ...a, noEdital: false, noCiclo: false, paiId: null, atualizadoEm: agora, sujo: 1 })
+    }
+  })
+  return n
+}
+
 export interface PedidoCiclo {
   materia: string
   pesoMateria: number

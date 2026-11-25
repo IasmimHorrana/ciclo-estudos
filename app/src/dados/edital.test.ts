@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { lerArquivo } from '@/dados/converter'
 import { gerarSemana, carregarCiclo } from '@/dados/ciclo'
 import { BancoCiclo } from '@/dados/db'
-import { adicionarMateriaEdital, carregarEdital, criarAssunto, enviarAoCiclo, importarEdital, mudarAssunto, definirHorasDoTopico, mudarComSubtopicos, moverAssunto, agruparEmNovoTopico, responderRevisaoAssunto, tirarAssuntoDoEdital, tirarMateriaDoEdital } from '@/dados/edital'
+import { adicionarMateriaEdital, carregarEdital, criarAssunto, enviarAoCiclo, importarEdital, mudarAssunto, definirHorasDoTopico, mudarComSubtopicos, moverAssunto, agruparEmNovoTopico, responderRevisaoAssunto, tirarAssuntoDoEdital, tirarEditalInteiro, tirarMateriaDoEdital } from '@/dados/edital'
 import { mudarPreferencias } from '@/dados/ciclo'
 import { substituirDados } from '@/dados/repositorio'
 
@@ -89,6 +89,25 @@ describe('o edital só mostra o que veio dele', () => {
     expect(depois.assuntos.every((a) => !a.noEdital)).toBe(true)
     expect(depois.questoes[0]?.assuntoId).toBe(penas?.id) // continua ligada ao assunto
     expect(await db.materiasEdital.count()).toBe(1) // guardada, marcada como excluída
+  })
+
+  it('apagar o edital tira todas as matérias, mas os assuntos e as questões seguem no app', async () => {
+    const db = await novoBanco()
+    await importarEdital(db, [{ materia: 'Penal', assuntos: i('Penas', 'Crimes') }, { materia: 'Civil', assuntos: i('Contratos') }], [], AGORA)
+    const penas = (await carregarEdital(db)).assuntos.find((a) => a.nome === 'Penas')
+    await db.questoes.put({ id: 'q1', data: '2026-10-07', materia: 'Penal', assuntoId: penas?.id ?? null, feitas: 5, acertos: 3, atualizadoEm: 1, excluidoEm: null, sujo: 1 })
+
+    expect(await tirarEditalInteiro(db, AGORA)).toBe(2)
+    const depois = await carregarEdital(db)
+    expect(depois.materias).toEqual([])
+    expect(depois.assuntos).toHaveLength(3)
+    expect(depois.assuntos.every((a) => !a.noEdital && !a.noCiclo && a.paiId === null)).toBe(true)
+    expect(depois.questoes[0]?.assuntoId).toBe(penas?.id)
+    expect(await db.materiasEdital.count()).toBe(2) // exclusão lógica
+
+    // reimportar religa os mesmos assuntos, sem duplicar
+    const r = await importarEdital(db, [{ materia: 'Penal', assuntos: i('Penas') }], [], AGORA + 1)
+    expect(r).toMatchObject({ assuntosNovos: 0, assuntosQueJaExistiam: 1 })
   })
 })
 

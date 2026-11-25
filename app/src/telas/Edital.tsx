@@ -1,13 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect } from 'react'
-import { ArrowRight, CalendarClock, FileText, ListCollapse, Plus, Search, X } from 'lucide-react'
+import { ArrowRight, CalendarClock, FileText, ListCollapse, Plus, Search, Trash2, X } from 'lucide-react'
 import { Menu } from '@/componentes/Menu'
-import { avisar, pedirTexto } from '@/componentes/dialogos-api'
+import { avisar, confirmar, pedirTexto } from '@/componentes/dialogos-api'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import { Topo } from '@/componentes/visual'
 import { db } from '@/dados/db'
-import { adicionarMateriaEdital, carregarEdital, enviarAoCiclo } from '@/dados/edital'
+import { adicionarMateriaEdital, carregarEdital, enviarAoCiclo, tirarEditalInteiro } from '@/dados/edital'
 import { mudarPreferencias } from '@/dados/ciclo'
 import { useCiclo, useHojeISO } from '@/dados/useCiclo'
 import { todasMaterias } from '@/dominio/ciclo'
@@ -121,6 +121,17 @@ export function Edital() {
     if (r === 'duplicada') void avisar('Matéria', 'Essa matéria já está no edital.')
   }
 
+  async function apagarEdital() {
+    const ok = await confirmar(
+      `Apagar o edital inteiro (${materias.length} ${materias.length === 1 ? 'matéria' : 'matérias'})? Os assuntos continuam no app (Desempenho, Pomodoro e flashcards), com as questões e os tempos; só saem desta tela e do ciclo. Se importar o edital de novo, eles são religados sem duplicar.`,
+      'Apagar edital',
+      true,
+    )
+    if (!ok) return
+    definir({ assuntoAberto: null })
+    await tirarEditalInteiro(db)
+  }
+
   if (materias.length === 0) {
     return (
       <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -189,6 +200,7 @@ export function Edital() {
             { rotulo: tudoRecolhido ? 'Abrir todos os tópicos' : 'Recolher todos os tópicos', icone: <ListCollapse className="size-4" />, acao: () => ui.definirTopicosRecolhidos(tudoRecolhido ? [] : topicos), desativado: topicos.length === 0 },
             { rotulo: `Intervalos de revisão (${intervalos.join(', ')} dias)`, icone: <CalendarClock className="size-4" />, acao: () => void ajustarIntervalos() },
             { rotulo: 'Ir para Montar ciclo', icone: <ArrowRight className="size-4" />, acao: () => irParaAba('montar') },
+            { rotulo: 'Apagar edital', icone: <Trash2 className="size-4" />, acao: () => void apagarEdital(), perigo: true },
           ]}
         />
       </Topo>
