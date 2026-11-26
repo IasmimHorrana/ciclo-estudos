@@ -9,11 +9,11 @@ const banco = () => new BancoCiclo(`nt-${++n}`)
 const OP = { citacoes: true, marcadores: true, dividir: false }
 
 describe('criar e editar', () => {
-  it('cria com texto inicial, título único e grava o texto novo', async () => {
+  it('cria em branco, com título único, e grava o texto novo', async () => {
     const db = banco()
     const a = await criarNota(db, 'Crase', 'Língua Portuguesa', undefined, T0)
     const b = await criarNota(db, 'crase', '', undefined, T0 + 1)
-    expect(a.texto).toBe('# Crase\n\n- ')
+    expect(a.texto).toBe('')
     expect(b.titulo).toBe('crase (2)')
     await salvarTextoNota(db, a.id, '# Crase\n\n- regra', T0 + 5)
     expect((await db.notas.get(a.id))).toMatchObject({ texto: '# Crase\n\n- regra', atualizado: T0 + 5, sujo: 1 })

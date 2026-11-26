@@ -29,7 +29,7 @@ Decisões já tomadas: núcleo fiel ao Anki; SM-2 "como o Anki usa"; decks = mat
 | Dados locais | **Dexie.js** (IndexedDB) com `useLiveQuery` | **no lugar do TanStack Query** (que é para dados de rede) |
 | Validação | **Zod** nos limites (importar, sincronizar) | evita número/string trocados |
 | Editor dos flashcards | **Tiptap** (extensão própria de cloze, Ctrl+Shift+C, colar imagem) | só nos flashcards |
-| Editor dos Resumos | **CodeMirror 6 + markdown-it + DOMPurify** | continua Markdown/`.md` |
+| Editor dos Resumos | **Folha editável (contentEditable) + Markdown próprio + DOMPurify** (decidido em 2026-11-26, no lugar de CodeMirror) | a folha é o editor; por dentro continua Markdown/`.md` |
 | Gráficos | nossos **SVG** como componentes React (rosca, barras, calendário de calor) | Recharts só se precisar |
 | Offline/celular | **vite-plugin-pwa** | fora da outra stack |
 | Testes | **Vitest** (SM-2, busca, cloze, sanitização, migração do Dexie) | fora da outra stack |

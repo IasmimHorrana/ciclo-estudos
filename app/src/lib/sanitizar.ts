@@ -15,12 +15,12 @@ export function htmlParaTexto(h: string): string {
   return h.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
 }
 
-/** HTML gerado pelo nosso Markdown: além do básico, deixa passar as caixinhas de tarefa e os dados das ligações e dos tópicos recolhíveis. */
+/** HTML gerado pelo nosso Markdown: além do básico, deixa passar as caixinhas de tarefa e os dados das ligações, dos tópicos recolhíveis e das marcações. */
 export function sanitizarMarkdown(html: string): string {
   return DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
     ADD_TAGS: ['input', 'details', 'summary'],
-    ADD_ATTR: ['data-t', 'data-k', 'checked', 'disabled', 'type', 'open', 'target', 'rel'],
+    ADD_ATTR: ['data-t', 'data-k', 'data-c', 'data-i', 'checked', 'disabled', 'type', 'open', 'target', 'rel'],
     FORBID_TAGS: ['style', 'form', 'button', 'iframe', 'object', 'embed', 'script'],
   })
 }
