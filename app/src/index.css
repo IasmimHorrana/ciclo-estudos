@@ -326,3 +326,20 @@ button {
 .md mark[data-c='rosa'] { background: var(--m-rosa); }
 .md mark[data-c='roxo'] { background: var(--m-roxo); }
 .md mark[data-c='azul'] { background: var(--m-azul); }
+
+/* folha dos Resumos: escreve-se direto nela; "pautada" desenha as linhas alinhadas ao texto */
+.folha { --lh: 1.9rem; --linha: rgb(100 116 139 / 0.22); line-height: var(--lh); cursor: text; caret-color: var(--primary); }
+.dark .folha { --linha: rgb(255 255 255 / 0.1); }
+.folha p, .folha ul, .folha ol, .folha li, .folha blockquote, .folha h1, .folha h2, .folha h3, .folha h4, .folha h5, .folha h6 { margin: 0; line-height: var(--lh); }
+.folha h1 { font-size: 1.45rem; }
+.folha h2 { font-size: 1.25rem; }
+.folha h3 { font-size: 1.08rem; }
+.folha blockquote { padding-top: 0; padding-bottom: 0; }
+.folha a { cursor: pointer; }
+.folha.pautada { background-image: linear-gradient(to bottom, transparent calc(var(--lh) - 1px), var(--linha) calc(var(--lh) - 1px)); background-size: 100% var(--lh); background-origin: content-box; background-attachment: local; }
+.folha[data-vazia] > p:first-child { position: relative; }
+.folha[data-vazia] > p:first-child::before { content: 'Comece a escrever…'; position: absolute; color: var(--muted-foreground); opacity: 0.7; pointer-events: none; }
+.folha ul { list-style: disc; }
+.folha ul ul { list-style: circle; }
+.folha ul ul ul { list-style: square; }
+.folha ol { list-style: decimal; }

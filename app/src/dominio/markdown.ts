@@ -20,6 +20,8 @@ export interface ContextoMd {
   existe: (titulo: string) => boolean
   /** Itens de lista recolhidos pelo usuário (chaves `idDaNota:hash`). */
   fechados: ReadonlySet<string>
+  /** Saída para a folha editável: listas simples, caixinhas como texto, uma linha da nota por bloco. */
+  folha?: boolean
 }
 
 function inl(s: string, ctx: ContextoMd): string {
@@ -56,7 +58,7 @@ function htmlLista(itens: Omit<No, 'filhos'>[], nid: string, ctx: ContextoMd): s
   }
   const conteudo = (t: string) => {
     const cx = t.match(/^\[( |x|X)\]\s+(.*)$/)
-    return cx ? `<input type="checkbox" disabled ${cx[1] === ' ' ? '' : 'checked'}> ${inl(cx[2] as string, ctx)}` : inl(t, ctx)
+    return cx && !ctx.folha ? `<input type="checkbox" disabled ${cx[1] === ' ' ? '' : 'checked'}> ${inl(cx[2] as string, ctx)}` : inl(t, ctx)
   }
   const rend = (nos: No[]): string => {
     if (!nos.length) return ''
@@ -64,6 +66,7 @@ function htmlLista(itens: Omit<No, 'filhos'>[], nid: string, ctx: ContextoMd): s
     return `<${tag}>${nos
       .map((n) => {
         if (!n.filhos.length) return `<li>${conteudo(n.texto)}</li>`
+        if (ctx.folha) return `<li>${conteudo(n.texto)}${rend(n.filhos)}</li>`
         const k = `${nid}:${hashStr(n.texto)}`
         return `<li class="k"><details ${ctx.fechados.has(k) ? '' : 'open'} data-k="${k}"><summary>${conteudo(n.texto)}</summary>${rend(n.filhos)}</details></li>`
       })
@@ -89,6 +92,7 @@ export function mdParaHtml(txt: string, nid: string, ctx: ContextoMd): string {
       continue
     }
     if (!l.trim()) {
+      if (ctx.folha && i < L.length - 1) out.push('<p><br></p>')
       i++
       continue
     }
@@ -137,9 +141,10 @@ export function mdParaHtml(txt: string, nid: string, ctx: ContextoMd): string {
     const buf: string[] = []
     while (i < L.length && (L[i] as string).trim() && !comecaBloco(L[i] as string)) buf.push(L[i++] as string)
     if (!buf.length) buf.push(L[i++] as string)
-    out.push(`<p>${buf.map((x) => inl(x, ctx)).join('<br>')}</p>`)
+    out.push(ctx.folha ? buf.map((x) => `<p>${inl(x, ctx)}</p>`).join('') : `<p>${buf.map((x) => inl(x, ctx)).join('<br>')}</p>`)
   }
-  return out.join('\n')
+  if (ctx.folha && !out.length) return '<p><br></p>'
+  return out.join(ctx.folha ? '' : '\n')
 }
 
 // ---------------------------------------------------------------- ajudas do editor (puras)

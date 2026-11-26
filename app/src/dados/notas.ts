@@ -15,7 +15,7 @@ export async function criarNota(db: BancoCiclo, titulo: string, materia: string,
   return db.transaction('rw', db.notas, async () => {
     const t = tituloUnico(vivas(await db.notas.toArray()).map((n) => n.titulo), titulo)
     const nota: NotaResumo = {
-      id: novoId(agora), titulo: t, materia, texto: texto ?? `# ${t}\n\n- `, criado: agora, atualizado: agora,
+      id: novoId(agora), titulo: t, materia, texto: texto ?? '', criado: agora, atualizado: agora,
       atualizadoEm: agora, excluidoEm: null, sujo: 1,
     }
     await db.notas.put(nota)

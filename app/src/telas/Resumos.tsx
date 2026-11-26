@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { FileText, Plus, Search, Upload } from 'lucide-react'
+import { Bold, FileText, Heading2, Heading3, Italic, List, ListOrdered, NotebookPen, Plus, Search, Strikethrough, Upload } from 'lucide-react'
 import { confirmar } from '@/componentes/dialogos-api'
 import { abrirNota } from '@/lib/abrirNota'
 import { BarraMarcacao } from '@/componentes/BarraMarcacao'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
-import { caixa, Segmentado, Sigla, Topo } from '@/componentes/visual'
-import { nomeSeguro } from '@/dados/arquivos'
+import { caixa, Sigla, Topo } from '@/componentes/visual'
 import { type Ciclo } from '@/dados/ciclo'
 import { db } from '@/dados/db'
 import type { NotaResumo } from '@/dados/esquemas'
@@ -15,10 +14,11 @@ import { acharPorTitulo, carregarNotas, criarNota, excluirNotaResumo, mudarMater
 import { useCiclo } from '@/dados/useCiclo'
 import { corDe, todasMaterias } from '@/dominio/ciclo'
 import { numerarMarcas } from '@/dominio/marcacao'
-import { consultaLigacao, continuarLista, indentar, inserirLigacao, mdParaHtml, type Edicao } from '@/dominio/markdown'
-import { agruparNotas, filtrarNotas, mencionadaEm, sugerirNotas } from '@/dominio/notas'
+import { domParaFolha, folhaParaMd } from '@/dominio/folha'
+import { mdParaHtml } from '@/dominio/markdown'
+import { agruparNotas, filtrarNotas, mencionadaEm } from '@/dominio/notas'
 import { abrirDialogo } from '@/estado/dialogo'
-import { CHAVE_SEM_MATERIA, useResumosUi, type ModoEditor } from '@/estado/resumos'
+import { CHAVE_SEM_MATERIA, useResumosUi } from '@/estado/resumos'
 import { sanitizarMarkdown } from '@/lib/sanitizar'
 import { cn } from '@/lib/utils'
 import { ImportarTexto } from '@/telas/ImportarTexto'
@@ -110,11 +110,11 @@ function ResumosTela({ ciclo, notas }: { ciclo: Ciclo; notas: NotaResumo[] }) {
         <div className={cn(card, 'flex items-center justify-center text-center')}>
           <div className="max-w-md">
             <h2 className="mb-1 text-lg font-bold">{notas.length ? 'Selecione uma nota' : 'Seus resumos'}</h2>
-            <p className="mb-2 text-sm text-muted-foreground">Notas em Markdown, ligadas às matérias do seu ciclo.</p>
+            <p className="mb-2 text-sm text-muted-foreground">Uma folha para escrever, ligada às matérias do seu ciclo.</p>
             <ul className="mx-auto mb-3 inline-block text-left text-sm text-muted-foreground">
-              <li>Use <code>-</code> e <b>Tab</b> / <b>Shift+Tab</b> para montar tópicos que recolhem e expandem.</li>
+              <li>Comece a linha com <code>-</code> e espaço para fazer tópicos; <b>Tab</b> / <b>Shift+Tab</b> mudam o nível.</li>
               <li>Digite <code>[[Nome da nota]]</code> para ligar notas; as ligações aparecem como "Mencionada em".</li>
-              <li>Na pré-visualização, selecione um trecho e escolha uma cor para marcá-lo.</li>
+              <li>Selecione um trecho e escolha uma cor para marcá-lo.</li>
             </ul>
             <div><Button variant="destaque" onClick={() => void nova()}><Plus className="size-4" /> Nova nota</Button></div>
           </div>
@@ -125,18 +125,57 @@ function ResumosTela({ ciclo, notas }: { ciclo: Ciclo; notas: NotaResumo[] }) {
   )
 }
 
+/** Botão pequeno da barra da folha (não tira o foco da folha ao clicar). */
+function BotaoFolha({ titulo, ativo, onClick, children }: { titulo: string; ativo?: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      title={titulo}
+      aria-label={titulo}
+      aria-pressed={ativo}
+      className={cn('flex h-8 min-w-8 cursor-pointer items-center justify-center gap-1 rounded-md px-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground', ativo && 'bg-accent text-foreground')}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  )
+}
+
+/** Atalhos do começo da linha: "- " vira lista, "1. " lista numerada, "# " / "## " título. */
+const ATALHOS: [RegExp, (el: HTMLElement) => void][] = [
+  [/^[-*]\s$/, () => document.execCommand('insertUnorderedList')],
+  [/^1[.)]\s$/, () => document.execCommand('insertOrderedList')],
+  [/^#\s$/, () => document.execCommand('formatBlock', false, '<h1>')],
+  [/^##\s$/, () => document.execCommand('formatBlock', false, '<h2>')],
+  [/^###\s$/, () => document.execCommand('formatBlock', false, '<h3>')],
+]
+
+/** Bloco (parágrafo, título, item) onde está o cursor. */
+function blocoDoCursor(raiz: HTMLElement): HTMLElement | null {
+  const s = window.getSelection()
+  let n: Node | null = s && s.rangeCount ? s.getRangeAt(0).startContainer : null
+  while (n && n !== raiz) {
+    if (n.nodeType === 1 && /^(P|DIV|H[1-6]|LI|BLOCKQUOTE|PRE)$/.test((n as Element).tagName)) return n as HTMLElement
+    n = n.parentNode
+  }
+  return null
+}
+
 function Editor({ nota, notas, ciclo }: { nota: NotaResumo; notas: NotaResumo[]; ciclo: Ciclo }) {
-  const modo = useResumosUi((s) => s.modo)
-  const definirModo = useResumosUi((s) => s.definirModo)
+  const pautada = useResumosUi((s) => s.pautada)
+  const alternarPautada = useResumosUi((s) => s.alternarPautada)
   const selecionar = useResumosUi((s) => s.selecionar)
   const abrirGrupo = useResumosUi((s) => s.abrirGrupo)
   const [texto, setTexto] = useState(nota.texto)
   const [titulo, setTitulo] = useState(nota.titulo)
-  const [sug, setSug] = useState<NotaResumo[]>([])
-  const ta = useRef<HTMLTextAreaElement>(null)
+  const [bloco, setBloco] = useState('')
+  const folha = useRef<HTMLDivElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const pendente = useRef<string | null>(null)
-  const [fechados] = useState(() => new Set<string>())
+  const atual = useRef(nota.texto)
+  const notasRef = useRef(notas)
+  notasRef.current = notas
 
   // grava o que falta ao sair da nota, trocar de aba ou fechar a página
   useEffect(() => {
@@ -156,7 +195,9 @@ function Editor({ nota, notas, ciclo }: { nota: NotaResumo; notas: NotaResumo[];
     }
   }, [nota.id])
 
-  function digitou(v: string) {
+  function salvar(v: string) {
+    if (v === atual.current) return
+    atual.current = v
     setTexto(v)
     pendente.current = v
     clearTimeout(timer.current)
@@ -165,57 +206,85 @@ function Editor({ nota, notas, ciclo }: { nota: NotaResumo; notas: NotaResumo[];
       pendente.current = null
       if (t !== null) void salvarTextoNota(db, nota.id, t)
     }, 500)
-    const el = ta.current
-    const q = el ? consultaLigacao(v, el.selectionStart) : null
-    setSug(q === null ? [] : sugerirNotas(notas, nota.id, q))
   }
 
-  /** Aplica uma edição preservando o "desfazer" do navegador. */
-  function aplicar(e: Edicao) {
-    const el = ta.current
+  /** Desenha a folha a partir do texto guardado (ao abrir, ao sair da folha e depois de marcar). */
+  const desenhar = useCallback(
+    (md: string) => {
+      const el = folha.current
+      if (!el) return
+      const ctx = { existe: (t: string) => !!acharPorTitulo(notasRef.current, t), fechados: new Set<string>(), folha: true }
+      el.innerHTML = sanitizarMarkdown(numerarMarcas(mdParaHtml(md, nota.id, ctx)))
+      el.querySelectorAll('a').forEach((a) => { a.contentEditable = 'false' })
+    },
+    [nota.id],
+  )
+
+  useLayoutEffect(() => {
+    document.execCommand('defaultParagraphSeparator', false, 'p')
+    desenhar(nota.texto)
+    // só ao abrir a nota (o Editor é recriado a cada nota): depois a folha é a fonte
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function lerFolha() {
+    const el = folha.current
+    if (el) salvar(folhaParaMd(domParaFolha(el)))
+  }
+
+  function aoDigitar() {
+    const el = folha.current
     if (!el) return
-    el.focus()
-    el.setSelectionRange(e.inicio, e.fim)
-    if (!document.execCommand('insertText', false, e.inserir)) {
-      el.setRangeText(e.inserir, e.inicio, e.fim, 'end')
-      el.dispatchEvent(new Event('input', { bubbles: true }))
-    }
-    el.setSelectionRange(e.selA, e.selB)
-  }
-
-  function tecla(ev: React.KeyboardEvent<HTMLTextAreaElement>) {
-    const el = ev.currentTarget
-    if (ev.key === 'Tab') {
-      ev.preventDefault()
-      return aplicar(indentar(el.value, el.selectionStart, el.selectionEnd, ev.shiftKey))
-    }
-    if (ev.key === 'Enter' && !ev.shiftKey && !ev.ctrlKey && !ev.altKey && !ev.metaKey && el.selectionStart === el.selectionEnd) {
-      const e = continuarLista(el.value, el.selectionStart)
-      if (e) {
-        ev.preventDefault()
-        aplicar(e)
+    const b = blocoDoCursor(el)
+    if (b && b.tagName !== 'LI') {
+      const atalho = ATALHOS.find(([re]) => re.test(b.textContent ?? ''))
+      if (atalho) {
+        b.textContent = ''
+        b.appendChild(document.createElement('br'))
+        const r = document.createRange()
+        r.setStart(b, 0)
+        r.collapse(true)
+        const s = window.getSelection()
+        s?.removeAllRanges()
+        s?.addRange(r)
+        atalho[1](b)
       }
     }
+    lerFolha()
+    atualizarBloco()
   }
 
-  const html = useMemo(
-    () => sanitizarMarkdown(numerarMarcas(mdParaHtml(texto, nota.id, { existe: (t) => !!acharPorTitulo(notas, t), fechados }))),
-    [texto, nota.id, notas, fechados],
-  )
-  const previa = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = previa.current
-    if (!el) return
-    const aoTocar = (e: Event) => {
-      const d = e.target as HTMLDetailsElement
-      const k = d.dataset?.k
-      if (!k) return
-      if (d.open) fechados.delete(k)
-      else fechados.add(k)
+  function atualizarBloco() {
+    const el = folha.current
+    const b = el ? blocoDoCursor(el) : null
+    setBloco(b ? b.tagName.toLowerCase() : '')
+  }
+
+  function comando(c: string, v?: string) {
+    folha.current?.focus()
+    document.execCommand(c, false, v)
+    lerFolha()
+    atualizarBloco()
+  }
+
+  const titulo2 = (t: string) => comando('formatBlock', bloco === t ? '<p>' : `<${t}>`)
+
+  function tecla(ev: React.KeyboardEvent<HTMLDivElement>) {
+    if (ev.key === 'Tab') {
+      ev.preventDefault()
+      const el = folha.current
+      const b = el ? blocoDoCursor(el) : null
+      if (b?.closest('li')) comando(ev.shiftKey ? 'outdent' : 'indent')
+      else if (!ev.shiftKey) comando('insertText', String.fromCharCode(160).repeat(4))
     }
-    el.addEventListener('toggle', aoTocar, true)
-    return () => el.removeEventListener('toggle', aoTocar, true)
-  }, [fechados])
+  }
+
+  function colar(ev: React.ClipboardEvent<HTMLDivElement>) {
+    // cola só o texto (sem cores e fontes de outros sites); Markdown colado vira formatação ao sair da folha
+    ev.preventDefault()
+    const t = ev.clipboardData.getData('text/plain').replace(/\r\n?/g, '\n')
+    document.execCommand('insertText', false, t)
+  }
 
   async function abrirLigacao(t: string) {
     const existente = acharPorTitulo(notas, t)
@@ -229,19 +298,8 @@ function Editor({ nota, notas, ciclo }: { nota: NotaResumo; notas: NotaResumo[];
     setTitulo(await renomearNota(db, nota.id, titulo))
   }
 
-  function exportarMd() {
-    const url = URL.createObjectURL(new Blob([texto], { type: 'text/markdown' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${nomeSeguro(nota.titulo)}.md`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-  }
-
   async function excluir() {
-    if (!(await confirmar(`Excluir a nota "${nota.titulo}"? Se houver backup em pasta, o arquivo .md dela será apagado de lá.`, 'Excluir', true))) return
+    if (!(await confirmar(`Excluir a nota "${nota.titulo}"? Se houver backup em pasta, o arquivo dela será apagado de lá.`, 'Excluir', true))) return
     clearTimeout(timer.current)
     pendente.current = null
     await excluirNotaResumo(db, nota.id)
@@ -251,7 +309,6 @@ function Editor({ nota, notas, ciclo }: { nota: NotaResumo; notas: NotaResumo[];
   const mats = [...todasMaterias(ciclo.config)]
   if (nota.materia && !mats.includes(nota.materia)) mats.push(nota.materia)
   const refs = mencionadaEm(notas, nota)
-  const modos: [ModoEditor, string][] = [['editar', 'Editar'], ['dividido', 'Dividido'], ['ver', 'Ver']]
 
   return (
     <section className={cn(card, 'flex min-h-0 flex-col')}>
@@ -271,62 +328,49 @@ function Editor({ nota, notas, ciclo }: { nota: NotaResumo; notas: NotaResumo[];
             <option key={m}>{m}</option>
           ))}
         </Selecao>
-        <Segmentado<ModoEditor> rotulo="Modo do editor" itens={modos} atual={modo} aoMudar={definirModo} />
+        <div role="toolbar" aria-label="Formatação" className="flex flex-wrap items-center gap-0.5 rounded-lg border bg-muted/40 p-0.5">
+          <BotaoFolha titulo="Título" ativo={bloco === 'h2'} onClick={() => titulo2('h2')}><Heading2 className="size-4" /></BotaoFolha>
+          <BotaoFolha titulo="Subtítulo" ativo={bloco === 'h3'} onClick={() => titulo2('h3')}><Heading3 className="size-4" /></BotaoFolha>
+          <BotaoFolha titulo="Negrito (Ctrl+B)" onClick={() => comando('bold')}><Bold className="size-4" /></BotaoFolha>
+          <BotaoFolha titulo="Itálico (Ctrl+I)" onClick={() => comando('italic')}><Italic className="size-4" /></BotaoFolha>
+          <BotaoFolha titulo="Riscado" onClick={() => comando('strikeThrough')}><Strikethrough className="size-4" /></BotaoFolha>
+          <BotaoFolha titulo="Lista (Tab / Shift+Tab mudam o nível)" onClick={() => comando('insertUnorderedList')}><List className="size-4" /></BotaoFolha>
+          <BotaoFolha titulo="Lista numerada" onClick={() => comando('insertOrderedList')}><ListOrdered className="size-4" /></BotaoFolha>
+        </div>
+        <BotaoFolha titulo={pautada ? 'Folha com linhas (clique para lisa)' : 'Folha lisa (clique para pôr linhas)'} ativo={pautada} onClick={alternarPautada}>
+          <NotebookPen className="size-4" /> <span className="text-xs font-semibold">{pautada ? 'Com linhas' : 'Lisa'}</span>
+        </BotaoFolha>
         <span className="flex-1" />
-        <Button size="sm" variant="outline" onClick={exportarMd}>⬇ .md</Button>
         <Button size="sm" variant="destructive" onClick={() => void excluir()}>Excluir</Button>
       </div>
 
-      <div className={cn('grid min-h-0 flex-1 gap-3', modo === 'dividido' ? 'grid-cols-2 max-[1000px]:grid-cols-1' : 'grid-cols-1')}>
-        {modo !== 'ver' && (
-          <div className="relative min-h-0">
-            <textarea
-              ref={ta}
-              className="size-full min-h-60 resize-none rounded-xl border bg-campo p-4 font-mono text-sm leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              spellCheck={false}
-              value={texto}
-              placeholder="Escreva em Markdown. Ex.: - tópico, [[outra nota]]"
-              onChange={(e) => digitou(e.target.value)}
-              onKeyDown={tecla}
-              onClick={(e) => { const q = consultaLigacao(e.currentTarget.value, e.currentTarget.selectionStart); if (q === null) setSug([]) }}
-              onBlur={() => setTimeout(() => setSug([]), 150)}
-            />
-            {sug.length > 0 && (
-              <div className="absolute right-2 bottom-2 left-2 flex flex-wrap gap-1 rounded-lg border bg-card p-1.5 shadow-lg">
-                {sug.map((n) => (
-                  <Button
-                    key={n.id}
-                    size="sm"
-                    variant="outline"
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                      const el = ta.current
-                      if (el) aplicar(inserirLigacao(el.value, el.selectionStart, n.titulo))
-                    }}
-                  >
-                    {n.titulo}
-                  </Button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-        {modo !== 'editar' && (
-          <div
-            ref={previa}
-            className="md min-h-0 overflow-auto rounded-xl border px-5 py-4"
-            onClick={(e) => {
-              const a = (e.target as HTMLElement).closest('a.wiki') as HTMLElement | null
-              if (a) {
-                e.preventDefault()
-                void abrirLigacao(a.dataset.t ?? '')
-              }
-            }}
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-        )}
-        {modo !== 'editar' && <BarraMarcacao key={modo} area={previa} texto={texto} aoMudar={digitou} />}
+      <div className="min-h-0 flex-1 overflow-auto rounded-xl border bg-muted/30 p-3 max-[900px]:p-0">
+        <div
+          ref={folha}
+          contentEditable
+          suppressContentEditableWarning
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Texto da nota"
+          spellCheck
+          data-vazia={texto.trim() ? undefined : ''}
+          className={cn('md folha mx-auto min-h-full max-w-[860px] rounded-lg border bg-card px-10 py-8 shadow-sm outline-none max-[900px]:px-5', pautada && 'pautada')}
+          onInput={aoDigitar}
+          onKeyDown={tecla}
+          onKeyUp={atualizarBloco}
+          onMouseUp={atualizarBloco}
+          onPaste={colar}
+          onBlur={() => desenhar(atual.current)}
+          onClick={(e) => {
+            const a = (e.target as HTMLElement).closest('a') as HTMLAnchorElement | null
+            if (!a) return
+            e.preventDefault()
+            if (a.classList.contains('wiki')) void abrirLigacao(a.dataset.t ?? '')
+            else if (/^https?:/.test(a.href)) window.open(a.href, '_blank', 'noopener,noreferrer')
+          }}
+        />
       </div>
+      <BarraMarcacao area={folha} texto={texto} aoMudar={(novo) => { salvar(novo); desenhar(novo) }} />
       {refs.length > 0 && (
         <div className={cn(mudo, 'mt-2 flex flex-wrap items-center gap-1')}>
           ↩ Mencionada em:
@@ -338,4 +382,3 @@ function Editor({ nota, notas, ciclo }: { nota: NotaResumo; notas: NotaResumo[];
     </section>
   )
 }
-
