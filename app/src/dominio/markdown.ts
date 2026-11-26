@@ -1,6 +1,8 @@
 // Markdown → HTML próprio (sem bibliotecas), portado do app em HTML, mais ajudas do editor e do importador.
 // Suporta: títulos, listas com recuo (recolhíveis), tarefas [ ] / [x], citações, código, tabelas, **negrito**,
-// *itálico*, ~~riscado~~, `código`, links http(s) e [[ligações entre notas]]. Tudo é escapado antes de virar HTML.
+// *itálico*, ~~riscado~~, ==marcação== (ver marcacao.ts), `código`, links http(s) e [[ligações entre notas]]. Tudo é escapado antes de virar HTML.
+
+import { marcasParaHtml } from '@/dominio/marcacao'
 
 export const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
 const desesc = (s: string) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
@@ -28,6 +30,7 @@ function inl(s: string, ctx: ContextoMd): string {
   })
   t = t.replace(/\[\[([^\]]+)\]\]/g, (_m, n: string) => `<a href="#" class="wiki${ctx.existe(desesc(n)) ? '' : ' novo'}" data-t="${n.trim()}">${n}</a>`)
   t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+  t = marcasParaHtml(t)
   t = t.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|[^*])\*([^*\s][^*]*?)\*/g, '$1<i>$2</i>').replace(/~~(.+?)~~/g, '<s>$1</s>')
   return t.replace(/(\d+)/g, (_m, i: string) => `<code>${cods[Number(i)]}</code>`)
 }

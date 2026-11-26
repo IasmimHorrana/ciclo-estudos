@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { FileText, Plus, Search, Upload } from 'lucide-react'
 import { confirmar } from '@/componentes/dialogos-api'
 import { abrirNota } from '@/lib/abrirNota'
+import { BarraMarcacao } from '@/componentes/BarraMarcacao'
 import { Button } from '@/componentes/ui/button'
 import { Entrada, Selecao } from '@/componentes/ui/entrada'
 import { caixa, Segmentado, Sigla, Topo } from '@/componentes/visual'
@@ -13,6 +14,7 @@ import type { NotaResumo } from '@/dados/esquemas'
 import { acharPorTitulo, carregarNotas, criarNota, excluirNotaResumo, mudarMateriaNota, renomearNota, salvarTextoNota } from '@/dados/notas'
 import { useCiclo } from '@/dados/useCiclo'
 import { corDe, todasMaterias } from '@/dominio/ciclo'
+import { numerarMarcas } from '@/dominio/marcacao'
 import { consultaLigacao, continuarLista, indentar, inserirLigacao, mdParaHtml, type Edicao } from '@/dominio/markdown'
 import { agruparNotas, filtrarNotas, mencionadaEm, sugerirNotas } from '@/dominio/notas'
 import { abrirDialogo } from '@/estado/dialogo'
@@ -112,6 +114,7 @@ function ResumosTela({ ciclo, notas }: { ciclo: Ciclo; notas: NotaResumo[] }) {
             <ul className="mx-auto mb-3 inline-block text-left text-sm text-muted-foreground">
               <li>Use <code>-</code> e <b>Tab</b> / <b>Shift+Tab</b> para montar tópicos que recolhem e expandem.</li>
               <li>Digite <code>[[Nome da nota]]</code> para ligar notas; as ligações aparecem como "Mencionada em".</li>
+              <li>Na pré-visualização, selecione um trecho e escolha uma cor para marcá-lo.</li>
             </ul>
             <div><Button variant="destaque" onClick={() => void nova()}><Plus className="size-4" /> Nova nota</Button></div>
           </div>
@@ -196,7 +199,7 @@ function Editor({ nota, notas, ciclo }: { nota: NotaResumo; notas: NotaResumo[];
   }
 
   const html = useMemo(
-    () => sanitizarMarkdown(mdParaHtml(texto, nota.id, { existe: (t) => !!acharPorTitulo(notas, t), fechados })),
+    () => sanitizarMarkdown(numerarMarcas(mdParaHtml(texto, nota.id, { existe: (t) => !!acharPorTitulo(notas, t), fechados }))),
     [texto, nota.id, notas, fechados],
   )
   const previa = useRef<HTMLDivElement>(null)
@@ -322,6 +325,7 @@ function Editor({ nota, notas, ciclo }: { nota: NotaResumo; notas: NotaResumo[];
             dangerouslySetInnerHTML={{ __html: html }}
           />
         )}
+        {modo !== 'editar' && <BarraMarcacao key={modo} area={previa} texto={texto} aoMudar={digitou} />}
       </div>
       {refs.length > 0 && (
         <div className={cn(mudo, 'mt-2 flex flex-wrap items-center gap-1')}>

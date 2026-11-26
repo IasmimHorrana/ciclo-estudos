@@ -317,3 +317,12 @@ button {
 .md a { color: var(--primary); }
 .md a.wiki { text-decoration: none; border-bottom: 1px solid var(--primary); }
 .md a.wiki.novo { opacity: 0.65; border-bottom-style: dashed; }
+/* marca-texto dos resumos (==trecho==); as mesmas cores servem para os botões da barra */
+:root { --m-amarelo: #fde68a; --m-laranja: #fed7aa; --m-verde: #bbf7d0; --m-rosa: #fbcfe8; --m-roxo: #ddd6fe; --m-azul: #bae6fd; }
+.dark { --m-amarelo: rgb(250 204 21 / 0.35); --m-laranja: rgb(251 146 60 / 0.35); --m-verde: rgb(74 222 128 / 0.3); --m-rosa: rgb(244 114 182 / 0.35); --m-roxo: rgb(167 139 250 / 0.4); --m-azul: rgb(56 189 248 / 0.35); }
+.md mark { color: inherit; border-radius: 3px; padding: 0.05em 0.1em; cursor: pointer; background: var(--m-amarelo); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.md mark[data-c='laranja'] { background: var(--m-laranja); }
+.md mark[data-c='verde'] { background: var(--m-verde); }
+.md mark[data-c='rosa'] { background: var(--m-rosa); }
+.md mark[data-c='roxo'] { background: var(--m-roxo); }
+.md mark[data-c='azul'] { background: var(--m-azul); }
