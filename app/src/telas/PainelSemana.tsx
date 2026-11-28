@@ -12,10 +12,16 @@ export function Constancia({ s, diasDeEstudo, hojeISO }: { s: SemanaAtual | null
   const { celulas, sequencia } = useConstancia(s, diasDeEstudo, hojeISO)
   return (
     <section className={cn(caixa, 'py-3')}>
-      <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-x-4">
+      <div className="mb-2 flex flex-wrap items-baseline gap-x-4">
         <h2 className={tituloCaixa}>
           Constância nos estudos <span className="text-xs font-normal text-muted-foreground">últimos 28 dias</span>
         </h2>
+        {/* legenda na mesma linha do título, para o quadro ocupar menos altura */}
+        <div className="ml-auto flex flex-wrap gap-x-4 gap-y-1 text-[0.7rem] text-muted-foreground">
+          <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-[3px] bg-primary" /> estudou</span>
+          <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-[3px] bg-erro-bg" /> faltou num dia de estudo</span>
+          <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-[3px] bg-muted" /> folga</span>
+        </div>
         <p className="m-0 text-[0.8rem] text-muted-foreground">
           {sequencia > 0 ? (
             <>Você está há <b className="text-primary">{sequencia} {sequencia === 1 ? 'dia' : 'dias'}</b> sem falhar</>
@@ -42,11 +48,6 @@ export function Constancia({ s, diasDeEstudo, hojeISO }: { s: SemanaAtual | null
             {c.estado === 'falhou' && <X className="size-3" strokeWidth={3} />}
           </span>
         ))}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[0.7rem] text-muted-foreground">
-        <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-[3px] bg-primary" /> estudou</span>
-        <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-[3px] bg-erro-bg" /> faltou num dia de estudo</span>
-        <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-[3px] bg-muted" /> folga</span>
       </div>
     </section>
   )
