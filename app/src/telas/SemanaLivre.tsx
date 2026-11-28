@@ -104,7 +104,8 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
         <SeletorModo modo="livre" />
       </Topo>
 
-      <Numeros>
+      {/* cartões mais baixos aqui, para a faixa de dias caber sem rolar */}
+      <Numeros className="[&>*]:py-2">
         <Numero destaque rotulo="Hoje" icone={Sun} valor={fmtH(r.hoje.horas)} sub={r.hoje.materias.length ? r.hoje.materias.map((m) => m.materia).join(' · ') : 'nada registrado ainda'} />
         <Numero
           rotulo="Questões hoje"
@@ -133,8 +134,8 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
 
       {/* a coluna da direita vai do topo ao fim; à esquerda, só a faixa de dias cresce (e rola por dentro se faltar espaço) */}
       <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_300px] grid-rows-[auto_auto_minmax(0,1fr)] gap-x-3.5 gap-y-3 max-[1100px]:grid-cols-1 max-[1100px]:grid-rows-none">
-        <section className={caixa}>
-          <div className="mb-3 flex items-center gap-3">
+        <section className={cn(caixa, 'py-3')}>
+          <div className="mb-2 flex items-center gap-3">
             <h2 className={tituloCaixa}>Matérias de hoje</h2>
             {dia.principal && !dia.extra && !abrirExtra && (
               <button className="flex cursor-pointer items-center gap-1 text-xs font-semibold text-primary hover:underline" onClick={() => setAbrirExtra(true)}>
@@ -148,10 +149,17 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
               const horas = r.hoje.materias.find((x) => x.materia === m)?.horas ?? 0
               const pri = papel === 'principal'
               return (
-                <div key={papel} className={cn('flex min-w-0 flex-col gap-2 rounded-xl p-3', pri ? 'border border-primary/25 bg-accent/60' : 'border border-dashed bg-muted/60')}>
-                  <span className={cn('text-[0.64rem] font-bold tracking-wider uppercase', pri ? 'text-primary' : 'text-muted-foreground')}>
-                    {pri ? 'Principal · bloco maior' : 'Secundária · opcional'}
-                  </span>
+                <div key={papel} className={cn('flex min-w-0 flex-col gap-1.5 rounded-xl px-3 py-2', pri ? 'border border-primary/25 bg-accent/60' : 'border border-dashed bg-muted/60')}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={cn('text-[0.64rem] font-bold tracking-wider uppercase', pri ? 'text-primary' : 'text-muted-foreground')}>
+                      {pri ? 'Principal · bloco maior' : 'Secundária · opcional'}
+                    </span>
+                    {m && (
+                      <span className="text-sm whitespace-nowrap">
+                        <b>{fmtH(horas)}</b> <span className={mudo}>hoje</span>
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     {m ? <Sigla materia={m} cor={corDe(cores, m)} /> : <span className="grid h-6 min-w-10 place-items-center rounded-md bg-card text-muted-foreground">—</span>}
                     <Selecao
@@ -166,21 +174,14 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
                         <option key={x} value={x}>{x}</option>
                       ))}
                     </Selecao>
+                    {m && botaoEstudar(m, !pri)}
                   </div>
-                  {m && (
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm">
-                        <b>{fmtH(horas)}</b> <span className={mudo}>hoje</span>
-                      </span>
-                      {botaoEstudar(m, !pri)}
-                    </div>
-                  )}
                 </div>
               )
             })}
           </div>
           {dia.principal && (dia.extra || abrirExtra) && (
-            <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-xl border border-dashed px-3 py-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-dashed px-3 py-1">
               <span className="text-[0.64rem] font-bold tracking-wider text-muted-foreground uppercase">Extra</span>
               {dia.extra && <Sigla materia={dia.extra} cor={corDe(cores, dia.extra)} />}
               <Selecao
@@ -220,8 +221,8 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
 
         <Constancia s={ciclo.semana} diasDeEstudo={config.dias} hojeISO={hojeISO} />
 
-        <section className={cn(caixa, 'flex max-h-full min-h-0 flex-col')}>
-          <h2 className={cn(tituloCaixa, 'mb-3')}>
+        <section className={cn(caixa, 'flex max-h-full min-h-0 flex-col py-3')}>
+          <h2 className={cn(tituloCaixa, 'mb-2')}>
             Dias da semana <span className="text-xs font-normal text-muted-foreground">{fmtData(r.segunda)} → {fmtData(r.domingo)}</span>
             <span className="ml-auto text-xs font-normal text-muted-foreground">Total <b className="text-foreground">{fmtH(r.horasSemana)}</b></span>
           </h2>
@@ -229,7 +230,7 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
             {r.dias.map((d) => {
               const ehHoje = d.data === hojeISO
               return (
-                <div key={d.data} className={cn('flex min-w-0 flex-col gap-1.5 rounded-xl border p-2.5', ehHoje && 'border-primary/40 bg-accent/50 ring-3 ring-primary/10', d.data > hojeISO && 'opacity-55')}>
+                <div key={d.data} className={cn('flex min-w-0 flex-col gap-1 rounded-xl border p-2', ehHoje && 'border-primary/40 bg-accent/50 ring-3 ring-primary/10', d.data > hojeISO && 'opacity-55')}>
                   <span className="flex items-center justify-between gap-1 text-[0.72rem] whitespace-nowrap text-muted-foreground">
                     <span><b className="text-foreground">{NOMES_DIA[idxDia(d.data)]}</b> {fmtData(d.data)}</span>
                     {ehHoje && <span className="rounded-[5px] bg-primary px-1.5 text-[0.55rem] leading-4 font-bold text-primary-foreground">HOJE</span>}
@@ -241,7 +242,7 @@ export function SemanaLivre({ ciclo, hojeISO }: { ciclo: Ciclo; hojeISO: string 
                   {d.materias.map((m) => (
                     <div
                       key={m.materia}
-                      className="flex min-w-0 flex-col gap-0.5 rounded-lg border-l-3 bg-card px-2 py-1.5 shadow-[0_1px_2px_rgb(0_0_0/0.06)]"
+                      className="flex min-w-0 flex-col rounded-lg border-l-3 bg-card px-2 py-1 shadow-[0_1px_2px_rgb(0_0_0/0.06)]"
                       style={{ borderLeftColor: corDe(cores, m.materia) }}
                       title={`${m.materia} · ${fmtH(m.horas)}`}
                     >
